@@ -181,6 +181,27 @@ API im Kern (rollengeschützt, Schreibzugriffe auditiert – T-004):
 **Fristen (GDP):** Ein Messwert ist nur beweiskräftig, wenn der Sensor gültig
 kalibriert ist. Läuft die Kalibrierung ab, ist das Fahrzeug nicht mehr buchbar.
 
+## Kunden & Fahrer
+
+Firmenkunden (D-010) und ihre Fahrer (gehören zum Kunden, D-004). Kernfunktion
+ist die **Fahrerlaubnis-Prüfung (R-22)**: Status, Führerschein-Gültigkeit und
+Klasse gegen das Fahrzeuggewicht.
+
+API im Kern (rollengeschützt, Schreibzugriffe auditiert):
+- `POST /v1/kunden`, `GET /v1/kunden` (paginiert), `GET /v1/kunden/:id`,
+  `POST /v1/kunden/:id/status` (geprüfte Übergänge).
+- `POST /v1/kunden/:kundeId/fahrer`, `GET /v1/kunden/:kundeId/fahrer`.
+- `POST /v1/fahrer/:id/status`.
+- `GET /v1/fahrer/:id/einsatzbereit?fahrzeugId=…` — darf der Fahrer dieses
+  Fahrzeug fahren? (freigegeben **und** Führerschein gültig **und** Klasse deckt
+  die geforderte Klasse).
+- `GET /v1/fahrer/faellige-fuehrerscheine?bis=…` — Fristenüberwachung (Sperre bei
+  Ablauf).
+
+> Statusmodelle und Führerscheinklassen-Abdeckung liegen in
+> `@rent2cool/shared`. Fahrerdaten sind personenbezogen – nur erfundene
+> Testdaten, solange der DSB ein Platzhalter ist (D-015).
+
 ## Betrieb und Cloud
 
 Lokal mit Docker Compose; der Umzug in die Cloud ist reine Konfiguration

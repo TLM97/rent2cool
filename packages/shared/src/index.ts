@@ -16,3 +16,4 @@ export * from './telemetry';
 export * from './auth';
 export * from './bericht';
 export * from './fahrzeug';
+export * from './kunde';

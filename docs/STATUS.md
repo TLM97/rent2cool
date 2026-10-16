@@ -13,6 +13,43 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-16 – Kunden & Fahrer
+
+**Kunden & Fahrer – erledigt.** (Fortlaufende Phase-1-Arbeit auf Toms Ansage;
+Planung möge die Aufgabe in `TASKS.md` nachziehen.)
+
+Erledigt:
+- Migration `0004_kunde_fahrer`: **Kunde** (Firmenkunde, D-010) und **Fahrer**
+  (gehört zum Kunden, D-004) mit Mandantbezug, Indizes und
+  Führerschein-Ablaufindex.
+- **Statusmodelle** Kunde und Fahrer in `@rent2cool/shared` (docs/datenmodell.md
+  §5.3/§5.4); Statuswechsel prüfen die erlaubten Übergänge.
+- **Fahrerlaubnis-Prüfung (R-22)** in `shared`: `bewerteFahrerEinsatz` +
+  Führerscheinklassen-Abdeckung (`klasseDeckt`). Ein Fahrer ist einsatzbereit,
+  wenn er `freigegeben` ist, sein Führerschein gültig ist und seine Klasse die
+  vom Fahrzeug geforderte Klasse deckt.
+- **API** (rollengeschützt, auditiert T-004): Kunde anlegen/listen/lesen/Status;
+  Fahrer je Kunde anlegen/listen/Status; `einsatzbereit` (gegen ein Fahrzeug);
+  `faellige-fuehrerscheine` (Fristenüberwachung, Sperre bei Ablauf).
+- **Tests:** Unit grün in CI (Status Kunde/Fahrer, Klassen-Abdeckung,
+  Einsatz-Bewertung). Integration lokal grün: Kunde- und Fahrer-Freigabe,
+  Einsatzbereitschaft gegen ein Fahrzeug (inkl. Sperre), fällige Führerscheine.
+
+Bewusste Entscheidungen/Abkürzungen:
+- **Führerscheinklassen-Abdeckung** ist vereinfacht modelliert (B/BE/C1/…);
+  exakte Zuordnung von der Planung zu bestätigen (F-19).
+- **Identitätsprüfung** ist noch ein Status-Feld (`identitaetspruefung_status`)
+  mit Fake-Ablauf (D-015: Identitätsprüfung als Schnittstelle mit
+  Fake-Implementierung); echte Anbindung später.
+- Fahrer-Personendaten nur als Testdaten (D-015); Löschkonzept weiter offen (F-3).
+
+Fragen an Planung:
+- **F-19:** Verbindliche Führerscheinklassen-Zuordnung (welche Klasse darf welche
+  zul. Gesamtmasse / welches Fahrzeug)?
+- Weiterhin: F-3 (Fahrer-Datenschutz/Löschung), F-1 (Mandant).
+
+---
+
 ### 2026-10-16 – Fahrzeugakte
 
 **Hinweis an die Planung:** Auf Toms Ansage „es muss eh alles gemacht werden,

@@ -7,6 +7,7 @@ import { AuditModule } from './audit/audit.module';
 import { AdminModule } from './admin/admin.module';
 import { BerichtModule } from './bericht/bericht.module';
 import { FahrzeugModule } from './fahrzeug/fahrzeug.module';
+import { KundeModule } from './kunde/kunde.module';
 import { HealthModule } from './health/health.module';
 import { TelemetryModule } from './telemetry/telemetry.module';
 
@@ -45,6 +46,7 @@ import { TelemetryModule } from './telemetry/telemetry.module';
     AdminModule,
     BerichtModule,
     FahrzeugModule,
+    KundeModule,
     HealthModule,
     TelemetryModule,
   ],

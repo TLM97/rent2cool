@@ -29,6 +29,13 @@
       "when": 1760608800000,
       "tag": "0003_fahrzeugakte",
       "breakpoints": false
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1760612400000,
+      "tag": "0004_kunde_fahrer",
+      "breakpoints": false
     }
   ]
 }
