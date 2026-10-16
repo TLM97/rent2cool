@@ -24,6 +24,7 @@
     "@opentelemetry/sdk-node": "^0.57.1",
     "@rent2cool/shared": "workspace:*",
     "drizzle-orm": "^0.38.3",
+    "kafkajs": "^2.2.4",
     "nestjs-pino": "^4.4.0",
     "pino": "^9.6.0",
     "pino-http": "^10.4.0",

@@ -5,8 +5,8 @@
     "moduleResolution": "Node",
     "rootDir": "src",
     "outDir": "dist",
-    "noEmit": true
+    "noUncheckedIndexedAccess": false
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["dist", "node_modules"]
+  "exclude": ["dist", "node_modules", "src/**/*.spec.ts"]
 }

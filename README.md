@@ -13,12 +13,13 @@ Entscheidungen in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 | Paket | Zweck |
 |---|---|
-| `apps/core` | Kern: Backend + Datenbank (NestJS + Fastify, Drizzle/PostgreSQL+TimescaleDB). Gesundheits-Endpunkte, Config aus Env, Logs, OpenTelemetry. |
-| `apps/ingest` | Telematik-Eingang (eigener Prozess, schreibt nur in die Warteschlange). *Gerüst, Ausbau in T-003.* |
+| `apps/core` | Kern: Backend + Datenbank (NestJS + Fastify, Drizzle/PostgreSQL+TimescaleDB). Gesundheits-Endpunkte, Config aus Env, Logs, OpenTelemetry, **Telematik-Verarbeiter** (T-003). |
+| `apps/ingest` | Telematik-Eingang (eigener Prozess, prüft Format + Signatur, schreibt nur in die Warteschlange). |
 | `apps/admin` | Interne Admin-Oberfläche (Next.js). *Gerüst.* |
 | `apps/web` | Öffentliche Website + Kundenportal (Next.js), ohne Schreibzugriff auf GDP-Daten. *Gerüst.* |
 | `apps/mobile` | App für Fahrer (React Native/Expo). *Gerüst.* |
-| `packages/shared` | Geteilte Typen für alle Pakete. |
+| `packages/shared` | Geteilte Typen für alle Pakete (inkl. neutrales Telematik-Format). |
+| `tools/simulator` | Telematik-Simulator: virtuelle Fahrzeuge als erster Adapter, inkl. Lasttest (T-003). |
 
 Werkzeuge: **pnpm Workspaces + Turborepo**, **TypeScript** (strikt) überall.
 
@@ -77,6 +78,46 @@ pnpm test         # Vitest (alle Pakete)
 pnpm build        # alle Pakete bauen
 pnpm format       # Prettier
 ```
+
+## Telematik-Pfad (T-003)
+
+Datenweg ohne echtes Fahrzeug:
+**Simulator → Eingang (`apps/ingest`) → Warteschlange (Kafka/Redpanda) → Verarbeiter (Kern) → unveränderbare Messreihe (TimescaleDB-Hypertable).**
+
+- Nachrichten sind **herstellerneutral** (`@rent2cool/shared`) und **HMAC-signiert**;
+  der Eingang prüft Format und Signatur, vergibt **keine eigenen IDs** und schreibt
+  nur in die Warteschlange.
+- Der Verarbeiter erkennt **Duplikate** über die mitgelieferte `nachrichtId`
+  (idempotent) und schreibt Messwerte **nur anhängend** (kein Update/Delete,
+  per DB-Trigger erzwungen).
+
+Lokal ausprobieren (Stack läuft, `.env` vorhanden):
+
+```bash
+# DB-Schema anlegen (Hypertable + Dedup-Ledger)
+pnpm --filter @rent2cool/core db:migrate
+
+# Topic anlegen
+docker compose exec redpanda rpk topic create telemetry.raw -p 6
+
+# Eingang starten (Port 3001)
+pnpm --filter @rent2cool/ingest dev
+
+# Verarbeiter im Kern mit aktivem Consumer starten
+TELEMETRY_CONSUMER_ENABLED=true pnpm --filter @rent2cool/core dev
+
+# Simulator / Lasttest: 4000 Fahrzeuge, 1 Runde (= 1 Nachricht/Minute je Fahrzeug)
+pnpm --filter @rent2cool/simulator start -- --vehicles 4000 --rounds 1 \
+  --funkloch-rate 0.1 --duplikat-rate 0.05
+```
+
+Integrationstests (Dedup, Append-only) gegen den laufenden Stack:
+
+```bash
+RUN_INTEGRATION=1 pnpm --filter @rent2cool/core test
+```
+
+Lasttest-Ergebnisse stehen in [`docs/STATUS.md`](docs/STATUS.md).
 
 ## Betrieb und Cloud
 

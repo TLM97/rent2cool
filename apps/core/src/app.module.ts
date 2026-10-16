@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { LoggerModule } from 'nestjs-pino';
 import { ConfigModule } from './config/config.module';
+import { DbModule } from './db/db.module';
 import { HealthModule } from './health/health.module';
+import { TelemetryModule } from './telemetry/telemetry.module';
 
 /**
  * Wurzelmodul des Kerns. Als modularer Monolith (D-002) kommen fachliche
@@ -32,7 +34,9 @@ import { HealthModule } from './health/health.module';
         },
       },
     }),
+    DbModule,
     HealthModule,
+    TelemetryModule,
   ],
 })
 export class AppModule {}

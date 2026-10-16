@@ -1,0 +1,20 @@
+{
+  "name": "@rent2cool/simulator",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Telematik-Simulator: virtuelle Kühltransporter als erster Adapter (D-012/D-015, T-003).",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@rent2cool/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

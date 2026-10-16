@@ -13,6 +13,86 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-16 – T-003
+
+**T-003 Telematik-Simulator und Eingang – erledigt.**
+
+Gebauter Datenweg: Simulator → Eingang (`apps/ingest`) → Warteschlange
+(Kafka/Redpanda) → Verarbeiter (Kern) → unveränderbare Messreihe
+(TimescaleDB-Hypertable).
+
+Erledigt:
+- **Neutrales Adapter-Format + Signatur** in `packages/shared`
+  (`telemetry.ts`): Zod-Schemas, HMAC-SHA256 über die exakte Payload, reine
+  Prüffunktion. Schlüssel ist Platzhalter bis Anbieterwahl (D-015).
+- **`apps/ingest`** (Fastify, eigener Prozess): nimmt Nachrichten an, prüft
+  Format (400) und Signatur (401), vergibt **keine eigenen IDs**, schreibt nur
+  in die Warteschlange (keyed nach `fahrzeugId`), antwortet mit 202. Health/
+  Readiness vorhanden. `publish` ist injizierbar → ohne Kafka testbar.
+- **Verarbeiter im Kern** (`apps/core/src/telemetry`): Kafka-Consumer liest aus
+  `telemetry.raw`, erkennt Duplikate über `nachrichtId` und schreibt Messwerte
+  append-only in die Hypertable `messwert`. Dedup-Eintrag und Messwerte in
+  **einer Transaktion** (atomar) → at-least-once + idempotent = effektiv
+  exactly-once-Speicherung. Consumer über `TELEMETRY_CONSUMER_ENABLED`
+  schaltbar (aus in Tests/CI).
+- **Migration `0001_telemetrie`**: `messwert` als TimescaleDB-Hypertable
+  (Tages-Chunks), Dedup-Ledger `telemetrie_nachricht`, Indizes, und ein
+  **Append-only-Trigger** (UPDATE/DELETE je Zeile werden abgewiesen).
+- **`tools/simulator`**: virtuelle Fahrzeuge (Profile 2–8 °C und 15–25 °C,
+  D-008), Türöffnungen, **Funklöcher mit Nachlieferung**, **Ausreißer** für
+  Alarmtests, gezielte Duplikate; Lasttest-/Burst-Modus mit Durchsatzmessung.
+- **Tests:** Unit grün in der CI (shared Signatur/Format, Eingang 202/400/401,
+  Simulator-Generator). Integration lokal gegen den Stack grün (Dedup:
+  zweimal dieselbe Nachricht → 1× gespeichert, 2× Duplikat; Append-only:
+  UPDATE wird abgewiesen).
+
+**Lasttest-Ergebnis (lokaler Docker-Stack, Einzelinstanz je Dienst):**
+- Eingang: 8.389 Nachrichten (8.000 eindeutig + 389 Duplikate, 10 %
+  Funkloch-Anteil) in 5,9 s angenommen, 0 abgelehnt, 0 Fehler →
+  **~1.400 Nachrichten/s** Annahmedurchsatz (bis ~1.740/s im reinen Senden).
+- Verarbeiter: 8.000 eindeutige Nachrichten → **80.000 Messwerte** in ~26 s
+  gedrängt (**~300 Nachr./s** Schreibpfad, Einzel-Consumer). Die 389 Duplikate
+  wurden verworfen (keine Doppelspeicherung).
+- Einordnung D-003: Eine Minute Last von 4.000 Fahrzeugen = 4.000 Nachrichten;
+  Annahme in ~2,3 s, Verarbeitung in ~13 s – also weit unter 60 s, klare
+  Reserve. Skaliert horizontal über mehr Consumer auf den 6 Partitionen
+  (zustandslos) und mehr Partitionen.
+
+**Verlustfreiheit / keine Doppelung bei Neustart (nachgewiesen):**
+- Eingang aus → 4.000 Nachrichten gesendet, in Kafka gehalten, DB blieb 0
+  (nichts verloren, nichts verarbeitet).
+- Verarbeiter gestartet, mitten im Drain **hart gekillt** (`kill -9` bei
+  635/4.000), neu gestartet → Endstand exakt **4.000 Nachrichten / 40.000
+  Messwerte / 4.000 eindeutige IDs / 0 Nachrichten mit ≠10 Werten**. Kein
+  Verlust, keine Doppelung.
+- Der Eingang ist zustandslos (schreibt nur in Kafka); ein Neustart verliert
+  nichts bereits Angenommenes. In-flight-HTTP-Anfragen während eines
+  Eingang-Absturzes bekommen kein 202 und werden vom Client (App/Simulator)
+  wiederholt.
+
+Offen / Abkürzungen bis Go-live (in der Reihenfolge der Dringlichkeit):
+- **Kompression + Aufbewahrung** der Hypertable noch nicht als Policy gesetzt
+  (hängt an den Fristen, Frage F-2). Beim Aktivieren der Kompression ist der
+  Append-only-Trigger zu berücksichtigen (Timescale re-komprimiert intern).
+- **Alarme** (Temperatur außerhalb Profil, Tür offen, Funkloch, Grenzübertritt
+  ohne Tacho) werden noch nicht erzeugt/gespeichert – der Simulator liefert
+  bereits Ausreißer dafür. Eigene Aufgabe (Alarmauswertung, Abweichungen).
+- **Signatur-Schlüsselverwaltung**: aktuell ein gemeinsamer HMAC-Platzhalter
+  (D-015). Für echte Boxen pro-Gerät-Schlüssel/PKI nötig.
+- Reihenfolge je Fahrzeug ist über Partition-Key `fahrzeugId` gewahrt; eine
+  echte Mehr-Consumer-Messung steht noch aus (Einzel-Consumer getestet).
+
+Fragen an Planung:
+- **F-11:** Welche Messgrößen/Einheiten sind verbindlich (Katalog)? Aktuell
+  frei als Text (`temperatur_laderaum`, `position_lat`, …). Soll das ein
+  festes Enum/Register werden?
+- **F-12:** Soll der Eingang zusätzlich pro Gerät authentifizieren (mTLS/Token)
+  oder reicht die HMAC-Signatur der Nachricht?
+- Weiterhin offen aus T-002: F-2 (Aufbewahrungsfristen) betrifft direkt die
+  Hypertable-Retention.
+
+---
+
 ### 2026-10-16 – T-001, T-002
 
 **T-001 Repo-Grundgerüst – erledigt.**

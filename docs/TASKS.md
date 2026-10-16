@@ -42,7 +42,7 @@ Status: `offen` · `in Arbeit` · `erledigt` · `blockiert`
 
 ## T-003 Telematik-Simulator und Eingang
 
-- **Status:** offen
+- **Status:** erledigt
 - **Bezug:** AP 1.2, D-003, D-012, D-015, R-11
 - **Ziel:** Ohne echtes Fahrzeug den kompletten Datenweg testen: Fahrzeug sendet → Eingang → Warteschlange → unveränderbare Messreihe.
 - **Umfang:**

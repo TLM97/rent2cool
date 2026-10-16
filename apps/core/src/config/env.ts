@@ -25,6 +25,13 @@ export const envSchema = z.object({
   KAFKA_BROKERS: z.string().default('localhost:19092'),
   KAFKA_CLIENT_ID: z.string().default('rent2cool-core'),
   KAFKA_TOPIC_TELEMETRY_RAW: z.string().default('telemetry.raw'),
+  KAFKA_CONSUMER_GROUP: z.string().default('rent2cool-core-telemetry'),
+
+  // Telematik-Verarbeiter (T-003). Consumer standardmäßig aus, damit Tests/CI
+  // und ein reiner API-Start keinen Kafka-Broker brauchen.
+  TELEMETRY_CONSUMER_ENABLED: booleanish.default('false'),
+  // HMAC-Schlüssel für die Telematik-Signatur – Platzhalter bis Anbieterwahl (D-015).
+  TELEMETRY_SIGNING_KEY: z.string().default('PLACEHOLDER_TELEMETRY_SIGNING_KEY'),
 
   VALKEY_URL: z.string().default('redis://localhost:6379'),
 

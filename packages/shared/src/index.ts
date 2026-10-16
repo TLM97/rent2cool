@@ -12,3 +12,4 @@
 export * from './ids';
 export * from './tenancy';
 export * from './health';
+export * from './telemetry';
