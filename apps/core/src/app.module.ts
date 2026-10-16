@@ -10,6 +10,7 @@ import { FahrzeugModule } from './fahrzeug/fahrzeug.module';
 import { KundeModule } from './kunde/kunde.module';
 import { MieteModule } from './miete/miete.module';
 import { RechnungModule } from './rechnung/rechnung.module';
+import { AlarmModule } from './alarm/alarm.module';
 import { HealthModule } from './health/health.module';
 import { TelemetryModule } from './telemetry/telemetry.module';
 
@@ -51,6 +52,7 @@ import { TelemetryModule } from './telemetry/telemetry.module';
     KundeModule,
     MieteModule,
     RechnungModule,
+    AlarmModule,
     HealthModule,
     TelemetryModule,
   ],

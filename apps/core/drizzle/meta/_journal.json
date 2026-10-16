@@ -50,6 +50,13 @@
       "when": 1760619600000,
       "tag": "0006_rechnung",
       "breakpoints": false
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1760623200000,
+      "tag": "0007_alarm_abweichung",
+      "breakpoints": false
     }
   ]
 }

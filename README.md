@@ -237,6 +237,25 @@ API im Kern (rollengeschützt, auditiert):
 - `POST /v1/rechnungen/:id/status` — `entwurf → gestellt → bezahlt`, bzw.
   `storniert`. Beim Stellen wird die Miete auf `abgerechnet` gesetzt.
 
+## Alarme & Abweichungen
+
+Der Telematik-Verarbeiter wertet jede neu gespeicherte Nachricht gegen das
+Temperaturprofil des Fahrzeugs aus (D-008) und legt **Alarme** an
+(Temperatur über/unter Grenze, Tür offen). Idempotent: dieselbe Nachricht erzeugt
+denselben Alarm nie doppelt. Die Auswertung ist best-effort und blockiert die
+Ingestion nicht.
+
+Aus Alarmen (oder Mieten/Fahrzeugen) entstehen **GDP-Abweichungen** mit
+CAPA-Verfahren (`erfasst → in_bewertung → bewertet → massnahmen_offen →
+geschlossen`, bzw. `verworfen`), bearbeitet von `qa_approver`.
+
+API im Kern (rollengeschützt, Schreibzugriffe auditiert):
+- `GET /v1/alarme` (paginiert, Filter Status/Fahrzeug/Miete), `GET /v1/alarme/:id`,
+  `POST /v1/alarme/:id/quittieren`, `POST /v1/alarme/:id/schliessen`.
+- `POST /v1/abweichungen`, `GET /v1/abweichungen`, `GET /v1/abweichungen/:id`,
+  `POST /v1/abweichungen/:id/status` (inkl. Bewertung/Maßnahmen, Rolle
+  `qa_approver`).
+
 ## Betrieb und Cloud
 
 Lokal mit Docker Compose; der Umzug in die Cloud ist reine Konfiguration

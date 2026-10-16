@@ -17,3 +17,4 @@ export * from './fahrzeugakte';
 export * from './kunde';
 export * from './miete';
 export * from './rechnung';
+export * from './alarm';

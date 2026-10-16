@@ -13,6 +13,54 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-16 – Alarme & Abweichungen
+
+**Alarme & Abweichungen – erledigt.** (Letzter Punkt der Phase-1-Reihenfolge
+dieser Session; Planung möge die Aufgabe in `TASKS.md` nachziehen.)
+
+Erledigt:
+- Migration `0007_alarm_abweichung`: **Alarm** (T-002 §4.13) und **Abweichung**
+  (§4.14, CAPA) mit Mandantbezug und Indizes. Alarme sind über
+  `(fahrzeug_id, nachricht_id, typ)` eindeutig → idempotent bei Neuzustellung.
+- **Statusmodelle** Alarm und Abweichung sowie die reine Auswertung
+  `findeAlarmKandidaten` in `@rent2cool/shared` (Temperatur über/unter
+  Profilgrenze, Tür offen).
+- **Automatische Auswertung im Telematik-Verarbeiter**: Nach dem Speichern einer
+  neuen Nachricht wird sie gegen das Standard-Temperaturprofil des Fahrzeugs
+  geprüft und Alarme werden angelegt. Profil je Fahrzeug gecacht (schlanker
+  Hot-Path, D-003); best-effort – Fehler blockieren die Ingestion nicht.
+- **API** (rollengeschützt, auditiert T-004): Alarme listen/lesen/quittieren/
+  schließen; Abweichungen anlegen/listen/lesen und durch das CAPA-Verfahren
+  führen (Bewertung, Maßnahmen, Verantwortliche; Rolle `qa_approver`).
+- **Tests:** Unit grün in CI (Statusmodelle, Alarm-Auswertung). Integration
+  lokal grün: Alarme aus einer Nachricht (2), Neuauswertung idempotent (0 neue),
+  quittieren/schließen; Abweichung komplett bis `geschlossen`; unerlaubter
+  Übergang abgewiesen. Gesamte Core-Suite: 53 Tests grün (Unit + Integration).
+
+Bewusste Entscheidungen/Abkürzungen:
+- Die Verdrahtung Alarm-Auswertung ↔ Kafka-Consumer ist typgeprüft und gebaut,
+  aber **nicht end-to-end über Kafka getestet** (Integrationstest prüft den
+  AlarmService direkt). Beim nächsten Lasttest mitprüfen.
+- Alarme werden noch **nicht automatisch der Miete zugeordnet** (`miete_id`
+  bleibt leer); Zuordnung über Fahrzeug + Zeitraum ist möglich. Automatische
+  Zuordnung braucht eine Lookup-Strategie für die aktive Miete (Last!).
+- Profil kommt aus `standard_temperaturprofil` des Fahrzeugs; das Profil der
+  aktiven Miete hat noch keinen Vorrang. Ohne Profil keine Temperatur-Alarme.
+- Funkloch-, Grenzübertritts- (D-006) und Kalibrierungs-Alarme sind als Typen
+  angelegt, werden aber noch nicht erzeugt.
+- **Vier-Augen-Prinzip** bei Abweichungs-Abschluss (D-015) ist noch nicht
+  technisch erzwungen – nur die Rolle `qa_approver`.
+- Alarm-Volumen bei 1.000 Mieten/Tag offen (F-8): normale Tabelle mit Indizes;
+  ggf. später Zeit-Partitionierung.
+
+Fragen an Planung:
+- **F-22:** Welche Alarmregeln genau (Hysterese/Mindestdauer statt Einzelwert,
+  Türöffnung nur außerhalb von Übergaben, Eskalation/Benachrichtigung)?
+- **F-23:** Vier-Augen-Prinzip für Abweichungen: Wer darf bewerten, wer
+  schließen (zwei verschiedene Personen)?
+
+---
+
 ### 2026-10-16 – Rechnung
 
 **Rechnung – erledigt.** (Fortlaufende Phase-1-Arbeit; Planung möge die Aufgabe
