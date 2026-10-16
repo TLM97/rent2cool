@@ -13,6 +13,49 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-16 – Buchung/Miete
+
+**Buchung/Miete – erledigt.** (Fortlaufende Phase-1-Arbeit; Planung möge die
+Aufgabe in `TASKS.md` nachziehen.)
+
+Erledigt:
+- Migration `0005_miete`: **Miete** (D-009) mit Bezügen zu Kunde, Fahrzeug,
+  Fahrer, Standorten; `idempotency_key` pro Mandant eindeutig (Teilindex), plus
+  Status-/Zeit-Indizes.
+- **Statusmodell Miete** in `@rent2cool/shared` (docs/datenmodell.md §5.2).
+- **Buchungsregeln** beim Anlegen (Kern): Kunde freigegeben (D-010);
+  Auslandsfahrt ⇒ nur Fahrzeug mit Fahrtenschreiber (D-006); Fahrzeug buchbar
+  (Fahrzeugakte); Fahrer einsatzbereit (R-22); keine Doppelbuchung im Zeitraum.
+  Bei Verstoß Ablehnung mit Gründen; bei Erfolg Bestätigung.
+- **Idempotenz** über `idempotencyKey` (D-003): gleicher Key liefert dieselbe
+  Miete (inkl. Schutz gegen Race über Unique-Constraint).
+- **Temperaturnachweis an Miete gebunden**: `GET /v1/mieten/:id/temperaturnachweis`
+  leitet Fahrzeug + Zeitfenster aus der Miete ab (Ist-Zeiten, sonst geplant).
+- Wiederverwendung statt Duplikat: Fahrzeug-/Kunde-/Bericht-Service werden
+  importiert (Module-Grenzen), nicht neu implementiert.
+- **Tests:** Unit grün in CI (Statusübergänge Miete). Integration lokal grün (5):
+  Ablehnung bei nicht freigegebenem Kunden; Ablehnung Auslandsfahrt ohne Tacho;
+  erfolgreiche Buchung + Idempotenz + Doppelbuchungsschutz; Status-Lebenszyklus
+  bis abgerechnet; Temperaturnachweis zur Miete.
+
+Bewusste Entscheidungen/Abkürzungen:
+- `POST /v1/mieten` erzeugt **direkt eine bestätigte** Buchung (Regeln erfüllt).
+  Der Zustand `angefragt` bleibt im Modell für einen späteren
+  „Anfrage-vor-Bestätigung"-Ablauf (Portal). → Planung: gewünscht?
+- `aktiv`/`beendet` werden derzeit per Status-Endpunkt gesetzt; später treibt
+  die **Übergabe/Rücknahme** (D-014, App) diese Übergänge.
+- Doppelbuchungs-Prüfung liest den committeten Stand; echte
+  Nebenläufigkeits-Absicherung (Transaktions-Sperre/Exclusion-Constraint) ist
+  für hohe Last noch zu ergänzen. → F-20.
+
+Fragen an Planung:
+- **F-20:** Soll gegen gleichzeitige Doppelbuchung eine DB-Sperre/
+  Exclusion-Constraint her (bei 1.000 Mieten/Tag relevant)?
+- **F-21:** Tarifmodell (Stunden/Tage/Wochen, D-009) – welche Felder/Regeln
+  braucht die Abrechnung (→ Rechnung)?
+
+---
+
 ### 2026-10-16 – Kunden & Fahrer
 
 **Kunden & Fahrer – erledigt.** (Fortlaufende Phase-1-Arbeit auf Toms Ansage;

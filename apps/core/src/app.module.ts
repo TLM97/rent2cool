@@ -8,6 +8,7 @@ import { AdminModule } from './admin/admin.module';
 import { BerichtModule } from './bericht/bericht.module';
 import { FahrzeugModule } from './fahrzeug/fahrzeug.module';
 import { KundeModule } from './kunde/kunde.module';
+import { MieteModule } from './miete/miete.module';
 import { HealthModule } from './health/health.module';
 import { TelemetryModule } from './telemetry/telemetry.module';
 
@@ -47,6 +48,7 @@ import { TelemetryModule } from './telemetry/telemetry.module';
     BerichtModule,
     FahrzeugModule,
     KundeModule,
+    MieteModule,
     HealthModule,
     TelemetryModule,
   ],

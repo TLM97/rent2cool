@@ -10,5 +10,6 @@ import { KundeService } from './kunde.service';
 @Module({
   controllers: [KundeController, FahrerController],
   providers: [KundeService],
+  exports: [KundeService],
 })
 export class KundeModule {}

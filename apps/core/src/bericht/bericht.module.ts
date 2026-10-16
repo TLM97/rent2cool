@@ -38,5 +38,6 @@ import { InMemoryBerichtSpeicher } from './speicher';
     },
     { provide: BERICHT_SPEICHER, useFactory: () => new InMemoryBerichtSpeicher() },
   ],
+  exports: [BerichtService],
 })
 export class BerichtModule {}

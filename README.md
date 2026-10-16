@@ -202,6 +202,27 @@ API im Kern (rollengeschützt, Schreibzugriffe auditiert):
 > `@rent2cool/shared`. Fahrerdaten sind personenbezogen – nur erfundene
 > Testdaten, solange der DSB ein Platzhalter ist (D-015).
 
+## Buchung/Miete
+
+Bringt Fahrzeugakte und Kunden/Fahrer zusammen (D-009). Beim Anlegen prüft der
+Kern die **Buchungsregeln** und bestätigt bei Erfolg:
+- Kunde ist `freigegeben` (D-010),
+- Auslandsfahrt ⇒ nur Fahrzeuge mit Fahrtenschreiber (D-006),
+- Fahrzeug buchbar (verfügbar + gültige Kalibrierung),
+- zugewiesener Fahrer einsatzbereit (R-22),
+- keine Doppelbuchung im Zeitraum.
+
+Buchungen sind **idempotent** über `idempotencyKey` (D-003). Der
+**Temperaturnachweis** lässt sich direkt an eine Miete binden.
+
+API im Kern (rollengeschützt, auditiert):
+- `POST /v1/mieten` — buchen (Regelprüfung + Bestätigung; idempotent).
+- `GET /v1/mieten` (paginiert, Filter), `GET /v1/mieten/:id`.
+- `POST /v1/mieten/:id/status` — Status (geprüfte Übergänge; setzt
+  Ist-Zeiten bei `aktiv`/`beendet`).
+- `GET /v1/mieten/:id/temperaturnachweis` — Nachweis für Fahrzeug + Zeitfenster
+  der Miete.
+
 ## Betrieb und Cloud
 
 Lokal mit Docker Compose; der Umzug in die Cloud ist reine Konfiguration

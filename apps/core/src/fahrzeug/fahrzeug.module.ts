@@ -9,5 +9,6 @@ import { FahrzeugService } from './fahrzeug.service';
 @Module({
   controllers: [FahrzeugController, SensorController],
   providers: [FahrzeugService],
+  exports: [FahrzeugService],
 })
 export class FahrzeugModule {}
