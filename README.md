@@ -139,6 +139,27 @@ Ein geschützter, auditierter Demo-Endpunkt (`POST /v1/admin/audit-demo`,
 Rolle `admin`) weist die Kette Guard → Rolle → Audit nach; er wird ersetzt,
 sobald echte GDP-Module existieren.
 
+## Temperaturnachweis v1
+
+Das zentrale Verkaufsargument: ein lückenloser, fälschungssicherer
+Temperaturnachweis aus der Messreihe (T-003). API im Kern (Schnittstelle
+zuerst):
+
+- `GET /v1/temperaturnachweis?fahrzeugId=…&von=…&bis=…&profil=2-8` — berechnet
+  den Nachweis (Kennzahlen, Grenzverletzungen ggü. Profil, Lücken/Funklöcher,
+  Signatur) und gibt ihn als JSON zurück. Rollen: `ops`, `admin`, `kunde_qa`,
+  `kunde_dispo`.
+- `POST /v1/temperaturnachweis?…&format=json` — erzeugt, rendert und **legt den
+  Nachweis ab**, gibt die Referenz zurück. Rollen: `ops`, `admin`; auditiert.
+
+**Modular** aufgebaut, damit Formate und Ablage ohne Umbau wechselbar sind:
+- **Format** über `NachweisRenderer` (v1: JSON; PDF/CSV = weiterer Renderer).
+- **Speicher** über `BerichtSpeicher` (v1: In-Memory; S3/MinIO als Austausch).
+- **Signatur** über `Signierer` (v1: HMAC-Platzhalter, D-015; später PKI).
+
+> v1 bezieht sich auf **Fahrzeug + Zeitraum**; sobald die Entität *Miete*
+> freigegeben ist (Datenmodell T-002), wird der Nachweis an eine Miete gebunden.
+
 ## Betrieb und Cloud
 
 Lokal mit Docker Compose; der Umzug in die Cloud ist reine Konfiguration

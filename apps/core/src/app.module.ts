@@ -5,6 +5,7 @@ import { DbModule } from './db/db.module';
 import { AuthModule } from './auth/auth.module';
 import { AuditModule } from './audit/audit.module';
 import { AdminModule } from './admin/admin.module';
+import { BerichtModule } from './bericht/bericht.module';
 import { HealthModule } from './health/health.module';
 import { TelemetryModule } from './telemetry/telemetry.module';
 
@@ -41,6 +42,7 @@ import { TelemetryModule } from './telemetry/telemetry.module';
     AuthModule,
     AuditModule,
     AdminModule,
+    BerichtModule,
     HealthModule,
     TelemetryModule,
   ],

@@ -14,3 +14,4 @@ export * from './tenancy';
 export * from './health';
 export * from './telemetry';
 export * from './auth';
+export * from './bericht';

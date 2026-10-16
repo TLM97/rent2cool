@@ -13,6 +13,57 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-16 – Temperaturnachweis v1
+
+**Hinweis an die Planung:** Auch diese Aufgabe stand noch nicht in `TASKS.md`.
+Tom hat sie beauftragt, nachdem die Freigabe des Datenmodells (T-002) aktuell
+nicht möglich ist und die Fahrzeugakte daran hängt. Der Temperaturnachweis läuft
+unabhängig vom offenen Datenmodell (nutzt die Messreihe aus T-003). **Bitte als
+Aufgabe (z. B. T-005) formal in `TASKS.md` aufnehmen.** Vorgabe von Tom:
+„Hauptsache wir kommen weiter und alles möglichst modular, Formate etc. ohne
+Weiteres änderbar."
+
+**Temperaturnachweis v1 – erledigt.**
+
+Gebaut (Kern-API, Schnittstelle zuerst):
+- `GET /v1/temperaturnachweis` berechnet den Nachweis (Kennzahlen min/max/mittel,
+  Grenzverletzungen ggü. Temperaturprofil, Lücken/Funklöcher, Signatur) und gibt
+  JSON zurück. `POST` erzeugt + rendert + legt ab und gibt die Referenz zurück
+  (auditiert, auf dem T-004-Fundament; Rollen gesetzt).
+- **Modular** (Toms Vorgabe): austauschbar über Interfaces —
+  `NachweisRenderer` (Format; v1 JSON, PDF/CSV später als weiterer Renderer),
+  `BerichtSpeicher` (Ablage; v1 In-Memory, S3/MinIO als Austausch) und
+  `Signierer` (Fälschungssicherheit; v1 HMAC-Platzhalter, später PKI). Wechsel
+  erfordert keine Änderung an Service/Controller.
+- Berechnung ist eine reine Funktion (`berechneNachweis`) → gut testbar; DB-Zugriff
+  gefiltert nach Fahrzeug/Messgröße/Zeit mit Reihenfolge (D-003: nie unbegrenzt).
+- **Tests:** Unit grün in CI (Berechnung inkl. Grenzverletzung/Lücke/leer/Signatur,
+  JSON-Renderer, Registry). Integration lokal gegen den Stack grün: Messwerte
+  eingefügt → Nachweis mit Grenzverletzung, Lücke und Signatur, abgelegt.
+
+Bewusste Entscheidungen/Abkürzungen (bis Go-live bzw. Planungs-Freigabe):
+- **Bezug Fahrzeug + Zeitraum**, noch nicht Miete (Miete gehört zum offenen
+  Datenmodell T-002). Bindung an Miete folgt nach Freigabe – API-Form bleibt.
+- **Temperaturprofile aus Konfiguration** (`KonfigProfilQuelle`, Profile 2–8/
+  15–25 °C, D-008), nicht aus einer DB-Tabelle, um das Datenmodell (F-4) nicht
+  vorwegzunehmen. Quelle ist ein Interface → später DB-gestützt ohne Umbau.
+- **Ablage v1 In-Memory**: Der produktive Weg ist S3/MinIO (D-003). Die
+  `S3BerichtSpeicher`-Implementierung steckt man über dasselbe Interface ein;
+  das MinIO-Image ließ sich in dieser Umgebung derzeit nicht ziehen (Registry
+  verweigert), daher S3 noch nicht integrationsgetestet.
+- **Ausgabeformat v1 JSON**; PDF ist ein weiterer Renderer (bewusst später).
+- Signatur-Schlüssel ist ein gemeinsamer HMAC-Platzhalter (D-015).
+
+Fragen an Planung:
+- **F-15:** Pflichtinhalte/Layout des Nachweises für die QA-Abteilungen der
+  Kunden (was muss drin sein, welches Format – PDF?), damit v2 passt?
+- **F-16:** Wird der Nachweis je Miete automatisch nach Rückgabe erzeugt und dem
+  Kunden zugestellt (Roadmap-Verkaufsargument) – welcher Auslöser/Kanal?
+- Weiterhin: F-2 (Aufbewahrung) betrifft auch die Nachweis-Ablage; F-4
+  (Temperaturprofil als Entität).
+
+---
+
 ### 2026-10-16 – T-004 (Rollen + Audit Trail)
 
 **Hinweis an die Planung:** Diese Aufgabe stand noch nicht in `TASKS.md`. Tom

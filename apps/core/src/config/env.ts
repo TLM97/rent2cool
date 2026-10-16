@@ -32,6 +32,8 @@ export const envSchema = z.object({
   TELEMETRY_CONSUMER_ENABLED: booleanish.default('false'),
   // HMAC-Schlüssel für die Telematik-Signatur – Platzhalter bis Anbieterwahl (D-015).
   TELEMETRY_SIGNING_KEY: z.string().default('PLACEHOLDER_TELEMETRY_SIGNING_KEY'),
+  // HMAC-Schlüssel für die Nachweis-Signatur – Platzhalter bis PKI (D-015).
+  BERICHT_SIGNING_KEY: z.string().default('PLACEHOLDER_BERICHT_SIGNING_KEY'),
 
   VALKEY_URL: z.string().default('redis://localhost:6379'),
 
