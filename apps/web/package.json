@@ -1,0 +1,13 @@
+{
+  "name": "@rent2cool/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Öffentliche Website + Kundenportal (Next.js, D-001). OHNE Schreibzugriff auf GDP-Daten (D-002). Leeres Gerüst.",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3"
+  }
+}

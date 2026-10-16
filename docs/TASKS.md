@@ -8,7 +8,7 @@ Status: `offen` · `in Arbeit` · `erledigt` · `blockiert`
 
 ## T-001 Repo-Grundgerüst
 
-- **Status:** offen
+- **Status:** erledigt
 - **Bezug:** AP 0.6, R-10
 - **Ziel:** Ein lauffähiges, leeres Projektgerüst, auf dem alle weiteren Aufgaben aufbauen.
 - **Umfang:**
@@ -27,7 +27,7 @@ Status: `offen` · `in Arbeit` · `erledigt` · `blockiert`
 
 ## T-002 Vorschlag Datenmodell v0
 
-- **Status:** offen
+- **Status:** erledigt
 - **Bezug:** AP 0.4, AP 0.6, R-06, R-11
 - **Ziel:** Ein Entwurf des Datenmodells, den die Planung prüfen kann. Noch keine Migration.
 - **Umfang:**

@@ -1,0 +1,13 @@
+{
+  "name": "@rent2cool/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Mobile App für Fahrer (React Native/Expo, D-001). Leeres Gerüst – App-MVP ab Phase 1.",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3"
+  }
+}
