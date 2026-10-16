@@ -41,6 +41,9 @@ Erledigt:
 - **Lokal verifiziert grün** mit denselben Befehlen wie die CI (install
   `--frozen-lockfile`, lint, typecheck, test: 9 Tests, build) und zusätzlich echter
   App-Boot mit funktionierenden Health-/Readiness-Antworten (JSON, UTC).
+- **CI auf GitHub Actions nach dem Push bestätigt grün** (Lauf 38871685328:
+  install → lint → typecheck → test → build alle erfolgreich). Akzeptanz-
+  kriterium „CI ist grün“ erfüllt.
 
 **T-002 Vorschlag Datenmodell v0 – erledigt.**
 
@@ -52,8 +55,6 @@ Erledigt:
   1.000 Mieten/Tag, ER- und State-Diagramme in Mermaid.
 
 Offen:
-- Echter erster CI-Lauf auf GitHub Actions wird nach dem Push bestätigt
-  (lokal mit identischen Befehlen bereits grün).
 - Aufbewahrungsfristen GDP/Steuer offen gelassen (siehe Fragen F-2).
 - Abkürzung/Technische Schuld bis Go-live: Readiness prüft derzeit nur, dass die
   Konfiguration geladen ist – echte Checks auf DB/Warteschlange/Objektspeicher
