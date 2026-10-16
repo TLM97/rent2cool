@@ -27,3 +27,9 @@ Status: `vorgeschlagen` · `freigegeben` · `verworfen` · `ersetzt durch D-xxx`
 - **Folgen:** Warteschlange vor dem Telematik-Eingang, partitionierte Zeitreihen, Objektspeicher mit Speicherklassen, zustandslose Server, idempotente APIs, offline-fähige App bei Übergabe und Rückgabe, Standort und Mandant im Datenmodell, Infrastruktur als Code, Betrieb in mindestens zwei EU-Zonen, Lasttest in Phase 2.
 - **Bewusst nicht:** Microservices, aktiv-aktiv über mehrere Regionen.
 - **Kosten:** Ausgelegt heißt nicht bezahlt. Die Infrastruktur startet klein und wächst über Konfiguration, nicht über Umbau.
+
+## D-004 Vermietung ohne Fahrer
+
+- **Status:** freigegeben (Entscheidung Gründer, 2026-10-16)
+- **Inhalt:** Wir vermieten nur Fahrzeuge, keinen Transport. Der Kunde stellt den Fahrer.
+- **Folgen:** Keine Güterkraftverkehrserlaubnis, keine Lenk- und Ruhezeiten für uns (R-24). Die Prüfung der Fahrerlaubnis jedes Fahrers des Kunden ist eine Kernfunktion: Identität, Klasse gegen Fahrzeuggewicht, wiederkehrende Prüfung, Sperre bei Ablauf (R-22). Die GDP-Verantwortung für die Ware bleibt beim Kunden; wir bleiben qualifizierter Dienstleister mit Qualitätsvereinbarung (R-01). Im Datenmodell gibt es keine eigenen Fahrer als Mitarbeiter, nur Fahrer, die zu einem Kunden gehören.
