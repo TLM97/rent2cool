@@ -13,7 +13,12 @@ Status: `offen` · `in Arbeit` · `erledigt` · `blockiert`
 - **Ziel:** Ein lauffähiges, leeres Projektgerüst, auf dem alle weiteren Aufgaben aufbauen.
 - **Umfang:**
   - Monorepo-Struktur mit Platz für `core` (Backend), `admin`, `web` (Website und Portal), `app` (Mobile)
-  - Stack nach `DECISIONS.md` D-001; solange D-001 nicht freigegeben ist, nur Struktur und Werkzeuge anlegen, keinen Anwendungscode
+  - Stack nach `DECISIONS.md` D-001, Betrieb nach D-005
+  - `docker-compose.yml` für die lokale Umgebung: PostgreSQL mit TimescaleDB, Redpanda, Valkey, MinIO, Keycloak; ein Befehl startet alles
+  - `apps/core` als NestJS-Grundgerüst mit Gesundheits-Endpunkt, Konfiguration nur aus Umgebungsvariablen (`.env.example` im Repo, keine echten Werte)
+  - Leere Gerüste für `apps/ingest`, `apps/admin`, `apps/web`, `apps/mobile` und `packages/shared` für geteilte Typen
+  - Migrationswerkzeug eingerichtet, erste leere Migration
+  - Strukturierte Logs und OpenTelemetry-Grundkonfiguration im Kern
   - Linting, Formatierung, Testrunner, ein Beispieltest
   - CI auf GitHub Actions: bei jedem Push Lint und Tests
   - README mit lokalem Start in wenigen Befehlen
@@ -28,7 +33,8 @@ Status: `offen` · `in Arbeit` · `erledigt` · `blockiert`
   - Entitäten: Fahrzeug, Aggregat, Sensor, Kalibrierung, Kunde, Fahrer, Vertrag, Miete, Übergabe, Messreihe, Alarm, Abweichung, Rechnung, AuditEvent
   - Statusmodelle für Fahrzeug, Miete, Kunde, Fahrer, Abweichung mit erlaubten Übergängen
   - Je Entität: GDP-relevant ja/nein, Aufbewahrungsfrist offen lassen, wenn unbekannt
-  - Standort, Region und Mandant überall dort, wo sie hingehören (D-003)
+  - Standort, Region und Mandant überall dort, wo sie hingehören (D-003, D-011)
+  - Entscheidungen D-004 bis D-011 berücksichtigen: Fahrer gehören zu Kunden, Fahrtenschreiber als Fahrzeugmerkmal mit Buchungsregel, Gewicht und Führerscheinklasse als Daten, Temperaturprofile konfigurierbar, nur Firmenkunden
   - Je Entität: erwartete Menge bei 1.000 Mieten pro Tag und welche Indizes und Partitionen das braucht
   - Ablage als `docs/datenmodell.md` mit einem Mermaid-Diagramm
 - **Fertig, wenn:** Datei liegt vor, offene Punkte stehen als Fragen in `STATUS.md`.

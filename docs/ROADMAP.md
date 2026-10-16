@@ -42,4 +42,4 @@ Fahrzeugtyp → Telematik-Box und Testgerät → Fernöffnen und Wegfahrsperre �
 
 ## Aktuelle Phase
 
-Phase 0.
+Phase 0. Entscheidungen bis D-011 stehen, Entwicklung kann starten (T-001, T-002).
