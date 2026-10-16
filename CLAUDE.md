@@ -16,6 +16,14 @@ Ihr kommuniziert ausschließlich über die Dateien in `docs/`. Es gibt keinen an
 3. `docs/DECISIONS.md` lesen, bevor du etwas an Architektur, Stack oder Datenmodell änderst.
 4. `docs/STATUS.md` lesen: Was zuletzt passiert ist und welche Fragen offen sind.
 
+## Umgebung
+
+Das Repo wird lokal (Toms Mac, `~/Developer/rent2cool`) und in Cloud-Sessions bearbeitet. GitHub ist die einzige Wahrheit.
+
+- Vor der Arbeit `git pull`, nach der Arbeit committen und pushen. Nie Arbeit nur lokal liegen lassen.
+- Lokale Dienste laufen über `docker compose`. In einer Cloud-Session ist Docker installiert, der Dienst aber eventuell nicht gestartet: Wenn `docker info` fehlschlägt, `sudo dockerd > /tmp/dockerd.log 2>&1 &` ausführen und kurz warten.
+- Arbeit, die einen echten Mac braucht (iOS-Simulator, Tests auf dem eigenen Handy), in `STATUS.md` als „braucht lokale Session“ markieren.
+
 ## Während der Arbeit
 
 - Arbeite nur an Aufgaben aus `TASKS.md`. Wenn dir etwas fehlt oder unklar ist, schreib eine Frage in `STATUS.md` unter „Fragen an Planung“ und mach mit etwas anderem weiter, statt zu raten.
