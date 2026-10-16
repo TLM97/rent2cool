@@ -28,5 +28,7 @@ Status: `offen` · `in Arbeit` · `erledigt` · `blockiert`
   - Entitäten: Fahrzeug, Aggregat, Sensor, Kalibrierung, Kunde, Fahrer, Vertrag, Miete, Übergabe, Messreihe, Alarm, Abweichung, Rechnung, AuditEvent
   - Statusmodelle für Fahrzeug, Miete, Kunde, Fahrer, Abweichung mit erlaubten Übergängen
   - Je Entität: GDP-relevant ja/nein, Aufbewahrungsfrist offen lassen, wenn unbekannt
+  - Standort, Region und Mandant überall dort, wo sie hingehören (D-003)
+  - Je Entität: erwartete Menge bei 1.000 Mieten pro Tag und welche Indizes und Partitionen das braucht
   - Ablage als `docs/datenmodell.md` mit einem Mermaid-Diagramm
 - **Fertig, wenn:** Datei liegt vor, offene Punkte stehen als Fragen in `STATUS.md`.

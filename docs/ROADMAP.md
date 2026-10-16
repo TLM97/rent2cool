@@ -6,6 +6,10 @@ Das Original mit allen Arbeitspaketen und dem Regulatorik-Register liegt im Doku
 
 In rund 11 Monaten steht eine Systemlandschaft, die jede Vermietung vom Angebot bis zur Rechnung lückenlos, GDP-konform und weitgehend automatisch abwickelt. Übergabe und Rücknahme laufen kontaktlos. Wichtigstes Verkaufsargument: Jeder Kunde bekommt nach jeder Miete automatisch einen lückenlosen, fälschungssicheren Temperaturnachweis.
 
+## Zielgröße
+
+Ab Tag 1 ausgelegt auf 1.000 Mieten pro Tag (siehe `DECISIONS.md` D-003). Der Pilot startet klein, aber nichts wird so gebaut, dass es bei Wachstum neu geschrieben werden muss.
+
 ## Ein System, nicht drei
 
 | Baustein | Nutzer | Aufgabe |

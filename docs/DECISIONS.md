@@ -19,3 +19,11 @@ Status: `vorgeschlagen` · `freigegeben` · `verworfen` · `ersetzt durch D-xxx`
 - **Status:** freigegeben
 - **Inhalt:** Modularer Monolith mit einer Datenbank und einem Deployment. Website ohne Schreibzugriff auf GDP-Daten.
 - **Begründung:** Kleines Team, einfacher zu validieren und zu betreiben.
+
+## D-003 Auslegung auf 1.000 Mieten pro Tag
+
+- **Status:** freigegeben (Vorgabe Tom, 2026-10-16)
+- **Inhalt:** Die gesamte IT wird ab Tag 1 für 1.000 Mieten pro Tag ausgelegt. Annahmen für die Dimensionierung: 3.500–4.000 Fahrzeuge, 1 Telematik-Nachricht pro Minute je Fahrzeug mit ca. 10 Messwerten (rund 6 Mio. Nachrichten am Tag), rund 120 GB Fotos am Tag, Betrieb rund um die Uhr.
+- **Folgen:** Warteschlange vor dem Telematik-Eingang, partitionierte Zeitreihen, Objektspeicher mit Speicherklassen, zustandslose Server, idempotente APIs, offline-fähige App bei Übergabe und Rückgabe, Standort und Mandant im Datenmodell, Infrastruktur als Code, Betrieb in mindestens zwei EU-Zonen, Lasttest in Phase 2.
+- **Bewusst nicht:** Microservices, aktiv-aktiv über mehrere Regionen.
+- **Kosten:** Ausgelegt heißt nicht bezahlt. Die Infrastruktur startet klein und wächst über Konfiguration, nicht über Umbau.

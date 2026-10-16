@@ -36,4 +36,19 @@ Trage oben in `docs/STATUS.md` einen neuen Eintrag ein: Datum, bearbeitete Aufga
 - Die öffentliche Website hat keinen Schreibzugriff auf GDP-Daten.
 - Keine echten Kundendaten, Zugangsdaten oder Schlüssel ins Repo.
 
+## Auslegung: 1.000 Mieten pro Tag (D-003)
+
+Baue jede Funktion so, als liefen schon 1.000 Mieten am Tag mit rund 4.000 sendenden Fahrzeugen, auch wenn heute nur Testdaten existieren. Konkret:
+
+- Telematik nur über eine Warteschlange annehmen; jede Nachricht mit eindeutiger ID, Duplikate erkennen.
+- Messwerte in Zeitreihen-Tabellen, nach Zeit partitioniert und komprimiert. Nie eine unbegrenzte Abfrage über alle Messwerte.
+- Fotos und Dateien in einen Objektspeicher, nie in die Datenbank.
+- Anwendungsserver zustandslos; alles, was länger als eine Anfrage dauert, als Hintergrundjob.
+- Schreibende APIs idempotent (Idempotency-Key), weil die App bei schlechtem Netz wiederholt.
+- Listen immer mit Pagination, Abfragen mit passenden Indizes; Standort und Mandant in jedem relevanten Datensatz.
+- Infrastruktur als Code, Monitoring und strukturierte Logs ab dem ersten Deployment.
+- Kein Over-Engineering: keine Microservices. Modularer Monolith, aber Telematik-Eingang und Berichtsdienst als klar getrennte Module, die später herausgelöst werden können.
+
+Wenn eine Lösung bei dieser Last nicht trägt, ist sie keine Lösung. Halte in `STATUS.md` fest, wo du eine Abkürzung genommen hast, die vor dem Go-live ersetzt werden muss.
+
 R-Nummern verweisen auf das Regulatorik-Register, AP-Nummern auf die Arbeitspakete der Roadmap.
