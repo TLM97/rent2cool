@@ -86,3 +86,21 @@ Status: `vorgeschlagen` · `freigegeben` · `verworfen` · `ersetzt durch D-xxx`
 - **Status:** freigegeben (Gründer, 2026-10-16)
 - **Inhalt:** Übergabe und Rückgabe am Firmenstandort. Der Standort steht noch nicht fest.
 - **Folgen:** Standorte sind Datensätze mit Adresse, Geofence und Öffnungsregeln. Im Code steht kein Ort. Testdaten verwenden einen Platzhalter-Standort.
+
+## D-012 Fahrzeugplattform Mercedes-Benz, Telematik ab Werk
+
+- **Status:** freigegeben, Modell offen (Gründer, 2026-10-16)
+- **Inhalt:** Kühltransporter auf Mercedes-Benz-Basis, Telematik ab Werk. Genaues Modell und Kühlaufbau noch offen.
+- **Zu prüfen vor der Bestellung (Beschaffung mit Händler):** (1) Gibt es eine Schnittstelle (API), über die unser Kern die Fahrzeugdaten live abrufen darf? (2) Lassen sich Türen und Wegfahrsperre aus der Ferne steuern, und gibt es einen digitalen Schlüssel für wechselnde Fahrer? (3) Die Laderaumtemperatur kommt vom Kühlaggregat bzw. Aufbau, nicht vom Fahrzeug: Welcher Temperaturschreiber ist verbaut, ist er kalibriert (EN 12830, R-08, R-09), und wie kommen seine Daten zu uns? (4) Datenrechte nach Data Act (R-46).
+- **Folge für die Architektur:** Der Telematik-Eingang wird herstellerneutral gebaut (Adapter je Quelle). Fahrzeugdaten und Temperaturdaten können aus zwei verschiedenen Quellen kommen.
+
+## D-013 Firmenname und Domain
+
+- **Status:** freigegeben (Gründer, 2026-10-16)
+- **Inhalt:** Rent2Cool. Domain noch zu sichern (z. B. rent2cool.de und .com).
+
+## D-014 Kontaktlose Übergabe und Rückgabe ab dem ersten Tag
+
+- **Status:** freigegeben (Gründer, 2026-10-16)
+- **Inhalt:** Übergabe und Rückgabe laufen von Anfang an ohne Personal.
+- **Folge:** App, digitaler Schlüssel und Foto-Check sind Teil des ersten Releases, nicht später. Die Akzeptanz bei den QA-Abteilungen der Kunden fragt der Vertrieb in den ersten Gesprächen ab; ein Fallback mit Personal bleibt als Ausnahmeprozess beschrieben.
