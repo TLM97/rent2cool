@@ -2,6 +2,9 @@ import { Module } from '@nestjs/common';
 import { LoggerModule } from 'nestjs-pino';
 import { ConfigModule } from './config/config.module';
 import { DbModule } from './db/db.module';
+import { AuthModule } from './auth/auth.module';
+import { AuditModule } from './audit/audit.module';
+import { AdminModule } from './admin/admin.module';
 import { HealthModule } from './health/health.module';
 import { TelemetryModule } from './telemetry/telemetry.module';
 
@@ -35,6 +38,9 @@ import { TelemetryModule } from './telemetry/telemetry.module';
       },
     }),
     DbModule,
+    AuthModule,
+    AuditModule,
+    AdminModule,
     HealthModule,
     TelemetryModule,
   ],

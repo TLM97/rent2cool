@@ -119,6 +119,26 @@ RUN_INTEGRATION=1 pnpm --filter @rent2cool/core test
 
 Lasttest-Ergebnisse stehen in [`docs/STATUS.md`](docs/STATUS.md).
 
+## Rollen & Audit Trail (T-004)
+
+Fundament für alle GDP-Schreibzugriffe (CLAUDE.md, „nicht verhandelbar"):
+
+- **Authentifizierung**: Alle Routen des Kerns außer `/health*` verlangen ein
+  gültiges **Keycloak-Zugriffstoken** (Bearer-JWT, Signatur über JWKS geprüft).
+  Aus dem Token entsteht der `Principal` (Akteur, Rollen, Mandant).
+- **Autorisierung**: Rollenmodell (`admin`, `ops`, `dpo`, `qa_approver`,
+  `kunde_dispo`, `kunde_qa`, `fahrer`); Routen schützen sich mit `@Roles(...)`,
+  global erzwungen.
+- **Audit Trail**: Jede erfolgreiche schreibende Aktion auf einer
+  `@Audited(...)`-Route wird **vor der Antwort** in die append-only-Tabelle
+  `audit_event` geschrieben (wer, wann, was, alter/neuer Wert). Präzisere
+  alt/neu-Einträge schreibt zusätzlich der `AuditService` direkt aus dem
+  Fachmodul. `audit_event` ist per DB-Trigger unveränderbar.
+
+Ein geschützter, auditierter Demo-Endpunkt (`POST /v1/admin/audit-demo`,
+Rolle `admin`) weist die Kette Guard → Rolle → Audit nach; er wird ersetzt,
+sobald echte GDP-Module existieren.
+
 ## Betrieb und Cloud
 
 Lokal mit Docker Compose; der Umzug in die Cloud ist reine Konfiguration

@@ -15,6 +15,13 @@
       "when": 1760601600000,
       "tag": "0001_telemetrie",
       "breakpoints": false
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1760605200000,
+      "tag": "0002_audit",
+      "breakpoints": false
     }
   ]
 }

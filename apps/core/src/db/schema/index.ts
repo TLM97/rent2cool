@@ -11,3 +11,4 @@
  * Standort/Mandant in jedem relevanten Datensatz.
  */
 export * from './telemetrie';
+export * from './audit';

@@ -13,6 +13,59 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-16 – T-004 (Rollen + Audit Trail)
+
+**Hinweis an die Planung:** Diese Aufgabe stand noch nicht in `TASKS.md`. Tom
+hat sie in der Umsetzungs-Session beauftragt (nächster Roadmap-Schritt, Phase 0:
+„Rollen, Audit Trail"; zugleich CLAUDE.md „ab dem ersten Commit Pflicht"). Ich
+lege in `TASKS.md` regelkonform selbst keine Aufgaben an – **bitte T-004 dort
+formal mit Akzeptanzkriterien aufnehmen.** Gebauter Scope und Akzeptanz siehe
+unten.
+
+**T-004 Rollen + Audit Trail – erledigt (Fundament).**
+
+Erledigt:
+- **Authentifizierung** (`apps/core/src/auth`): Keycloak-Zugriffstoken (JWT)
+  werden geprüft (RS256 über JWKS des Issuers, Issuer + Ablauf). Daraus entsteht
+  der `Principal` (Akteur, Rollen, optional Mandant aus Claim `mandant_id`).
+  Der Key-Resolver ist injizierbar → ohne echten Keycloak testbar.
+- **Autorisierung**: Rollenmodell in `@rent2cool/shared` (admin, ops, dpo,
+  qa_approver, kunde_dispo, kunde_qa, fahrer – deckungsgleich mit dem
+  Keycloak-Realm). `JwtAuthGuard` + `RolesGuard` **global** via `APP_GUARD`
+  erzwungen; `@Public()` nur für `/health*`, `@Roles(...)` je Route.
+- **Audit Trail**: Migration `0002_audit` legt `audit_event` an (append-only
+  per Trigger). `AuditService.protokolliere()` für präzise alt/neu-Einträge aus
+  dem Fachmodul; `AuditInterceptor` als Backstop protokolliert jede erfolgreiche
+  `@Audited(...)`-Route **vor** der Antwort (kein Verlust).
+- **Nachweis**: geschützter, auditierter Demo-Endpunkt
+  `POST /v1/admin/audit-demo` (Rolle `admin`). Klar als temporär markiert
+  (TODO), nimmt das noch offene Datenmodell (T-002) nicht vorweg.
+- **Tests:** Unit grün in CI (JWT-Verifikation inkl. Ablauf/Issuer/Rollenfilter,
+  RolesGuard, AuditService). Integration lokal gegen den Stack grün (5 Tests):
+  `/health` bleibt öffentlich (200), ohne Token 401, falsche Rolle 403, admin
+  202 **mit geschriebener Audit-Zeile** (korrekter Akteur, neuer Wert),
+  `audit_event` lehnt UPDATE ab (append-only).
+
+Offen / Abkürzungen bis Go-live:
+- Der **Demo-Endpunkt** ersetzt noch kein echtes GDP-Modul; er wird mit der
+  ersten Fachfunktion (z. B. Fahrzeugakte) abgelöst. Die automatische
+  Audit-Protokollierung ist dort je schreibender Aktion über `@Audited` bzw.
+  `AuditService` anzuwenden.
+- **Mandant im Audit** kommt aus dem Token-Claim `mandant_id` (noch Platzhalter,
+  hängt an F-1). `audit_event.mandant_id` ist bewusst `text`, damit der
+  Audit-Sink nie am Claim-Format scheitert.
+- `audit_event` wächst stark (jede Schreibaktion); Partitionierung/Retention wie
+  bei `messwert` später als Policy (F-2).
+
+Fragen an Planung:
+- **F-13:** Verbindlicher Katalog der Audit-`aktion`-Werte und `entitaet_typ`-
+  Namen (für auswertbare, revisionssichere Audit-Trails)?
+- **F-14:** Soll auch **lesender** Zugriff auf besonders sensible GDP-Daten
+  auditiert werden (Zugriffsprotokoll), oder nur schreibender?
+- Weiterhin offen: F-1 (Mandantenbegriff) bestimmt `mandant_id` im Audit.
+
+---
+
 ### 2026-10-16 – T-003
 
 **T-003 Telematik-Simulator und Eingang – erledigt.**

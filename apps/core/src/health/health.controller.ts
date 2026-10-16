@@ -2,6 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { nowUtcIso, type HealthReport } from '@rent2cool/shared';
 import type { Env } from '../config/env';
+import { Public } from '../auth/decorators';
 
 /**
  * Gesundheits- und Bereitschafts-Endpunkte (D-005).
@@ -13,6 +14,7 @@ import type { Env } from '../config/env';
  * Checks auf Datenbank, Warteschlange und Objektspeicher kommen mit den
  * jeweiligen Modulen dazu (Persistenz-/Telematik-Aufgaben).
  */
+@Public()
 @Controller('health')
 export class HealthController {
   constructor(private readonly config: ConfigService<Env, true>) {}
