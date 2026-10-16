@@ -104,3 +104,24 @@ Status: `vorgeschlagen` · `freigegeben` · `verworfen` · `ersetzt durch D-xxx`
 - **Status:** freigegeben (Gründer, 2026-10-16)
 - **Inhalt:** Übergabe und Rückgabe laufen von Anfang an ohne Personal.
 - **Folge:** App, digitaler Schlüssel und Foto-Check sind Teil des ersten Releases, nicht später. Die Akzeptanz bei den QA-Abteilungen der Kunden fragt der Vertrieb in den ersten Gesprächen ab; ein Fallback mit Personal bleibt als Ausnahmeprozess beschrieben.
+
+## D-015 Platzhalter für offene Punkte
+
+- **Status:** freigegeben (Tom, 2026-10-16)
+- **Inhalt:** Offene Punkte blockieren die Entwicklung nicht. Bis zur Klärung gelten diese Platzhalter. Jeder Platzhalter ist im Code und in der Konfiguration als solcher erkennbar (Präfix `PLACEHOLDER_` bzw. Kommentar `TODO(D-015)`), damit er vor dem Go-live gefunden wird.
+
+| Offener Punkt | Platzhalter | Ersetzen, wenn |
+|---|---|---|
+| Fahrzeugmodell und Kühlaufbau | generisches Fahrzeugprofil „Mercedes Kühltransporter bis 3,5 t“ | Beschaffung bestellt |
+| Telematik-Schnittstelle Mercedes | Adapter-Schnittstelle plus **Telematik-Simulator** als erste Quelle (simuliert Position, km, Türen, Wegfahrsperre, Laderaumtemperatur, Funklöcher) | API-Zugang geklärt |
+| Temperaturschreiber im Aufbau | eigene Quelle im Simulator, getrennt von den Fahrzeugdaten | Aufbau feststeht |
+| Fernöffnung und digitaler Schlüssel | Schnittstelle `KeyProvider` mit Simulator-Implementierung | Mercedes-Lösung oder Nachrüstung entschieden |
+| Firmenstandort | Standort `PLACEHOLDER_HQ` mit Fantasieadresse und Geofence | Sitz feststeht |
+| Domain | `rent2cool.example` in Konfiguration | Domain gesichert |
+| Datenschutzbeauftragter | Rolle `dpo` im System, Kontakt `PLACEHOLDER_DPO` in Datenschutztexten | externer DSB beauftragt |
+| Qualitätsverantwortliche Person | Rolle `qa_approver`, im Testsystem einem Testnutzer zugeordnet; Freigaben technisch trotzdem nach Vier-Augen-Prinzip | Person benannt |
+| Identitätsprüfung, Signatur, Zahlung | Schnittstellen mit Fake-Implementierung | Anbieter gewählt |
+| Teamgröße | Planung mit einem Entwickler (Tom + Claude Code) | Budget entschieden |
+| Cloud-Anbieter | lokal per Docker Compose (D-005) | vor Phase 2 |
+
+- **Regel:** Keine echten Personendaten, solange `dpo` ein Platzhalter ist. Nur erfundene Testdaten.

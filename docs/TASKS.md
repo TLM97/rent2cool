@@ -19,6 +19,7 @@ Status: `offen` · `in Arbeit` · `erledigt` · `blockiert`
   - Leere Gerüste für `apps/ingest`, `apps/admin`, `apps/web`, `apps/mobile` und `packages/shared` für geteilte Typen
   - Migrationswerkzeug eingerichtet, erste leere Migration
   - Strukturierte Logs und OpenTelemetry-Grundkonfiguration im Kern
+  - Platzhalter nach D-015 als Konfiguration angelegt (`.env.example`, Seed-Daten mit `PLACEHOLDER_HQ`)
   - Linting, Formatierung, Testrunner, ein Beispieltest
   - CI auf GitHub Actions: bei jedem Push Lint und Tests
   - README mit lokalem Start in wenigen Befehlen
@@ -38,3 +39,16 @@ Status: `offen` · `in Arbeit` · `erledigt` · `blockiert`
   - Je Entität: erwartete Menge bei 1.000 Mieten pro Tag und welche Indizes und Partitionen das braucht
   - Ablage als `docs/datenmodell.md` mit einem Mermaid-Diagramm
 - **Fertig, wenn:** Datei liegt vor, offene Punkte stehen als Fragen in `STATUS.md`.
+
+## T-003 Telematik-Simulator und Eingang
+
+- **Status:** offen
+- **Bezug:** AP 1.2, D-003, D-012, D-015, R-11
+- **Ziel:** Ohne echtes Fahrzeug den kompletten Datenweg testen: Fahrzeug sendet → Eingang → Warteschlange → unveränderbare Messreihe.
+- **Umfang:**
+  - `apps/ingest`: nimmt Nachrichten an, prüft Format und Signatur, vergibt keine eigenen IDs (die Nachricht bringt eine eindeutige ID mit), schreibt in die Warteschlange, antwortet schnell
+  - Verarbeiter im Kern: liest aus der Warteschlange, erkennt Duplikate, schreibt Fahrzeugdaten und Temperaturwerte in TimescaleDB-Hypertables (nur anhängen, kein Update, kein Delete)
+  - Herstellerneutrales Adapter-Format; Simulator als erster Adapter
+  - Simulator (`tools/simulator`): beliebig viele virtuelle Fahrzeuge, Temperaturprofile 2–8 °C und 15–25 °C, Türöffnungen, Funklöcher mit Nachlieferung, Ausreißer für Alarmtests
+  - Lasttest-Modus: 4.000 Fahrzeuge, 1 Nachricht pro Minute je Fahrzeug, Ergebnis in `STATUS.md`
+- **Fertig, wenn:** Tests grün; Lasttest-Ergebnis dokumentiert; Nachrichten gehen bei Neustart von Eingang oder Verarbeiter nicht verloren und werden nicht doppelt gespeichert.
