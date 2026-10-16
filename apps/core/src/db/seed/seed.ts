@@ -2,24 +2,55 @@
  * Seed der lokalen Entwicklungsdatenbank mit Platzhalter-Stammdaten (D-015).
  * Aufruf:  pnpm --filter @rent2cool/core db:seed
  *
- * Noch gibt es keine Tabellen (das Datenmodell ist in T-002 ein Vorschlag,
- * keine Migration). Deshalb schreibt dieses Skript noch nichts in die DB,
- * sondern validiert und zeigt die Platzhalter, die nach Freigabe des
- * Datenmodells eingespielt werden. So ist der Seed-Pfad eingerichtet und die
- * Platzhalter (PLACEHOLDER_HQ u. a.) sind an einer Stelle definiert.
+ * Legt den Platzhalter-Mandanten und den Standort PLACEHOLDER_HQ an
+ * (idempotent). Ausschließlich erfundene Testdaten – keine echten Personen-
+ * oder Kundendaten, solange `dpo` ein Platzhalter ist (D-015-Regel).
  */
-import { placeholderDpo, placeholderHq } from './placeholder-data';
+import { createDbClient } from '../client';
+import { mandant, standort } from '../schema';
+import { PLACEHOLDER_HQ_ID, PLACEHOLDER_MANDANT_ID, placeholderDpo, placeholderHq } from './placeholder-data';
 
-function main(): void {
+async function main(): Promise<void> {
+  const databaseUrl = process.env.DATABASE_URL;
   const hq = placeholderHq();
   const dpo = placeholderDpo();
 
-  console.log('Platzhalter-Stammdaten (D-015) – werden nach T-002-Freigabe eingespielt:');
-  console.log(JSON.stringify({ standort: hq, dpo }, null, 2));
-  console.log(
-    '\nTODO(D-015): Sobald das Datenmodell (T-002) freigegeben und migriert ist,' +
-      ' hier echte INSERTs über das Drizzle-Schema ergänzen.',
-  );
+  console.log('Platzhalter-Stammdaten (D-015):');
+  console.log(JSON.stringify({ mandantId: PLACEHOLDER_MANDANT_ID, standort: hq, dpo }, null, 2));
+
+  if (!databaseUrl) {
+    console.log('\nDATABASE_URL nicht gesetzt – überspringe das Schreiben in die DB.');
+    return;
+  }
+
+  const { db, sql } = createDbClient(databaseUrl);
+  try {
+    await db
+      .insert(mandant)
+      .values({ id: PLACEHOLDER_MANDANT_ID, name: 'Rent2Cool (Platzhalter-Mandant)' })
+      .onConflictDoNothing();
+    await db
+      .insert(standort)
+      .values({
+        id: PLACEHOLDER_HQ_ID,
+        mandantId: PLACEHOLDER_MANDANT_ID,
+        name: hq.name,
+        strasse: hq.strasse,
+        plz: hq.plz,
+        ort: hq.ort,
+        land: hq.land,
+        geofenceLat: hq.geofence.center.lat,
+        geofenceLng: hq.geofence.center.lng,
+        geofenceRadiusM: hq.geofence.radiusM,
+      })
+      .onConflictDoNothing();
+    console.log('\nMandant und Standort PLACEHOLDER_HQ angelegt (idempotent).');
+  } finally {
+    await sql.end({ timeout: 5 });
+  }
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

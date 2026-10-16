@@ -22,6 +22,13 @@
       "when": 1760605200000,
       "tag": "0002_audit",
       "breakpoints": false
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1760608800000,
+      "tag": "0003_fahrzeugakte",
+      "breakpoints": false
     }
   ]
 }

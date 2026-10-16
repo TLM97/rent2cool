@@ -13,6 +13,57 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-16 – Fahrzeugakte
+
+**Hinweis an die Planung:** Auf Toms Ansage „es muss eh alles gemacht werden,
+fahr in sinnvoller Reihenfolge fort" baue ich die Kernsysteme der Phase 1 ab.
+Reihenfolge: **Fahrzeugakte → Kunden & Fahrer → Buchung/Miete → Rechnung →
+Alarme & Abweichungen.** Das Datenmodell (T-002) ist formal noch nicht
+freigegeben; ich nehme den Vorschlag (gestützt auf die freigegebenen
+Entscheidungen D-004..D-012) als **Arbeitsgrundlage** und markiere Entscheidungen
+hier. **Bitte diese Aufgaben in `TASKS.md` nachziehen** (T-004, Temperaturnachweis,
+Fahrzeugakte …).
+
+**Fahrzeugakte – erledigt.**
+
+Erledigt:
+- Migration `0003_fahrzeugakte`: Stammdaten-Basis **Mandant** und **Standort**
+  (D-011) sowie **Fahrzeug**, **Aggregat**, **Sensor**, **Kalibrierung** mit
+  Fremdschlüsseln, Indizes und Mandanten-/Standortbezug (D-003). Kennzeichen je
+  Mandant eindeutig.
+- **Statusmodell Fahrzeug** in `@rent2cool/shared` (erlaubte Übergänge wie in
+  docs/datenmodell.md §5.1); Statuswechsel-Endpunkt prüft Übergänge.
+- **API** (Kern, Schnittstelle zuerst): Akte anlegen (optional inkl. Aggregat +
+  Sensoren), paginierte Liste (Filter Status/Standort, D-003), vollständige Akte,
+  Statuswechsel, Kalibrierung erfassen, **Buchbarkeit** und
+  **fällige Kalibrierungen** (Fristenüberwachung). Schreibzugriffe `ops`/`admin`,
+  rollengeschützt und auditiert (T-004).
+- **Fristen/Buchbarkeit (GDP):** Fahrzeug nur buchbar, wenn `verfuegbar` und
+  jeder aktive Sensor eine gültige (nicht abgelaufene) Kalibrierung hat
+  (EN 12830, R-08/R-09). Reine, getestete Logik.
+- **Seed** legt den Platzhalter-Mandanten und `PLACEHOLDER_HQ` an (idempotent,
+  D-015).
+- **Tests:** Unit grün in CI (Statusübergänge, Buchbarkeitslogik). Integration
+  lokal gegen den Stack grün (Akte anlegen → Status → Buchbarkeit über
+  Kalibrierung; unerlaubter Übergang abgewiesen; fällige Kalibrierungen).
+
+Bewusste Entscheidungen/Abkürzungen:
+- **Mandant** aus dem Token-Claim; fehlt er, wird der Platzhalter-Mandant
+  verwendet (D-015, hängt an F-1). Fahrzeuge referenzieren Mandant/Standort.
+- **Kalibrierungen** sind derzeit änderbar (auditiert). Da sie Nachweis sind,
+  ist später „append-only" zu erwägen (wie messwert/audit_event). → F-17.
+- Temperaturprofil weiterhin aus Konfiguration (F-4), nicht als Fahrzeug-FK.
+
+Fragen an Planung:
+- **F-17:** Sollen Kalibrierungen unveränderbar sein (append-only), analog zu
+  Messwerten/Audit?
+- **F-18:** Welche weiteren Fristen gehören an die Fahrzeugakte (HU/TÜV,
+  Wartung, Versicherung) und mit welchen Vorlauf-Warnungen?
+- Weiterhin: F-1 (Mandant), F-2 (Aufbewahrung), F-5 (Aggregat↔Fahrzeug 1:1 vs.
+  Historie – aktuell 1:n über `eingebaut_am`/`ausgebaut_am` angelegt).
+
+---
+
 ### 2026-10-16 – Temperaturnachweis v1
 
 **Hinweis an die Planung:** Auch diese Aufgabe stand noch nicht in `TASKS.md`.

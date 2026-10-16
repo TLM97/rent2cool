@@ -5,6 +5,10 @@
  * erkennbar und müssen vor dem Go-live ersetzt werden.
  */
 
+/** Feste IDs für die Platzhalter-Stammdaten (D-015), damit Seed und Tests sie referenzieren können. */
+export const PLACEHOLDER_MANDANT_ID = '00000000-0000-0000-0000-0000000000a1';
+export const PLACEHOLDER_HQ_ID = '00000000-0000-0000-0000-0000000000b1';
+
 export interface GeoPunkt {
   readonly lat: number;
   readonly lng: number;

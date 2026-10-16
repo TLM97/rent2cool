@@ -160,6 +160,27 @@ zuerst):
 > v1 bezieht sich auf **Fahrzeug + Zeitraum**; sobald die Entität *Miete*
 > freigegeben ist (Datenmodell T-002), wird der Nachweis an eine Miete gebunden.
 
+## Fahrzeugakte
+
+Digitale Stammakte jedes Kühltransporters und Grundlage für Telematik-Zuordnung,
+Buchung und Temperaturnachweis. Entitäten: **Fahrzeug**, **Aggregat**
+(Kühlaufbau), **Sensor**, **Kalibrierung** (EN 12830) – dazu die
+Stammdaten-Basis **Mandant** und **Standort** (D-011, Platzhalter `PLACEHOLDER_HQ`).
+
+API im Kern (rollengeschützt, Schreibzugriffe auditiert – T-004):
+- `POST /v1/fahrzeuge` — Akte anlegen (optional mit Aggregat + Sensoren). `ops`/`admin`.
+- `GET /v1/fahrzeuge` — paginierte Liste (Filter: Status, Standort).
+- `GET /v1/fahrzeuge/:id` — vollständige Akte (Aggregate + Sensoren).
+- `POST /v1/fahrzeuge/:id/status` — Statuswechsel mit geprüften Übergängen
+  (Statusmodell in `@rent2cool/shared`).
+- `POST /v1/sensoren/:sensorId/kalibrierungen` — Kalibrierung erfassen.
+- `GET /v1/fahrzeuge/:id/buchbarkeit` — ist das Fahrzeug buchbar? (nur
+  `verfuegbar` **und** jeder Sensor gültig kalibriert).
+- `GET /v1/fahrzeuge/faellige-kalibrierungen?bis=…` — Fristenüberwachung.
+
+**Fristen (GDP):** Ein Messwert ist nur beweiskräftig, wenn der Sensor gültig
+kalibriert ist. Läuft die Kalibrierung ab, ist das Fahrzeug nicht mehr buchbar.
+
 ## Betrieb und Cloud
 
 Lokal mit Docker Compose; der Umzug in die Cloud ist reine Konfiguration

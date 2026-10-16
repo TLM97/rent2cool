@@ -12,3 +12,5 @@
  */
 export * from './telemetrie';
 export * from './audit';
+export * from './stammdaten';
+export * from './fahrzeugakte';
