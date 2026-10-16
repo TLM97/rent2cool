@@ -16,3 +16,4 @@ export * from './stammdaten';
 export * from './fahrzeugakte';
 export * from './kunde';
 export * from './miete';
+export * from './rechnung';

@@ -13,6 +13,43 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-16 – Rechnung
+
+**Rechnung – erledigt.** (Fortlaufende Phase-1-Arbeit; Planung möge die Aufgabe
+in `TASKS.md` nachziehen.)
+
+Erledigt:
+- Migration `0006_rechnung`: **Rechnung** (R-63) aus einer Miete; Beträge in
+  ganzen Cent; Rechnungsnummer je Mandant eindeutig; eine Rechnung je Miete
+  (Unique auf `miete_id`). Plus `rechnung_sequenz` für fortlaufende Nummern.
+- **Statusmodell + Betragslogik** in `@rent2cool/shared` (`rechneBetraege`,
+  `formatRechnungsnummer`): kaufmännische Rundung, Format `JAHR-00001`.
+- **Service** (Kern): Rechnung nur aus **beendeter** Miete; Umsatzsteuer über
+  konfigurierbaren Satz (D-006/R-63, Standard 19 %); **atomare, fortlaufende
+  Rechnungsnummer** je Mandant/Jahr via Upsert-Increment (race-sicher). Beim
+  Stellen wird die Miete auf `abgerechnet` gesetzt. Doppelrechnung je Miete
+  ausgeschlossen.
+- **API** (rollengeschützt, auditiert T-004): anlegen, listen, lesen, Status.
+- **Tests:** Unit grün in CI (Statusübergänge, Steuerberechnung/Rundung,
+  Nummernformat). Integration lokal grün: Rechnung aus beendeter Miete
+  (korrekte Steuer, Nummernformat), Duplikatschutz, Ablehnung für nicht
+  beendete Miete, fortlaufende Nummern.
+
+Bewusste Entscheidungen/Abkürzungen:
+- **Netto wird eingegeben** (kein automatisches Pricing), weil das Tarifmodell
+  noch offen ist (F-21). Automatische Berechnung aus dem Tarif folgt mit dem
+  Tarifmodell.
+- **Eine Rechnung je Miete** (v1). Sammelrechnung ist offen (F-7).
+- Umsatzsteuersatz pauschal (konfigurierbar); genaue USt-Logik (Ausland,
+  Reverse-Charge) vom Steuerberater bestätigen (R-63).
+- Steuerliche **Aufbewahrungsfrist** noch offen (F-2) – betrifft die Rechnung.
+
+Fragen an Planung:
+- **F-21:** Tarifmodell (Stunden/Tage/Wochen) für automatisches Pricing?
+- **F-7:** Eine Rechnung je Miete oder Sammelrechnung (mehrere Mieten)?
+
+---
+
 ### 2026-10-16 – Buchung/Miete
 
 **Buchung/Miete – erledigt.** (Fortlaufende Phase-1-Arbeit; Planung möge die

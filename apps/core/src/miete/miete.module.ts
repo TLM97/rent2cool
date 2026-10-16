@@ -14,5 +14,6 @@ import { MieteService } from './miete.service';
   imports: [FahrzeugModule, KundeModule, BerichtModule],
   controllers: [MieteController],
   providers: [MieteService],
+  exports: [MieteService],
 })
 export class MieteModule {}

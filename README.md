@@ -223,6 +223,20 @@ API im Kern (rollengeschützt, auditiert):
 - `GET /v1/mieten/:id/temperaturnachweis` — Nachweis für Fahrzeug + Zeitfenster
   der Miete.
 
+## Rechnung
+
+Rechnung aus einer **beendeten Miete** (R-63). Beträge in ganzen Cent;
+Umsatzsteuer über konfigurierbaren Satz (`RECHNUNG_STEUERSATZ`, Standard 19 %,
+vom Steuerberater zu bestätigen). **Fortlaufende Rechnungsnummer** je Mandant und
+Jahr (`JAHR-00001`, atomar vergeben). Eine Rechnung je Miete (v1).
+
+API im Kern (rollengeschützt, auditiert):
+- `POST /v1/rechnungen` — Rechnung zu einer Miete (Netto in Euro; Steuer/Brutto
+  berechnet). `ops`/`admin`.
+- `GET /v1/rechnungen` (paginiert, Filter), `GET /v1/rechnungen/:id`.
+- `POST /v1/rechnungen/:id/status` — `entwurf → gestellt → bezahlt`, bzw.
+  `storniert`. Beim Stellen wird die Miete auf `abgerechnet` gesetzt.
+
 ## Betrieb und Cloud
 
 Lokal mit Docker Compose; der Umzug in die Cloud ist reine Konfiguration

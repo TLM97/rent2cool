@@ -34,6 +34,10 @@ export const envSchema = z.object({
   TELEMETRY_SIGNING_KEY: z.string().default('PLACEHOLDER_TELEMETRY_SIGNING_KEY'),
   // HMAC-Schlüssel für die Nachweis-Signatur – Platzhalter bis PKI (D-015).
   BERICHT_SIGNING_KEY: z.string().default('PLACEHOLDER_BERICHT_SIGNING_KEY'),
+  // Umsatzsteuer-Standardsatz (%) und Währung für Rechnungen (R-63, vom
+  // Steuerberater bestätigen lassen).
+  RECHNUNG_STEUERSATZ: z.coerce.number().int().min(0).max(100).default(19),
+  RECHNUNG_WAEHRUNG: z.string().default('EUR'),
 
   VALKEY_URL: z.string().default('redis://localhost:6379'),
 

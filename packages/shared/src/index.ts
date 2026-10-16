@@ -18,3 +18,4 @@ export * from './bericht';
 export * from './fahrzeug';
 export * from './kunde';
 export * from './miete';
+export * from './rechnung';

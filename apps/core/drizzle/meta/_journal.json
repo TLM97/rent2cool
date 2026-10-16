@@ -43,6 +43,13 @@
       "when": 1760616000000,
       "tag": "0005_miete",
       "breakpoints": false
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1760619600000,
+      "tag": "0006_rechnung",
+      "breakpoints": false
     }
   ]
 }
