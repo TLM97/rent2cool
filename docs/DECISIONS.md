@@ -125,3 +125,10 @@ Status: `vorgeschlagen` · `freigegeben` · `verworfen` · `ersetzt durch D-xxx`
 | Cloud-Anbieter | lokal per Docker Compose (D-005) | vor Phase 2 |
 
 - **Regel:** Keine echten Personendaten, solange `dpo` ein Platzhalter ist. Nur erfundene Testdaten.
+
+## D-016 Stammdaten ändern: Versionsschutz und Audit in derselben Transaktion
+
+- **Status:** vorgeschlagen (Claude Code, 2026-10-17)
+- **Inhalt:** Änderungen an Stammdaten (Kunde, Fahrer, Fahrzeug) laufen über `PATCH` und tragen den Versionsstand (`aktualisiertAm`) mit, den der Bearbeiter gesehen hat. Ist der Datensatz inzwischen geändert, lehnt der Kern mit 409 ab, statt still zu überschreiben (optimistische Sperre, Zeile wird während der Prüfung gesperrt). Gespeichert werden nur tatsächlich geänderte Felder; der Audit-Eintrag mit altem und neuem Wert je Feld wird in **derselben Transaktion** geschrieben – Änderung und Protokoll gelingen oder scheitern gemeinsam. Keine Änderung → kein Update, kein Audit-Eintrag.
+- **Begründung:** Audit Trail mit alt/neu ist Pflicht (CLAUDE.md, GDP); verlorene Änderungen bei mehreren Bearbeitern (D-003) wären für die Validierung nicht hinnehmbar. Keine zusätzliche Versionsspalte nötig, keine Migration.
+- **Folge:** Ein Wächter-Test stellt sicher, dass jede schreibende Route auditiert ist (`@Audited` als Rückfallebene oder `@AuditImService` für den präzisen Weg). Bestehende Statuswechsel nutzen weiter die Rückfallebene (nur neuer Wert) und sollten schrittweise auf den präzisen Weg umgestellt werden.

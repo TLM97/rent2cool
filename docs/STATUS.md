@@ -13,6 +13,57 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Stammdaten-Bearbeitung
+
+**Stammdaten bearbeiten – erledigt.** (Auf Toms Auftrag; Planung möge die
+Aufgabe in `TASKS.md` nachziehen.)
+
+Erledigt:
+- **Kern:** neue Endpunkte `PATCH /v1/kunden/:id`, `PATCH /v1/fahrer/:id`,
+  `PATCH /v1/fahrzeuge/:id` (Rollen `ops`/`admin`) und `GET /v1/fahrer/:id`.
+  Nur geänderte Felder werden gespeichert; leeres Feld = Wert löschen.
+- **Audit mit altem und neuem Wert** je geändertem Feld, in derselben
+  Transaktion wie die Änderung (vorher protokollierte die Rückfallebene nur
+  den neuen Wert). In der DB geprüft.
+- **Schutz vor verlorenen Änderungen:** Speichert jemand anderes zwischendurch,
+  wird abgelehnt (409) und die Eingaben bleiben im Formular stehen. Auch zwei
+  gleichzeitige Anfragen mit demselben Stand getestet: genau eine gewinnt.
+  Vorschlag als **D-016** in `DECISIONS.md`.
+- **Mandantentrennung:** Ein anderer Mandant bekommt 404 statt Zugriff.
+- Doppeltes Kennzeichen beim Ändern → verständliche Ablehnung.
+- **Wächter-Test:** Jede schreibende Route im Kern muss auditiert sein – eine
+  vergessene fällt künftig im Test auf.
+- **Oberfläche:** „Stammdaten bearbeiten“ auf Fahrzeug- und Kundenseite,
+  Fahrer über den Namen in der Fahrertabelle. Anlegen und Bearbeiten nutzen
+  dieselben Feldgruppen (`apps/admin/src/components/stammdaten.tsx`) –
+  Beschriftungen und Formate nur an einer Stelle. Kundenseite zeigt jetzt die
+  ganze Anschrift. Hinweise, wenn ein freigegebener Kunde/Fahrer oder ein
+  gebuchtes Fahrzeug geändert wird.
+- **Tests:** shared 40, admin 37, Kern 34 Unit + 29 Integration (63/63 grün
+  gegen den lokalen Stack); neuer Browser-Test bearbeitet Kunde, Fahrer und
+  Fahrzeug inkl. Pflichtfeldfehler und Konflikt in zwei Tabs. Alle 7
+  Browser-Tests grün.
+
+Offen / Abkürzungen:
+- Kühlaufbau und Sensoren lassen sich noch nicht ändern (z. B. Sensor
+  tauschen → neuer Sensor braucht Kalibrierung). Eigener Ablauf nötig.
+- Standort bleibt nicht wählbar (keine Standortverwaltung).
+- Statuswechsel protokollieren weiterhin nur den neuen Wert (Rückfallebene);
+  Umstellung auf alt/neu wie bei den Stammdaten empfohlen (D-016).
+- Im Audit steht als Rolle nur die erste Rolle des Nutzers (wie bisher).
+
+Fragen an Planung:
+- **F-27:** Was passiert fachlich, wenn sich prüfrelevante Daten nach der
+  Freigabe ändern? Vorschlag: Fahrer mit geänderter Führerscheinklasse,
+  -nummer oder -gültigkeit fällt automatisch zurück auf
+  „Identitätsprüfung“; Kunde mit geändertem Firmennamen, Handelsregister oder
+  USt-ID zurück auf „in Prüfung“; bei gebuchten Fahrzeugen sind Klasse und
+  Fahrtenschreiber gesperrt. Heute gibt es nur einen Hinweis in der
+  Oberfläche, nichts wird erzwungen.
+- F-24 und F-26 weiter offen (siehe unten).
+
+---
+
 ### 2026-10-17 – Formulare zum Anlegen und Bearbeiten
 
 **Formulare für den ganzen Ablauf – erledigt.** (Auf Toms Auftrag; Planung möge

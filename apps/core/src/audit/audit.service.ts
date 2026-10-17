@@ -5,7 +5,7 @@
  */
 import { Inject, Injectable } from '@nestjs/common';
 import type { Principal } from '@rent2cool/shared';
-import type { Database } from '../db/client';
+import type { Database, Transaktion } from '../db/client';
 import { DB } from '../db/db.module';
 import { auditEvent } from '../db/schema/audit';
 
@@ -18,21 +18,33 @@ export interface AuditEingabe {
   quelle?: string;
 }
 
+/**
+ * Audit-Eintrag schreiben – auch innerhalb einer laufenden Transaktion, damit
+ * Änderung und Protokoll gemeinsam gelingen oder gemeinsam scheitern.
+ */
+export async function schreibeAudit(
+  ausfuehrer: Database | Transaktion,
+  principal: Principal,
+  e: AuditEingabe,
+): Promise<void> {
+  await ausfuehrer.insert(auditEvent).values({
+    akteurId: principal.akteurId,
+    akteurRolle: principal.rollen[0] ?? null,
+    aktion: e.aktion,
+    entitaetTyp: e.entitaetTyp,
+    entitaetId: e.entitaetId ?? null,
+    altWert: e.altWert ?? null,
+    neuWert: e.neuWert ?? null,
+    mandantId: principal.mandantId ?? null,
+    quelle: e.quelle ?? 'core',
+  });
+}
+
 @Injectable()
 export class AuditService {
   constructor(@Inject(DB) private readonly db: Database) {}
 
   async protokolliere(principal: Principal, e: AuditEingabe): Promise<void> {
-    await this.db.insert(auditEvent).values({
-      akteurId: principal.akteurId,
-      akteurRolle: principal.rollen[0] ?? null,
-      aktion: e.aktion,
-      entitaetTyp: e.entitaetTyp,
-      entitaetId: e.entitaetId ?? null,
-      altWert: e.altWert ?? null,
-      neuWert: e.neuWert ?? null,
-      mandantId: principal.mandantId ?? null,
-      quelle: e.quelle ?? 'core',
-    });
+    await schreibeAudit(this.db, principal, e);
   }
 }

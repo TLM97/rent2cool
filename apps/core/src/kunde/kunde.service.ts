@@ -14,12 +14,15 @@ import {
   type EinsatzErgebnis,
   type FahrerStatus,
   type KundeStatus,
+  type Principal,
 } from '@rent2cool/shared';
+import { ermittleAenderungen, neueWerte, pruefeVersion, versionVon, type StammdatenErgebnis } from '../audit/aenderung';
+import { schreibeAudit } from '../audit/audit.service';
 import type { Database } from '../db/client';
 import { DB } from '../db/db.module';
 import { fahrer, fahrzeug, kunde } from '../db/schema';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
-import type { FahrerErstellen, KundeErstellen } from './dto';
+import type { FahrerAendern, FahrerErstellen, KundeAendern, KundeErstellen } from './dto';
 
 @Injectable()
 export class KundeService {
@@ -67,6 +70,43 @@ export class KundeService {
     return row;
   }
 
+  /**
+   * Stammdaten ändern: nur geänderte Felder, mit Versionsprüfung und
+   * Audit-Eintrag (alt/neu) in derselben Transaktion.
+   */
+  async aendereKunde(principal: Principal, id: string, p: KundeAendern): Promise<StammdatenErgebnis> {
+    const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
+    const { version, ...eingabe } = p;
+    return this.db.transaction(async (tx) => {
+      const [vorher] = await tx
+        .select()
+        .from(kunde)
+        .where(and(eq(kunde.id, id), eq(kunde.mandantId, mandant)))
+        .for('update');
+      if (!vorher) {
+        throw new NotFoundException('Kunde nicht gefunden');
+      }
+      pruefeVersion(vorher.aktualisiertAm, version);
+      const a = ermittleAenderungen(vorher, eingabe);
+      if (a.felder.length === 0) {
+        return { id, version: versionVon(vorher.aktualisiertAm), geaendert: [] };
+      }
+      const jetzt = new Date();
+      await tx
+        .update(kunde)
+        .set({ ...neueWerte(eingabe, a), aktualisiertAm: jetzt })
+        .where(eq(kunde.id, id));
+      await schreibeAudit(tx, principal, {
+        aktion: 'PATCH',
+        entitaetTyp: 'kunde',
+        entitaetId: id,
+        altWert: a.alt,
+        neuWert: a.neu,
+      });
+      return { id, version: versionVon(jetzt), geaendert: a.felder };
+    });
+  }
+
   async aendereKundeStatus(id: string, nach: KundeStatus): Promise<{ id: string; status: KundeStatus }> {
     const aktuell = await this.holeKunde(id);
     const von = aktuell.status;
@@ -97,6 +137,55 @@ export class KundeService {
       })
       .returning({ id: fahrer.id });
     return { id: row!.id };
+  }
+
+  async holeFahrer(id: string): Promise<typeof fahrer.$inferSelect> {
+    const [row] = await this.db.select().from(fahrer).where(eq(fahrer.id, id));
+    if (!row) {
+      throw new NotFoundException('Fahrer nicht gefunden');
+    }
+    return row;
+  }
+
+  async aendereFahrer(principal: Principal, id: string, p: FahrerAendern): Promise<StammdatenErgebnis> {
+    const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
+    const { version, fuehrerscheinGueltigBis, ...rest } = p;
+    const eingabe = {
+      ...rest,
+      fuehrerscheinGueltigBis:
+        fuehrerscheinGueltigBis === undefined
+          ? undefined
+          : fuehrerscheinGueltigBis === null
+            ? null
+            : new Date(fuehrerscheinGueltigBis),
+    };
+    return this.db.transaction(async (tx) => {
+      const [vorher] = await tx.select().from(fahrer).where(eq(fahrer.id, id)).for('update');
+      const [besitzer] = vorher
+        ? await tx.select({ mandantId: kunde.mandantId }).from(kunde).where(eq(kunde.id, vorher.kundeId))
+        : [];
+      if (!vorher || besitzer?.mandantId !== mandant) {
+        throw new NotFoundException('Fahrer nicht gefunden');
+      }
+      pruefeVersion(vorher.aktualisiertAm, version);
+      const a = ermittleAenderungen(vorher, eingabe);
+      if (a.felder.length === 0) {
+        return { id, version: versionVon(vorher.aktualisiertAm), geaendert: [] };
+      }
+      const jetzt = new Date();
+      await tx
+        .update(fahrer)
+        .set({ ...neueWerte(eingabe, a), aktualisiertAm: jetzt })
+        .where(eq(fahrer.id, id));
+      await schreibeAudit(tx, principal, {
+        aktion: 'PATCH',
+        entitaetTyp: 'fahrer',
+        entitaetId: id,
+        altWert: a.alt,
+        neuWert: a.neu,
+      });
+      return { id, version: versionVon(jetzt), geaendert: a.felder };
+    });
   }
 
   async listeFahrer(kundeId: string): Promise<(typeof fahrer.$inferSelect)[]> {

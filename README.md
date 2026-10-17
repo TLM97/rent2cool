@@ -306,6 +306,14 @@ Aufbau (bewusst austauschbar):
 - Buchungen tragen je geöffnetem Formular einen Idempotency-Key – doppeltes
   Absenden legt keine zweite Miete an (D-003).
 
+### Stammdaten bearbeiten
+
+Kunde, Fahrer und Fahrzeug lassen sich ändern (`PATCH` im Kern). Anlegen und
+Bearbeiten nutzen dieselben Feldgruppen (`apps/admin/src/components/stammdaten.tsx`).
+Gespeichert werden nur geänderte Felder, jeweils mit altem und neuem Wert im
+Audit Trail. Hat zwischenzeitlich jemand anderes gespeichert, lehnt der Kern ab,
+statt zu überschreiben (Vorschlag D-016).
+
 ## Betrieb und Cloud
 
 Lokal mit Docker Compose; der Umzug in die Cloud ist reine Konfiguration

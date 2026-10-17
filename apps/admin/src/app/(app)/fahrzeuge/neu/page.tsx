@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import { FUEHRERSCHEINKLASSEN, STANDARD_TEMPERATURPROFILE } from '@rent2cool/shared';
 import { Seitenkopf } from '../../../../components/bausteine';
-import { Auswahl, Feld, FormularRahmen, Gruppe, Haken } from '../../../../components/formular';
+import { Feld, FormularRahmen, Gruppe, Haken } from '../../../../components/formular';
+import { FahrzeugFelder } from '../../../../components/stammdaten';
 import { erstelleFahrzeug } from '../../formulare';
 
 export const metadata: Metadata = { title: 'Fahrzeug anlegen' };
@@ -16,35 +16,7 @@ export default function FahrzeugNeu() {
       />
       <section className="karte">
         <FormularRahmen aktion={erstelleFahrzeug} sendenText="Fahrzeug anlegen" abbrechenHref="/fahrzeuge">
-          <Feld name="kennzeichen" label="Kennzeichen" pflicht hinweis="z. B. B-RC 1001" />
-          <Feld name="vin" label="Fahrgestellnummer (VIN)" />
-          <Feld
-            name="zulGesamtmasseKg"
-            label="zul. Gesamtmasse (kg)"
-            typ="number"
-            pflicht
-            standard="3500"
-            hinweis="Bestimmt die nötige Führerscheinklasse (D-007)."
-          />
-          <Auswahl
-            name="benoetigteFuehrerscheinklasse"
-            label="Benötigte Führerscheinklasse"
-            standard="B"
-            optionen={FUEHRERSCHEINKLASSEN.map((k) => ({ wert: k, text: k }))}
-          />
-          <Auswahl
-            name="standardTemperaturprofil"
-            label="Standard-Temperaturprofil"
-            standard="2-8"
-            leer="keins"
-            optionen={STANDARD_TEMPERATURPROFILE.map((p) => ({ wert: p.name, text: `${p.name} °C` }))}
-            hinweis="Gegen dieses Profil wertet die Telematik Alarme aus."
-          />
-          <Haken
-            name="hatFahrtenschreiber"
-            label="Fahrtenschreiber verbaut"
-            hinweis="Nur Fahrzeuge mit Fahrtenschreiber dürfen für Auslandsfahrten gebucht werden (D-006)."
-          />
+          <FahrzeugFelder />
           <Haken name="mitAufbau" label="Kühlaufbau mit Laderaum-Temperatursensor erfassen" standard />
           <Gruppe titel="Kühlaufbau (Aggregat) und Sensor">
             <Feld name="aggregatTyp" label="Typ des Aufbaus" standard="Kühlkoffer" />

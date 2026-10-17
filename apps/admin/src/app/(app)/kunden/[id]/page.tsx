@@ -1,14 +1,15 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import {
   FAHRER_STATUS,
-  FUEHRERSCHEINKLASSEN,
   istFahrerUebergangErlaubt,
   istKundeUebergangErlaubt,
   KUNDE_STATUS,
 } from '@rent2cool/shared';
 import { Leer, Meldungen, Plakette, Seitenkopf, StatusFormular } from '../../../../components/bausteine';
-import { Auswahl, Feld, FormularRahmen } from '../../../../components/formular';
+import { FormularRahmen } from '../../../../components/formular';
+import { FahrerFelder } from '../../../../components/stammdaten';
 import { apiGet, apiGetOderNull } from '../../../../lib/api';
 import { formatDatum } from '../../../../lib/format';
 import { naechsteStatus } from '../../../../lib/formular';
@@ -44,6 +45,13 @@ export default async function KundeDetail({
         titel={kunde.firmenname}
         untertitel={<Plakette status={kunde.status} />}
         brotkrume={{ href: '/kunden', text: 'Kunden & Fahrer' }}
+        aktionen={
+          darfAendern ? (
+            <Link className="knopf zweitrangig" href={`${pfad}/bearbeiten`}>
+              Stammdaten bearbeiten
+            </Link>
+          ) : null
+        }
       />
       <Meldungen params={suche} />
 
@@ -54,8 +62,12 @@ export default async function KundeDetail({
           <dd className="mono">{kunde.ustId ?? '–'}</dd>
           <dt>Handelsregister</dt>
           <dd className="mono">{kunde.handelsregisternummer ?? '–'}</dd>
-          <dt>Ort</dt>
-          <dd>{kunde.ort ?? '–'}</dd>
+          <dt>Anschrift</dt>
+          <dd>
+            {[kunde.strasse, [kunde.plz, kunde.ort].filter(Boolean).join(' '), kunde.land]
+              .filter(Boolean)
+              .join(', ') || '–'}
+          </dd>
           <dt>angelegt</dt>
           <dd>{formatDatum(kunde.erstelltAm)}</dd>
           {darfAendern ? (
@@ -97,7 +109,9 @@ export default async function KundeDetail({
                   const frist = fuehrerscheinFrist(f.fuehrerscheinGueltigBis);
                   return (
                     <tr key={f.id}>
-                      <td>{f.name}</td>
+                      <td>
+                        {darfAendern ? <Link href={`${pfad}/fahrer/${f.id}`}>{f.name}</Link> : f.name}
+                      </td>
                       <td>
                         <Plakette status={f.status} />
                       </td>
@@ -134,16 +148,7 @@ export default async function KundeDetail({
             benannt ist (D-015).
           </p>
           <FormularRahmen aktion={erstelleFahrer} sendenText="Fahrer anlegen" versteckt={{ kundeId: kunde.id }}>
-            <Feld name="name" label="Name" pflicht />
-            <Auswahl
-              name="fuehrerscheinKlasse"
-              label="Führerscheinklasse"
-              pflicht
-              standard="B"
-              optionen={FUEHRERSCHEINKLASSEN.map((k) => ({ wert: k, text: k }))}
-            />
-            <Feld name="fuehrerscheinNummer" label="Führerscheinnummer" />
-            <Feld name="fuehrerscheinGueltigBis" label="Führerschein gültig bis" typ="date" />
+            <FahrerFelder />
           </FormularRahmen>
         </section>
       ) : null}

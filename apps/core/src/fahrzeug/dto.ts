@@ -4,10 +4,12 @@ import { FAHRZEUG_STATUS } from '@rent2cool/shared';
 
 export {
   aggregatEingabeSchema,
+  fahrzeugAendernSchema,
   fahrzeugErstellenSchema,
   fahrzeugStatusSchema as statusAendernSchema,
   kalibrierungSchema,
   sensorEingabeSchema,
+  type FahrzeugAendern,
   type FahrzeugErstellen,
   type KalibrierungEingabe,
 } from '@rent2cool/shared';

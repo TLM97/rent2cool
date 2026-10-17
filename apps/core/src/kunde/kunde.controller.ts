@@ -5,16 +5,19 @@ import {
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
 import { z } from 'zod';
 import { istFahrerStatus, istKundeStatus, type Principal } from '@rent2cool/shared';
 import { CurrentUser, Roles } from '../auth/decorators';
-import { Audited } from '../audit/audited.decorator';
+import { AuditImService, Audited } from '../audit/audited.decorator';
 import {
+  fahrerAendernSchema,
   fahrerErstellenSchema,
   fahrerStatusSchema,
+  kundeAendernSchema,
   kundeErstellenSchema,
   kundeStatusSchema,
   listeAbfrageSchema,
@@ -53,6 +56,14 @@ export class KundeController {
   @Roles('ops', 'admin', 'kunde_dispo', 'kunde_qa')
   hole(@Param('id') id: string) {
     return this.service.holeKunde(id);
+  }
+
+  /** Stammdaten ändern (Status über `/status`). Audit mit alt/neu im Service. */
+  @Patch(':id')
+  @Roles('ops', 'admin')
+  @AuditImService('kunde')
+  aendere(@CurrentUser() user: Principal, @Param('id') id: string, @Body() body: unknown) {
+    return this.service.aendereKunde(user, id, parse(kundeAendernSchema, body));
   }
 
   @Post(':id/status')
@@ -95,6 +106,20 @@ export class FahrerController {
       throw new BadRequestException('Ungültiges Datum in "bis"');
     }
     return this.service.faelligeFuehrerscheine(user.mandantId, stichtag);
+  }
+
+  @Get(':id')
+  @Roles('ops', 'admin', 'kunde_dispo', 'kunde_qa')
+  hole(@Param('id') id: string) {
+    return this.service.holeFahrer(id);
+  }
+
+  /** Name und Führerscheindaten ändern. Audit mit alt/neu im Service. */
+  @Patch(':id')
+  @Roles('ops', 'admin')
+  @AuditImService('fahrer')
+  aendere(@CurrentUser() user: Principal, @Param('id') id: string, @Body() body: unknown) {
+    return this.service.aendereFahrer(user, id, parse(fahrerAendernSchema, body));
   }
 
   @Post(':id/status')

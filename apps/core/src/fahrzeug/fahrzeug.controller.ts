@@ -5,14 +5,16 @@ import {
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
 import { z } from 'zod';
 import type { Principal } from '@rent2cool/shared';
 import { CurrentUser, Roles } from '../auth/decorators';
-import { Audited } from '../audit/audited.decorator';
+import { AuditImService, Audited } from '../audit/audited.decorator';
 import {
+  fahrzeugAendernSchema,
   fahrzeugErstellenSchema,
   kalibrierungSchema,
   listeAbfrageSchema,
@@ -73,6 +75,14 @@ export class FahrzeugController {
       throw new BadRequestException('Ungültiges Datum in "stichtag"');
     }
     return this.service.buchbarkeit(id, t);
+  }
+
+  /** Stammdaten ändern (Status über `/status`). Audit mit alt/neu im Service. */
+  @Patch(':id')
+  @Roles('ops', 'admin')
+  @AuditImService('fahrzeug')
+  aendere(@CurrentUser() user: Principal, @Param('id') id: string, @Body() body: unknown) {
+    return this.service.aendere(user, id, parse(fahrzeugAendernSchema, body));
   }
 
   @Post(':id/status')

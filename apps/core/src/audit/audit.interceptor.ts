@@ -13,7 +13,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { type Observable, concatMap } from 'rxjs';
 import type { AuthRequest } from '../auth/decorators';
-import { AUDITED_KEY } from './audited.decorator';
+import { AUDIT_IM_SERVICE_KEY, AUDITED_KEY } from './audited.decorator';
 import { AuditService } from './audit.service';
 
 function istObjekt(x: unknown): x is Record<string, unknown> {
@@ -32,7 +32,11 @@ export class AuditInterceptor implements NestInterceptor {
       context.getHandler(),
       context.getClass(),
     ]);
-    if (!entitaetTyp) {
+    const imService = this.reflector.getAllAndOverride<boolean>(AUDIT_IM_SERVICE_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (!entitaetTyp || imService) {
       return next.handle();
     }
     const req = context.switchToHttp().getRequest<AuthRequest>();

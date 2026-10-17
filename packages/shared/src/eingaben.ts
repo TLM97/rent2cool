@@ -14,6 +14,16 @@ import { RECHNUNG_STATUS } from './rechnung';
 const pflicht = (feld = 'Pflichtfeld') => z.string().trim().min(1, feld);
 const auswahl = (meldung = 'Bitte auswählen') => z.string().uuid(meldung);
 const zeitpunkt = (meldung = 'Ungültiges Datum') => z.string().datetime({ offset: true, message: meldung });
+/** Optionales Textfeld beim Ändern: fehlt = unverändert, `null` = leeren. */
+const leerbar = () => z.string().trim().nullable().optional();
+/**
+ * Versionsstand beim Öffnen des Formulars (`aktualisiertAm` des Datensatzes).
+ * Hat inzwischen jemand anderes gespeichert, lehnt der Kern ab (409) statt
+ * dessen Änderung stillschweigend zu überschreiben.
+ */
+const VERSION_FEHLT = 'Version fehlt – bitte Seite neu laden';
+const version = () =>
+  z.string({ required_error: VERSION_FEHLT }).datetime({ offset: true, message: VERSION_FEHLT });
 
 // --- Fahrzeugakte ---
 export const sensorEingabeSchema = z.object({
@@ -50,6 +60,22 @@ export type FahrzeugErstellen = z.infer<typeof fahrzeugErstellenSchema>;
 
 export const fahrzeugStatusSchema = z.object({ status: z.enum(FAHRZEUG_STATUS) });
 
+/** Stammdaten ändern; Status, Standort und Kühlaufbau haben eigene Wege. */
+export const fahrzeugAendernSchema = z.object({
+  version: version(),
+  kennzeichen: pflicht('Kennzeichen fehlt').optional(),
+  vin: leerbar(),
+  zulGesamtmasseKg: z.coerce
+    .number({ invalid_type_error: 'Zahl erwartet' })
+    .int('Ganze Zahl erwartet')
+    .positive('Muss größer als 0 sein')
+    .optional(),
+  benoetigteFuehrerscheinklasse: pflicht('Klasse fehlt').optional(),
+  hatFahrtenschreiber: z.boolean().optional(),
+  standardTemperaturprofil: leerbar(),
+});
+export type FahrzeugAendern = z.infer<typeof fahrzeugAendernSchema>;
+
 export const kalibrierungSchema = z
   .object({
     durchgefuehrtAm: zeitpunkt(),
@@ -78,6 +104,18 @@ export type KundeErstellen = z.infer<typeof kundeErstellenSchema>;
 
 export const kundeStatusSchema = z.object({ status: z.enum(KUNDE_STATUS) });
 
+export const kundeAendernSchema = z.object({
+  version: version(),
+  firmenname: pflicht('Firmenname fehlt').optional(),
+  handelsregisternummer: leerbar(),
+  ustId: leerbar(),
+  strasse: leerbar(),
+  plz: leerbar(),
+  ort: leerbar(),
+  land: pflicht('Land fehlt').optional(),
+});
+export type KundeAendern = z.infer<typeof kundeAendernSchema>;
+
 export const fahrerErstellenSchema = z.object({
   name: pflicht('Name fehlt'),
   fuehrerscheinKlasse: pflicht('Klasse fehlt'),
@@ -87,6 +125,15 @@ export const fahrerErstellenSchema = z.object({
 export type FahrerErstellen = z.infer<typeof fahrerErstellenSchema>;
 
 export const fahrerStatusSchema = z.object({ status: z.enum(FAHRER_STATUS) });
+
+export const fahrerAendernSchema = z.object({
+  version: version(),
+  name: pflicht('Name fehlt').optional(),
+  fuehrerscheinKlasse: pflicht('Klasse fehlt').optional(),
+  fuehrerscheinNummer: leerbar(),
+  fuehrerscheinGueltigBis: zeitpunkt().nullable().optional(),
+});
+export type FahrerAendern = z.infer<typeof fahrerAendernSchema>;
 
 // --- Miete ---
 export const mieteErstellenSchema = z

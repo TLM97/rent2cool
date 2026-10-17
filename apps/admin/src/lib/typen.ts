@@ -21,6 +21,7 @@ export interface Fahrzeug {
   standortId: string | null;
   status: string;
   erstelltAm: string;
+  aktualisiertAm: string;
 }
 
 export interface Sensor {
@@ -56,17 +57,24 @@ export interface Kunde {
   firmenname: string;
   ustId: string | null;
   handelsregisternummer: string | null;
+  strasse: string | null;
+  plz: string | null;
   ort: string | null;
+  land: string;
   status: string;
   erstelltAm: string;
+  aktualisiertAm: string;
 }
 
 export interface Fahrer {
   id: string;
+  kundeId: string;
   name: string;
   fuehrerscheinKlasse: string;
+  fuehrerscheinNummer: string | null;
   fuehrerscheinGueltigBis: string | null;
   status: string;
+  aktualisiertAm: string;
 }
 
 export interface Miete {

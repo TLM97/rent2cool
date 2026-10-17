@@ -43,7 +43,7 @@ export function Seitenkopf({
         <h1>{titel}</h1>
         {untertitel ? <p>{untertitel}</p> : null}
       </div>
-      {aktionen}
+      {aktionen ? <div className="knopfreihe">{aktionen}</div> : null}
     </div>
   );
 }

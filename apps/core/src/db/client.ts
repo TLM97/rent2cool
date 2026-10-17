@@ -16,3 +16,6 @@ export function createDbClient(databaseUrl: string) {
 }
 
 export type Database = ReturnType<typeof createDbClient>['db'];
+
+/** Offene Transaktion (für Schreibvorgänge, die mit ihrem Audit-Eintrag atomar sein müssen). */
+export type Transaktion = Parameters<Parameters<Database['transaction']>[0]>[0];

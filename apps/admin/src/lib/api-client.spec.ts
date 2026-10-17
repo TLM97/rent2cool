@@ -73,4 +73,19 @@ describe('erstelleApiClient', () => {
     await expect(client.get('/v1/fahrzeuge')).rejects.toBeInstanceOf(ApiFehler);
     expect(aufgerufen).toBe(false);
   });
+
+  it('sendet Änderungen als PATCH mit JSON-Körper', async () => {
+    const merke: { url?: string; init?: RequestInit } = {};
+    const client = erstelleApiClient({
+      basisUrl: 'http://kern',
+      token: async () => 't',
+      fetcher: fakeFetch(200, { id: 'k1', geaendert: ['ort'] }, merke),
+    });
+    await expect(client.patch('/v1/kunden/k1', { version: 'v', ort: 'Potsdam' })).resolves.toEqual({
+      id: 'k1',
+      geaendert: ['ort'],
+    });
+    expect(merke.init?.method).toBe('PATCH');
+    expect(merke.init?.body).toBe(JSON.stringify({ version: 'v', ort: 'Potsdam' }));
+  });
 });

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   abweichungStatusSchema,
+  fahrerAendernSchema,
+  fahrzeugAendernSchema,
+  kundeAendernSchema,
   fahrzeugErstellenSchema,
   kalibrierungSchema,
   mieteErstellenSchema,
@@ -51,5 +54,27 @@ describe('Geteilte Eingabe-Schemas', () => {
   it('Abweichung: unbekannter Status wird abgewiesen', () => {
     expect(abweichungStatusSchema.safeParse({ status: 'erledigt' }).success).toBe(false);
     expect(abweichungStatusSchema.safeParse({ status: 'in_bewertung' }).success).toBe(true);
+  });
+
+  it('Ändern: fehlende Felder bleiben unverändert, null leert, Version ist Pflicht', () => {
+    const v = '2026-10-17T08:00:00.123Z';
+    const k = kundeAendernSchema.parse({ version: v, ort: 'Potsdam', ustId: null });
+    expect(k).toEqual({ version: v, ort: 'Potsdam', ustId: null });
+    expect(feldMeldung(kundeAendernSchema.safeParse({ ort: 'X' }), 'version')).toMatch(/Version fehlt/);
+    expect(feldMeldung(kundeAendernSchema.safeParse({ version: v, firmenname: ' ' }), 'firmenname')).toBe(
+      'Firmenname fehlt',
+    );
+  });
+
+  it('Ändern: Fahrzeugmasse und Führerscheindatum werden geprüft', () => {
+    const v = '2026-10-17T08:00:00Z';
+    expect(fahrzeugAendernSchema.parse({ version: v, zulGesamtmasseKg: '7490' }).zulGesamtmasseKg).toBe(7490);
+    expect(feldMeldung(fahrzeugAendernSchema.safeParse({ version: v, zulGesamtmasseKg: 0 }), 'zulGesamtmasseKg')).toBe(
+      'Muss größer als 0 sein',
+    );
+    expect(fahrerAendernSchema.parse({ version: v, fuehrerscheinGueltigBis: null }).fuehrerscheinGueltigBis).toBeNull();
+    expect(feldMeldung(fahrerAendernSchema.safeParse({ version: v, fuehrerscheinGueltigBis: 'morgen' }), 'fuehrerscheinGueltigBis')).toBe(
+      'Ungültiges Datum',
+    );
   });
 });

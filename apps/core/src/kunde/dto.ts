@@ -2,11 +2,15 @@
 import { z } from 'zod';
 
 export {
+  fahrerAendernSchema,
   fahrerErstellenSchema,
   fahrerStatusSchema,
+  kundeAendernSchema,
   kundeErstellenSchema,
   kundeStatusSchema,
+  type FahrerAendern,
   type FahrerErstellen,
+  type KundeAendern,
   type KundeErstellen,
 } from '@rent2cool/shared';
 

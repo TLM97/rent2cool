@@ -11,14 +11,17 @@ import { redirect } from 'next/navigation';
 import {
   abweichungErstellenSchema,
   abweichungStatusSchema,
+  fahrerAendernSchema,
   fahrerErstellenSchema,
+  fahrzeugAendernSchema,
   fahrzeugErstellenSchema,
   kalibrierungSchema,
+  kundeAendernSchema,
   kundeErstellenSchema,
   mieteErstellenSchema,
   rechnungErstellenSchema,
 } from '@rent2cool/shared';
-import { apiPost } from '../../lib/api';
+import { apiPatch, apiPost } from '../../lib/api';
 import { ApiFehler } from '../../lib/api-client';
 import {
   berlinLokalZuIso,
@@ -66,6 +69,19 @@ function kernFehler(e: unknown, werte: Record<string, string>): FormularZustand 
   return { fehler: e.message, werte };
 }
 
+/** Leeres Feld beim Ändern: `null` (= Feld leeren), nicht „unverändert“. */
+function leer(fd: FormData, name: string): string | null {
+  return text(fd, name) ?? null;
+}
+
+interface Aenderung {
+  geaendert: string[];
+}
+
+function aenderungsMeldung(r: Aenderung): string {
+  return r.geaendert.length === 0 ? 'Keine Änderungen – nichts gespeichert.' : 'Änderungen gespeichert.';
+}
+
 function weiter(pfad: string, erfolg: string): never {
   revalidatePath('/', 'layout');
   redirect(`${pfad}?erfolg=${encodeURIComponent(erfolg)}`);
@@ -106,6 +122,30 @@ export async function erstelleFahrzeug(_z: FormularZustand, fd: FormData): Promi
     return kernFehler(e, werte);
   }
   weiter(`/fahrzeuge/${id}`, 'Fahrzeug angelegt.');
+}
+
+export async function aendereFahrzeug(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const id = text(fd, 'id') ?? '';
+  if (!istUuid(id)) return { fehler: 'Fahrzeug fehlt.', werte };
+  const roh = {
+    version: text(fd, 'version') ?? '',
+    kennzeichen: text(fd, 'kennzeichen') ?? '',
+    vin: leer(fd, 'vin'),
+    zulGesamtmasseKg: text(fd, 'zulGesamtmasseKg') ?? '',
+    benoetigteFuehrerscheinklasse: text(fd, 'benoetigteFuehrerscheinklasse') ?? '',
+    hatFahrtenschreiber: haken(fd, 'hatFahrtenschreiber'),
+    standardTemperaturprofil: leer(fd, 'standardTemperaturprofil'),
+  };
+  const p = pruefe(fahrzeugAendernSchema, roh, werte);
+  if (!p.ok) return p.zustand;
+  let r: Aenderung;
+  try {
+    r = await apiPatch<Aenderung>(`/v1/fahrzeuge/${id}`, p.daten);
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(`/fahrzeuge/${id}`, aenderungsMeldung(r));
 }
 
 export async function erfasseKalibrierung(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
@@ -155,6 +195,31 @@ export async function erstelleKunde(_z: FormularZustand, fd: FormData): Promise<
   weiter(`/kunden/${id}`, 'Kunde angelegt. Nächster Schritt: Prüfung (Handelsregister/USt-ID).');
 }
 
+export async function aendereKunde(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const id = text(fd, 'id') ?? '';
+  if (!istUuid(id)) return { fehler: 'Kunde fehlt.', werte };
+  const roh = {
+    version: text(fd, 'version') ?? '',
+    firmenname: text(fd, 'firmenname') ?? '',
+    handelsregisternummer: leer(fd, 'handelsregisternummer'),
+    ustId: leer(fd, 'ustId'),
+    strasse: leer(fd, 'strasse'),
+    plz: leer(fd, 'plz'),
+    ort: leer(fd, 'ort'),
+    land: text(fd, 'land') ?? '',
+  };
+  const p = pruefe(kundeAendernSchema, roh, werte);
+  if (!p.ok) return p.zustand;
+  let r: Aenderung;
+  try {
+    r = await apiPatch<Aenderung>(`/v1/kunden/${id}`, p.daten);
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(`/kunden/${id}`, aenderungsMeldung(r));
+}
+
 export async function erstelleFahrer(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
   const werte = werteAus(fd);
   const kundeId = text(fd, 'kundeId') ?? '';
@@ -176,6 +241,34 @@ export async function erstelleFahrer(_z: FormularZustand, fd: FormData): Promise
     return kernFehler(e, werte);
   }
   weiter(`/kunden/${kundeId}`, 'Fahrer angelegt. Nächster Schritt: Identitäts- und Führerscheinprüfung.');
+}
+
+export async function aendereFahrer(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const id = text(fd, 'id') ?? '';
+  const kundeId = text(fd, 'kundeId') ?? '';
+  if (!istUuid(id) || !istUuid(kundeId)) return { fehler: 'Fahrer fehlt.', werte };
+  const datum = text(fd, 'fuehrerscheinGueltigBis');
+  const gueltigBis = berlinTagesendeZuIso(datum);
+  if (datum && !gueltigBis) {
+    return { fehler: PRUEFEN, feldFehler: { fuehrerscheinGueltigBis: 'Ungültiges Datum' }, werte };
+  }
+  const roh = {
+    version: text(fd, 'version') ?? '',
+    name: text(fd, 'name') ?? '',
+    fuehrerscheinKlasse: text(fd, 'fuehrerscheinKlasse') ?? '',
+    fuehrerscheinNummer: leer(fd, 'fuehrerscheinNummer'),
+    fuehrerscheinGueltigBis: gueltigBis ?? null,
+  };
+  const p = pruefe(fahrerAendernSchema, roh, werte);
+  if (!p.ok) return p.zustand;
+  let r: Aenderung;
+  try {
+    r = await apiPatch<Aenderung>(`/v1/fahrer/${id}`, p.daten);
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(`/kunden/${kundeId}`, aenderungsMeldung(r));
 }
 
 // --- Buchung ---

@@ -6,13 +6,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
-import { istUebergangErlaubt, type FahrzeugStatus } from '@rent2cool/shared';
+import { istUebergangErlaubt, type FahrzeugStatus, type Principal } from '@rent2cool/shared';
+import { ermittleAenderungen, neueWerte, pruefeVersion, versionVon, type StammdatenErgebnis } from '../audit/aenderung';
+import { schreibeAudit } from '../audit/audit.service';
 import type { Database } from '../db/client';
 import { DB } from '../db/db.module';
 import { aggregat, fahrzeug, kalibrierung, sensor } from '../db/schema';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 import { bewerteBuchbarkeit, type BuchbarkeitErgebnis, type SensorFrist } from './fristen';
-import type { FahrzeugErstellen, KalibrierungEingabe } from './dto';
+import type { FahrzeugAendern, FahrzeugErstellen, KalibrierungEingabe } from './dto';
 
 @Injectable()
 export class FahrzeugService {
@@ -72,6 +74,51 @@ export class FahrzeugService {
         }
       }
       return { id: fahrzeugId };
+    });
+  }
+
+  /**
+   * Stammdaten ändern: nur geänderte Felder, mit Versionsprüfung und
+   * Audit-Eintrag (alt/neu) in derselben Transaktion.
+   */
+  async aendere(principal: Principal, id: string, p: FahrzeugAendern): Promise<StammdatenErgebnis> {
+    const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
+    const { version, ...eingabe } = p;
+    return this.db.transaction(async (tx) => {
+      const [vorher] = await tx
+        .select()
+        .from(fahrzeug)
+        .where(and(eq(fahrzeug.id, id), eq(fahrzeug.mandantId, mandant)))
+        .for('update');
+      if (!vorher) {
+        throw new NotFoundException('Fahrzeug nicht gefunden');
+      }
+      pruefeVersion(vorher.aktualisiertAm, version);
+      const a = ermittleAenderungen(vorher, eingabe);
+      if (a.felder.length === 0) {
+        return { id, version: versionVon(vorher.aktualisiertAm), geaendert: [] };
+      }
+      const jetzt = new Date();
+      try {
+        await tx
+          .update(fahrzeug)
+          .set({ ...neueWerte(eingabe, a), aktualisiertAm: jetzt })
+          .where(eq(fahrzeug.id, id));
+      } catch (e: unknown) {
+        const msg = String(e);
+        if (msg.includes('23505') || msg.toLowerCase().includes('unique')) {
+          throw new ConflictException(`Kennzeichen "${p.kennzeichen}" existiert bereits für diesen Mandanten`);
+        }
+        throw e;
+      }
+      await schreibeAudit(tx, principal, {
+        aktion: 'PATCH',
+        entitaetTyp: 'fahrzeug',
+        entitaetId: id,
+        altWert: a.alt,
+        neuWert: a.neu,
+      });
+      return { id, version: versionVon(jetzt), geaendert: a.felder };
     });
   }
 

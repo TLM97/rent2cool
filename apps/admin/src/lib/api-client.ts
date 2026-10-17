@@ -62,12 +62,13 @@ export interface ApiClientOptionen {
 export interface ApiClient {
   get<T>(pfad: string, abfrage?: Abfrage): Promise<T>;
   post<T>(pfad: string, body?: unknown): Promise<T>;
+  patch<T>(pfad: string, body: unknown): Promise<T>;
 }
 
 export function erstelleApiClient(optionen: ApiClientOptionen): ApiClient {
   const f = optionen.fetcher ?? fetch;
 
-  async function anfrage<T>(methode: 'GET' | 'POST', pfad: string, abfrage?: Abfrage, body?: unknown): Promise<T> {
+  async function anfrage<T>(methode: 'GET' | 'POST' | 'PATCH', pfad: string, abfrage?: Abfrage, body?: unknown): Promise<T> {
     const token = await optionen.token();
     if (!token) {
       throw new ApiFehler(401, 'Nicht angemeldet');
@@ -96,5 +97,6 @@ export function erstelleApiClient(optionen: ApiClientOptionen): ApiClient {
   return {
     get: <T>(pfad: string, abfrage?: Abfrage) => anfrage<T>('GET', pfad, abfrage),
     post: <T>(pfad: string, body?: unknown) => anfrage<T>('POST', pfad, undefined, body ?? {}),
+    patch: <T>(pfad: string, body: unknown) => anfrage<T>('PATCH', pfad, undefined, body),
   };
 }

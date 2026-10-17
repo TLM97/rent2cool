@@ -49,11 +49,18 @@ export default async function FahrzeugDetail({
         untertitel={<Plakette status={f.status} />}
         brotkrume={{ href: '/fahrzeuge', text: 'Fahrzeuge' }}
         aktionen={
-          darfAbweichung ? (
-            <Link className="knopf zweitrangig" href={`/abweichungen/neu?bezugTyp=fahrzeug&bezugId=${f.id}`}>
-              Abweichung erfassen
-            </Link>
-          ) : null
+          <>
+            {darfAendern ? (
+              <Link className="knopf zweitrangig" href={`/fahrzeuge/${f.id}/bearbeiten`}>
+                Stammdaten bearbeiten
+              </Link>
+            ) : null}
+            {darfAbweichung ? (
+              <Link className="knopf zweitrangig" href={`/abweichungen/neu?bezugTyp=fahrzeug&bezugId=${f.id}`}>
+                Abweichung erfassen
+              </Link>
+            ) : null}
+          </>
         }
       />
       <Meldungen params={suche} />
