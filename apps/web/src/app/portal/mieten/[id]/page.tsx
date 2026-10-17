@@ -1,17 +1,26 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { formatDatumZeit } from '@rent2cool/oberflaeche/format';
-import { istUuid } from '@rent2cool/oberflaeche/seiten';
-import { Leer, Plakette, Seitenkopf } from '../../../../components/bausteine';
+import { istUuid, type SuchParameter } from '@rent2cool/oberflaeche/seiten';
+import { Leer, Meldungen, Plakette, Seitenkopf } from '../../../../components/bausteine';
 import { apiGetOderNull, mitKunde } from '../../../../lib/api';
-import { SIEGEL_TEXT } from '../../../../lib/portal';
+import { kannStornieren } from '../../../../lib/buchung';
+import { hat, SIEGEL_TEXT } from '../../../../lib/portal';
 import type { Miete, NachweisArchivEintrag } from '../../../../lib/typen';
+import { storniereMiete } from '../../aktionen';
 
 export const metadata: Metadata = { title: 'Miete' };
 
-export default async function MieteDetail({ params }: { params: Promise<{ id: string }> }) {
+export default async function MieteDetail({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<SuchParameter>;
+}) {
   const { id } = await params;
-  await mitKunde();
+  const meldungen = await searchParams;
+  const ich = await mitKunde();
   if (!istUuid(id)) notFound();
   // Fremde Mieten sind für den Kern „nicht gefunden“ (D-020).
   const [m, nachweise] = await Promise.all([
@@ -31,6 +40,7 @@ export default async function MieteDetail({ params }: { params: Promise<{ id: st
         titel={`Miete ${akte?.fahrzeug.kennzeichen ?? ''}`.trim()}
         zurueck={{ href: '/portal/mieten', text: 'Alle Mieten' }}
       />
+      <Meldungen params={meldungen} />
       <section className="karte">
         <dl className="daten">
           <dt>Status</dt>
@@ -49,6 +59,14 @@ export default async function MieteDetail({ params }: { params: Promise<{ id: st
           <dt>Temperaturprofil</dt>
           <dd>{m.temperaturprofil ?? '–'}</dd>
         </dl>
+        {kannStornieren(m.status) && hat(ich.rollen, 'kunde_dispo') ? (
+          <form action={storniereMiete} className="knopfreihe abstand-oben">
+            <input type="hidden" name="id" value={m.id} />
+            <button className="knopf gefahr" type="submit">
+              Buchung stornieren
+            </button>
+          </form>
+        ) : null}
       </section>
 
       <section className="karte" aria-labelledby="nachweis-titel">

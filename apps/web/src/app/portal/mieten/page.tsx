@@ -4,13 +4,14 @@ import { formatDatumZeit } from '@rent2cool/oberflaeche/format';
 import { blattAus, type SuchParameter } from '@rent2cool/oberflaeche/seiten';
 import { Blaettern, Leer, Plakette, Seitenkopf } from '../../../components/bausteine';
 import { apiGet, mitKunde } from '../../../lib/api';
+import { hat } from '../../../lib/portal';
 import type { Liste, Miete } from '../../../lib/typen';
 
 export const metadata: Metadata = { title: 'Mieten & Nachweise' };
 
 export default async function Mieten({ searchParams }: { searchParams: Promise<SuchParameter> }) {
   const params = await searchParams;
-  await mitKunde();
+  const ich = await mitKunde();
   const blatt = blattAus(params, 25);
   // Der Kern liefert nur Mieten des eigenen Unternehmens (D-020).
   const mieten = await apiGet<Liste<Miete>>('/v1/mieten', {
@@ -24,6 +25,13 @@ export default async function Mieten({ searchParams }: { searchParams: Promise<S
         titel="Mieten & Nachweise"
         untertitel="Nach jeder Miete entsteht automatisch ein gesiegelter Temperaturnachweis."
       />
+      {hat(ich.rollen, 'kunde_dispo') ? (
+        <div className="knopfreihe abstand-unten">
+          <Link className="knopf" href="/portal/buchen">
+            Neue Buchung
+          </Link>
+        </div>
+      ) : null}
       <section className="karte">
         {mieten.eintraege.length === 0 ? (
           <Leer>Noch keine Mieten.</Leer>

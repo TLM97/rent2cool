@@ -2,7 +2,7 @@
  * Antwortformen der Kern-API, wie das Portal sie nutzt (Zeitpunkte als
  * ISO-Strings). Bewusst schmal – nur die angezeigten Felder.
  */
-import type { KundeRolle } from '@rent2cool/shared';
+import type { KundeRolle, Oeffnungsregeln } from '@rent2cool/shared';
 
 export interface Liste<T> {
   eintraege: T[];
@@ -91,4 +91,29 @@ export interface Rechnung {
   waehrung: string;
   status: string;
   gestelltAm: string | null;
+}
+
+export interface Fahrer {
+  id: string;
+  name: string;
+  fuehrerscheinKlasse: string;
+  fuehrerscheinGueltigBis: string | null;
+  status: string;
+}
+
+/** Treffer der Verfügbarkeitssuche (dieselben Regeln wie die Buchung). */
+export interface VerfuegbaresFahrzeug {
+  id: string;
+  kennzeichen: string;
+  benoetigteFuehrerscheinklasse: string;
+  hatFahrtenschreiber: boolean;
+  standardTemperaturprofil: string | null;
+  kalibriertBis: string;
+}
+
+export interface Standort {
+  id: string;
+  name: string;
+  ort: string | null;
+  oeffnungsregeln: Oeffnungsregeln | null;
 }

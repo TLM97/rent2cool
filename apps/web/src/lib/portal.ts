@@ -37,8 +37,10 @@ export interface NavPunkt {
 /** Navigation je nach Rollen im eigenen Unternehmen. */
 export function navigation(rollen: readonly string[]): NavPunkt[] {
   const punkte: NavPunkt[] = [{ href: '/portal', text: 'Übersicht' }];
+  if (hat(rollen, 'kunde_dispo')) punkte.push({ href: '/portal/buchen', text: 'Buchen' });
   if (hat(rollen, 'kunde_dispo', 'kunde_qa')) {
     punkte.push({ href: '/portal/mieten', text: 'Mieten & Nachweise' });
+    punkte.push({ href: '/portal/fahrer', text: 'Fahrer' });
     punkte.push({ href: '/portal/rechnungen', text: 'Rechnungen' });
   }
   punkte.push({ href: '/portal/organisation', text: 'Unternehmen' });

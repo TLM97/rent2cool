@@ -87,7 +87,7 @@ export function Feld({
   standard,
   autocomplete,
   ...basis
-}: FeldBasis & { typ?: 'text' | 'email'; standard?: string; autocomplete?: string }) {
+}: FeldBasis & { typ?: 'text' | 'email' | 'date'; standard?: string; autocomplete?: string }) {
   const z = useContext(Zustand);
   const wert = z.werte ? (z.werte[basis.name] ?? '') : (standard ?? '');
   const fehler = z.feldFehler?.[basis.name];
@@ -113,6 +113,58 @@ export function Feld({
         aria-invalid={fehler ? true : undefined}
         aria-describedby={fehler ? `${name}-fehler` : hinweis ? `${name}-hinweis` : undefined}
       />
+      {hinweis && !fehler ? (
+        <p className="feldhinweis" id={`${name}-hinweis`}>
+          {hinweis}
+        </p>
+      ) : null}
+      {fehler ? (
+        <p className="feldfehler" id={`${name}-fehler`}>
+          {fehler}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+export function Auswahl({
+  name,
+  label,
+  optionen,
+  standard,
+  leer,
+  hinweis,
+}: {
+  name: string;
+  label: string;
+  optionen: readonly { wert: string; text: string }[];
+  standard?: string;
+  /** Text der Leer-Option; ohne Angabe gibt es keine. */
+  leer?: string;
+  hinweis?: string;
+}) {
+  const z = useContext(Zustand);
+  const wert = z.werte ? (z.werte[name] ?? '') : (standard ?? '');
+  const fehler = z.feldFehler?.[name];
+  return (
+    <div className="feld">
+      <label htmlFor={name}>{label}</label>
+      {/* key: React übernimmt ein geändertes defaultValue bei <select> nicht. */}
+      <select
+        key={wert}
+        id={name}
+        name={name}
+        defaultValue={wert}
+        aria-invalid={fehler ? true : undefined}
+        aria-describedby={fehler ? `${name}-fehler` : hinweis ? `${name}-hinweis` : undefined}
+      >
+        {leer !== undefined ? <option value="">{leer}</option> : null}
+        {optionen.map((o) => (
+          <option key={o.wert} value={o.wert}>
+            {o.text}
+          </option>
+        ))}
+      </select>
       {hinweis && !fehler ? (
         <p className="feldhinweis" id={`${name}-hinweis`}>
           {hinweis}

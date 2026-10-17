@@ -379,6 +379,13 @@ Admin-Oberfläche).
   durch Rent2Cool.
 - **Einladung** (`/einladung?code=…`, Link aus der Mail): anmelden oder
   Konto mit der eingeladenen Adresse anlegen, annehmen.
+- **Buchen** (`/portal/buchen`, Disposition, erst nach Freigabe): Zeitraum,
+  Fahrer, Standort, Auslandsfahrt → buchbare Fahrzeuge aus der
+  Verfügbarkeitssuche des Kerns (paginiert) → verbindlich buchen (mit
+  Idempotency-Key, der Kern prüft alle Regeln erneut). Stornieren bis
+  Mietbeginn auf der Mietseite.
+- **Fahrer** (`/portal/fahrer`): Fahrer des Unternehmens mit Status; die
+  Disposition legt neue an, Rent2Cool prüft Identität und Führerschein.
 - **Mieten & Nachweise**: eigene Mieten (paginiert), je Miete die
   Temperaturnachweise als gesiegeltes PDF und JSON mit SHA-256.
   **Rechnungen**: eigene Rechnungen.

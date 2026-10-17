@@ -21,9 +21,13 @@ describe('Portal-Regeln', () => {
     expect(navigation(['kunde_qa']).map((n) => n.href)).toEqual([
       '/portal',
       '/portal/mieten',
+      '/portal/fahrer',
       '/portal/rechnungen',
       '/portal/organisation',
     ]);
+    // Buchen nur mit Disposition.
+    expect(navigation(['kunde_dispo']).map((n) => n.href)).toContain('/portal/buchen');
+    expect(navigation(['kunde_qa']).map((n) => n.href)).not.toContain('/portal/buchen');
   });
 
   it('aktiver Menüpunkt', () => {

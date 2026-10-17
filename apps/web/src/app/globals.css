@@ -173,6 +173,12 @@ h2 {
   padding: 5px 10px;
   font-size: 13px;
 }
+.abstand-oben {
+  margin-top: 16px;
+}
+.abstand-unten {
+  margin-bottom: 16px;
+}
 .knopfreihe {
   display: flex;
   flex-wrap: wrap;
@@ -443,6 +449,9 @@ th {
 tr:last-child td {
   border-bottom: 0;
 }
+tr[aria-current='true'] td {
+  background: var(--akzent-zart);
+}
 .zeilenformular {
   display: flex;
   flex-wrap: wrap;
@@ -499,7 +508,10 @@ tr:last-child td {
   color: var(--kritisch-fg);
 }
 .feld input[type='text'],
-.feld input[type='email'] {
+.feld input[type='email'],
+.feld input[type='date'],
+.feld input[type='datetime-local'],
+.feld select {
   font: inherit;
   padding: 8px 10px;
   border: 1px solid var(--rand-stark);
@@ -536,4 +548,9 @@ tr:last-child td {
   .daten {
     grid-template-columns: 1fr;
   }
+}
+
+.daten + .formular,
+.daten + .hinweis {
+  margin-top: 18px;
 }

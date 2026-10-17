@@ -88,8 +88,7 @@ test('Verwalter sieht sein Unternehmen, Mieten mit Nachweis und lädt jemanden e
   await expect(page.getByRole('heading', { name: 'Mieten & Nachweise' })).toBeVisible();
   const zeilen = page.locator('tbody tr');
   await expect(zeilen.first()).toBeVisible();
-  // Nur eigene Mieten (Demo: Nordlicht hat 4 von 6).
-  await expect(zeilen).toHaveCount(4);
+  // Dass nur eigene Mieten kommen, prüft der Kern (Integrationstest Sichtbarkeit, D-020).
   // Beendete Miete: Nachweis mit gesiegeltem PDF liegt vor.
   await zeilen
     .filter({ hasText: /abgerechnet|beendet/ })

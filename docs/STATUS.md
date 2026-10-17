@@ -13,6 +13,46 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Kundenportal: Buchen, Stornieren, Fahrer
+
+Tom: „Bitte fahre fort“ – nächster Schritt aus dem letzten Eintrag
+(Buchen im Portal). Planung möge die Aufgabe in `TASKS.md` nachziehen.
+
+Erledigt:
+- **Buchen** (`/portal/buchen`, nur Disposition, erst nach Freigabe):
+  Zeitraum in Ortszeit, Fahrer, Standort, Auslandsfahrt → buchbare
+  Fahrzeuge aus `GET /v1/fahrzeuge/verfuegbar` (dieselben Regeln wie die
+  Buchung, paginiert) → verbindlich buchen. Der Kunde kommt aus dem Kern,
+  nie aus dem Formular; Idempotency-Key je Formular (D-003). Hinweis bei
+  Abholung/Rückgabe außerhalb der Öffnungszeiten.
+- Bestätigt wird aus den aktuellen Suchtreffern (Kunden sehen die
+  Fahrzeugakte nur für eigene Mieten, F-41) – ist das Fahrzeug inzwischen
+  vergeben, gibt es nichts zu bestätigen.
+- **Stornieren** auf der Mietseite, solange die Miete nicht begonnen hat.
+- **Fahrer** (`/portal/fahrer`): Liste mit Status, Anlegen durch
+  Disposition/Verwaltung (Status „angelegt“, Prüfung durch Rent2Cool).
+- Keine Kern-Änderung nötig (Schnittstelle zuerst war schon erfüllt).
+
+Tests: Web 16 Unit-Tests (neu: Zeitraum/Sommer-/Winterzeit, Storno-Regel,
+Navigation „Buchen“ nur Disposition); **Portal-Browser-Tests 6/6** (neu:
+Fahrer anlegen mit Pflichtfeldprüfung; ungültiger Zeitraum, suchen,
+verbindlich buchen, stornieren).
+
+Abkürzungen (vor Go-live ersetzen):
+- Digitaler Schlüssel und App-Konto des Fahrers (`kontoId`) noch nicht im
+  Portal; Schlüssel stellt heute der Betrieb aus.
+- Ein Fahrer lässt sich nach dem Anlegen nur durch Rent2Cool ändern (siehe
+  F-54).
+
+Fragen an Planung:
+- **F-54:** Dürfen Kunden Fahrerdaten selbst ändern (z. B. verlängerter
+  Führerschein), mit erneuter Prüfung durch Rent2Cool? Heute dürfen das nur
+  `ops`/`admin`.
+- F-52, F-53 und F-24, F-26 bis F-37, F-42 bis F-45, F-49, F-50 weiter
+  offen.
+
+---
+
 ### 2026-10-17 – Kundenportal v1 (Registrierung, Unternehmen, Mieten & Nachweise)
 
 Tom: „Dann fahre fort bitte“ (Vorschlag: Portal-Oberfläche für F-51).

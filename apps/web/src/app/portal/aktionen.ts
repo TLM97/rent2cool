@@ -9,19 +9,24 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import {
   einladungSchema,
+  fahrerErstellenSchema,
+  mieteErstellenSchema,
   organisationAendernSchema,
   registrierungSchema,
   type KundeRolle,
 } from '@rent2cool/shared';
 import { ApiFehler } from '@rent2cool/oberflaeche/api-client';
 import {
+  berlinLokalZuIso,
+  berlinTagesendeZuIso,
   feldFehlerAus,
+  haken,
   text,
   werteAus,
   type FormularZustand,
 } from '@rent2cool/oberflaeche/formular';
 import { istUuid } from '@rent2cool/oberflaeche/seiten';
-import { apiDelete, apiPatch, apiPost, holeIch } from '../../lib/api';
+import { apiDelete, apiPatch, apiPost, holeIch, mitKunde } from '../../lib/api';
 import { einladungsCode, IDENTITAETS_FELDER, rollenAusFormular } from '../../lib/portal';
 
 const PRUEFEN = 'Bitte prüfen Sie die markierten Felder.';
@@ -182,4 +187,72 @@ export async function nehmeEinladungAn(fd: FormData): Promise<void> {
     redirect(`/einladung?code=${code}&fehler=${encodeURIComponent(f)}`);
   }
   weiter('/portal', 'erfolg', 'Willkommen! Sie gehören jetzt zu diesem Unternehmen.');
+}
+
+// --- Buchen, Stornieren, Fahrer ---
+
+/**
+ * Buchung bestätigen. Der Kunde kommt aus dem Kern (`/v1/ich`), nie aus dem
+ * Formular; der Kern prüft alle Regeln erneut und lehnt mit Gründen ab.
+ * Ein Idempotency-Key je geöffnetem Formular verhindert Doppelbuchungen (D-003).
+ */
+export async function bucheMiete(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const ich = await mitKunde();
+  const r = mieteErstellenSchema.safeParse({
+    kundeId: ich.kunde.id,
+    fahrzeugId: text(fd, 'fahrzeugId') ?? '',
+    fahrerId: text(fd, 'fahrerId'),
+    standortAbholId: text(fd, 'standortId'),
+    standortRueckgabeId: text(fd, 'standortId'),
+    startGeplant: berlinLokalZuIso(text(fd, 'start')) ?? '',
+    endeGeplant: berlinLokalZuIso(text(fd, 'ende')) ?? '',
+    auslandsfahrtGeplant: haken(fd, 'ausland'),
+    temperaturprofil: text(fd, 'temperaturprofil'),
+    idempotencyKey: text(fd, 'idempotencyKey'),
+  });
+  if (!r.success) return { fehler: PRUEFEN, feldFehler: feldFehlerAus(r.error), werte };
+  let ergebnis: { id: string; idempotent: boolean };
+  try {
+    ergebnis = await apiPost<{ id: string; idempotent: boolean }>('/v1/mieten', r.data);
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(
+    `/portal/mieten/${ergebnis.id}`,
+    'erfolg',
+    ergebnis.idempotent ? 'Diese Buchung war bereits angelegt.' : 'Buchung bestätigt.',
+  );
+}
+
+export async function storniereMiete(fd: FormData): Promise<void> {
+  const id = String(fd.get('id') ?? '');
+  if (!istUuid(id)) weiter('/portal/mieten', 'fehler', 'Miete nicht gefunden.');
+  await knopf(
+    `/portal/mieten/${id}`,
+    () => apiPost(`/v1/mieten/${id}/status`, { status: 'storniert' }),
+    'Buchung storniert.',
+  );
+}
+
+export async function legeFahrerAn(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const ich = await mitKunde();
+  const r = fahrerErstellenSchema.safeParse({
+    name: text(fd, 'name') ?? '',
+    fuehrerscheinKlasse: (text(fd, 'fuehrerscheinKlasse') ?? '').toUpperCase(),
+    fuehrerscheinNummer: text(fd, 'fuehrerscheinNummer'),
+    fuehrerscheinGueltigBis: berlinTagesendeZuIso(text(fd, 'fuehrerscheinGueltigBis')),
+  });
+  if (!r.success) return { fehler: PRUEFEN, feldFehler: feldFehlerAus(r.error), werte };
+  try {
+    await apiPost(`/v1/kunden/${ich.kunde.id}/fahrer`, r.data);
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(
+    '/portal/fahrer',
+    'erfolg',
+    `${r.data.name} angelegt. Rent2Cool prüft Identität und Führerschein, dann ist die Person buchbar.`,
+  );
 }
