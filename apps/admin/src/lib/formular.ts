@@ -91,7 +91,9 @@ export function berlinLokalZuIso(lokal: string | undefined): string | undefined 
 
 /** Datum „2026-10-17“ → Ende dieses Tages (23:59 Berliner Zeit) in UTC. */
 export function berlinTagesendeZuIso(datum: string | undefined): string | undefined {
-  return datum && /^\d{4}-\d{2}-\d{2}$/.test(datum) ? berlinLokalZuIso(`${datum}T23:59`) : undefined;
+  return datum && /^\d{4}-\d{2}-\d{2}$/.test(datum)
+    ? berlinLokalZuIso(`${datum}T23:59`)
+    : undefined;
 }
 
 /** UTC-ISO → Wert für `datetime-local` (bzw. `date`) in Berliner Ortszeit. */

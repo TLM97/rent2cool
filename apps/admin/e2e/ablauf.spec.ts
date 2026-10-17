@@ -44,7 +44,9 @@ test('kompletter Ablauf von Fahrzeug bis Abweichung', async ({ page }) => {
   await page.getByRole('link', { name: 'Fahrzeug anlegen' }).click();
   await page.getByLabel('Sensor-Seriennummer').fill(`SN-${lauf}`);
   await page.getByRole('button', { name: 'Fahrzeug anlegen' }).click();
-  await expect(page.locator('.hinweis[role=alert]')).toContainText('Bitte die markierten Felder prüfen');
+  await expect(page.locator('.hinweis[role=alert]')).toContainText(
+    'Bitte die markierten Felder prüfen',
+  );
   await expect(page.getByLabel('Kennzeichen')).toHaveAttribute('aria-invalid', 'true');
   await expect(page.getByLabel('Sensor-Seriennummer')).toHaveValue(`SN-${lauf}`);
   await page.screenshot({ path: `${SCREENS}/11-fahrzeug-fehler.png`, fullPage: true });
@@ -91,15 +93,23 @@ test('kompletter Ablauf von Fahrzeug bis Abweichung', async ({ page }) => {
   await page.getByRole('link', { name: 'Buchung anlegen' }).click();
   await page.getByLabel('Freigegebener Kunde').selectOption({ label: firma });
   await page.getByRole('button', { name: 'Weiter' }).click();
-  await page.getByLabel('Fahrzeug (verfügbar)').selectOption({ label: `${kennzeichen} · Klasse B` });
-  await page.getByLabel('Fahrer', { exact: true }).selectOption({ label: `${fahrerName} · Klasse B` });
+  await page
+    .getByLabel('Fahrzeug (verfügbar)')
+    .selectOption({ label: `${kennzeichen} · Klasse B` });
+  await page
+    .getByLabel('Fahrer', { exact: true })
+    .selectOption({ label: `${fahrerName} · Klasse B` });
   await page.getByLabel('Auslandsfahrt geplant').check();
   await page.getByRole('button', { name: 'Buchung prüfen und anlegen' }).click();
   await expect(page.locator('.hinweis[role=alert]')).toContainText('Fahrtenschreiber');
   await expect(page.getByLabel('Auslandsfahrt geplant')).toBeChecked();
   // Auswahlfelder behalten nach der Ablehnung ihren Wert (React setzt das Formular zurück).
-  await expect(page.getByLabel('Fahrzeug (verfügbar)').locator('option:checked')).toHaveText(`${kennzeichen} · Klasse B`);
-  await expect(page.getByLabel('Fahrer', { exact: true }).locator('option:checked')).toHaveText(`${fahrerName} · Klasse B`);
+  await expect(page.getByLabel('Fahrzeug (verfügbar)').locator('option:checked')).toHaveText(
+    `${kennzeichen} · Klasse B`,
+  );
+  await expect(page.getByLabel('Fahrer', { exact: true }).locator('option:checked')).toHaveText(
+    `${fahrerName} · Klasse B`,
+  );
   await page.screenshot({ path: `${SCREENS}/14-buchung-abgelehnt.png`, fullPage: true });
 
   await page.getByLabel('Auslandsfahrt geplant').uncheck();
@@ -121,15 +131,22 @@ test('kompletter Ablauf von Fahrzeug bis Abweichung', async ({ page }) => {
   await expect(page.getByRole('status')).toContainText('Rechnung als Entwurf angelegt');
   await statusWechseln(page, 'Rechnungsstatus ändern', 'gestellt', 'Status');
   await statusWechseln(page, 'Rechnungsstatus ändern', 'bezahlt', 'Status');
-  await expect(page.getByRole('region', { name: 'Verlauf' })).toContainText('Status: gestellt → bezahlt');
+  await expect(page.getByRole('region', { name: 'Verlauf' })).toContainText(
+    'Status: gestellt → bezahlt',
+  );
   await expect(page.getByRole('region', { name: 'Rechnungsdaten' })).toContainText('297,50');
   await page.screenshot({ path: `${SCREENS}/15-rechnung.png`, fullPage: true });
 
   // --- Abweichung aus der Miete erfassen und durch die QA abschließen ---
-  await page.getByRole('link', { name: /^[0-9a-f]{8}$/ }).first().click();
+  await page
+    .getByRole('link', { name: /^[0-9a-f]{8}$/ })
+    .first()
+    .click();
   await expect(page.getByRole('heading', { name: 'Temperaturnachweis' })).toBeVisible();
   await page.getByRole('link', { name: 'Abweichung erfassen' }).click();
-  await page.getByLabel('Beschreibung').fill(`Testabweichung ${lauf}: Tür bei Übergabe offen (erfunden).`);
+  await page
+    .getByLabel('Beschreibung')
+    .fill(`Testabweichung ${lauf}: Tür bei Übergabe offen (erfunden).`);
   await page.getByLabel('Schweregrad').selectOption('mittel');
   await page.getByRole('button', { name: 'Abweichung erfassen' }).click();
   await expect(page.getByRole('status')).toContainText('Abweichung erfasst');
@@ -144,7 +161,9 @@ test('kompletter Ablauf von Fahrzeug bis Abweichung', async ({ page }) => {
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByRole('status')).toContainText('Abweichung aktualisiert');
   }
-  await expect(page.getByRole('region', { name: 'Erfassung' })).toContainText('Fahrer nachgeschult.');
+  await expect(page.getByRole('region', { name: 'Erfassung' })).toContainText(
+    'Fahrer nachgeschult.',
+  );
   const abwVerlauf = page.getByRole('region', { name: 'Verlauf' });
   await expect(abwVerlauf).toContainText('Maßnahmen: – → Fahrer nachgeschult.');
   await expect(abwVerlauf).toContainText('Status: bewertet → geschlossen');

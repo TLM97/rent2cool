@@ -44,8 +44,7 @@ export class AuditInterceptor implements NestInterceptor {
     return next.handle().pipe(
       concatMap(async (body) => {
         if (req.principal) {
-          const entitaetId =
-            istObjekt(body) && typeof body.id === 'string' ? body.id : undefined;
+          const entitaetId = istObjekt(body) && typeof body.id === 'string' ? body.id : undefined;
           await this.audit.protokolliere(req.principal, {
             aktion: req.method,
             entitaetTyp,

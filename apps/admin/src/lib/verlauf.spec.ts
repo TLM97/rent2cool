@@ -36,17 +36,30 @@ describe('Verlauf', () => {
 
   it('Feldänderung ohne Statuswechsel und Stammdaten', () => {
     expect(
-      beschreibe(eintrag({ altWert: { status: 'in_bewertung', bewertung: null }, neuWert: { status: 'in_bewertung', bewertung: 'ok' } }))
-        .vorgang,
+      beschreibe(
+        eintrag({
+          altWert: { status: 'in_bewertung', bewertung: null },
+          neuWert: { status: 'in_bewertung', bewertung: 'ok' },
+        }),
+      ).vorgang,
     ).toBe('Angaben ergänzt');
-    expect(beschreibe(eintrag({ aktion: 'PATCH', entitaetTyp: 'kunde' })).vorgang).toBe('Stammdaten geändert');
+    expect(beschreibe(eintrag({ aktion: 'PATCH', entitaetTyp: 'kunde' })).vorgang).toBe(
+      'Stammdaten geändert',
+    );
   });
 
   it('Anlegen zeigt die gefüllten Felder ohne alten Wert; ohne Namen die gekürzte Kennung', () => {
     const b = beschreibe(
       eintrag({
         entitaetTyp: 'rechnung',
-        neuWert: { id: 'x', mandantId: 'm', rechnungsnummer: '2026-00001', nettoCent: 10000, status: 'entwurf', bezahltAm: null },
+        neuWert: {
+          id: 'x',
+          mandantId: 'm',
+          rechnungsnummer: '2026-00001',
+          nettoCent: 10000,
+          status: 'entwurf',
+          bezahltAm: null,
+        },
       }),
     );
     expect(b.vorgang).toBe('angelegt');
@@ -57,16 +70,21 @@ describe('Verlauf', () => {
       { feld: 'Netto', alt: null, neu: '100,00\u00a0€' },
     ]);
     // Alte Einträge der Rückfallebene enthielten nur die ID.
-    expect(beschreibe(eintrag({ entitaetTyp: 'miete', neuWert: { id: 'x' } })).aenderungen).toEqual([]);
-    expect(beschreibe(eintrag({ entitaetTyp: 'kalibrierung', neuWert: { zertifikatRef: 'K1' } })).vorgang).toBe(
-      'Kalibrierung erfasst',
+    expect(beschreibe(eintrag({ entitaetTyp: 'miete', neuWert: { id: 'x' } })).aenderungen).toEqual(
+      [],
     );
+    expect(
+      beschreibe(eintrag({ entitaetTyp: 'kalibrierung', neuWert: { zertifikatRef: 'K1' } }))
+        .vorgang,
+    ).toBe('Kalibrierung erfasst');
   });
 
   it('formatiert Werte deutsch', () => {
     expect(formatWert('hatFahrtenschreiber', true)).toBe('ja');
     expect(formatWert('zulGesamtmasseKg', 7490)).toBe('7.490');
     expect(formatWert('ort', null)).toBe('–');
-    expect(feldaenderungen({ ort: 'A', plz: '1' }, { ort: 'B', plz: '1' })).toEqual([{ feld: 'Ort', alt: 'A', neu: 'B' }]);
+    expect(feldaenderungen({ ort: 'A', plz: '1' }, { ort: 'B', plz: '1' })).toEqual([
+      { feld: 'Ort', alt: 'A', neu: 'B' },
+    ]);
   });
 });

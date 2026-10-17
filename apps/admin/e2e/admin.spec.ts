@@ -41,7 +41,10 @@ test('admin meldet sich an und sieht alle Bereiche', async ({ page }) => {
     ['Abweichungen', '10-abweichungen'],
   ];
   for (const [name, datei] of bereiche) {
-    await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name }).click();
+    await page
+      .getByRole('navigation', { name: 'Hauptnavigation' })
+      .getByRole('link', { name })
+      .click();
     await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
     await page.screenshot({ path: `${SCREENS}/${datei}.png`, fullPage: true });
 

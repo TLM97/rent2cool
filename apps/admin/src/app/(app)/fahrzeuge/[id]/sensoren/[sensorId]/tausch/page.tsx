@@ -1,7 +1,13 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Leer, Seitenkopf } from '../../../../../../../components/bausteine';
-import { Feld, FormularRahmen, Gruppe, Haken, Textfeld } from '../../../../../../../components/formular';
+import {
+  Feld,
+  FormularRahmen,
+  Gruppe,
+  Haken,
+  Textfeld,
+} from '../../../../../../../components/formular';
 import { KalibrierungFelder } from '../../../../../../../components/stammdaten';
 import { apiGetOderNull } from '../../../../../../../lib/api';
 import { formatDatum, formatDatumZeit, kurzeId } from '../../../../../../../lib/format';
@@ -15,10 +21,17 @@ export const metadata: Metadata = { title: 'Sensor tauschen' };
 
 const UNTERWEGS = new Set(['vermietet', 'in_ruecknahme']);
 
-export default async function SensorTausch({ params }: { params: Promise<{ id: string; sensorId: string }> }) {
+export default async function SensorTausch({
+  params,
+}: {
+  params: Promise<{ id: string; sensorId: string }>;
+}) {
   const { id, sensorId } = await params;
   if (!istUuid(id) || !istUuid(sensorId)) notFound();
-  const [akte, sitzung] = await Promise.all([apiGetOderNull<FahrzeugAkte>(`/v1/fahrzeuge/${id}`), holeSitzung()]);
+  const [akte, sitzung] = await Promise.all([
+    apiGetOderNull<FahrzeugAkte>(`/v1/fahrzeuge/${id}`),
+    holeSitzung(),
+  ]);
   const sensor = akte?.aggregate.flatMap((a) => a.sensoren).find((s) => s.id === sensorId);
   if (!akte || !sensor) notFound();
   const f = akte.fahrzeug;
@@ -53,13 +66,14 @@ export default async function SensorTausch({ params }: { params: Promise<{ id: s
         ) : (
           <>
             <p className="leise">
-              Der alte Sensor wird ausgebaut und bleibt mit seiner Historie in der Akte. Der neue misst ab jetzt dieselbe
-              Größe. Ohne gültige Kalibrierung des neuen Sensors ist das Fahrzeug nicht buchbar (R-08/R-09).
+              Der alte Sensor wird ausgebaut und bleibt mit seiner Historie in der Akte. Der neue
+              misst ab jetzt dieselbe Größe. Ohne gültige Kalibrierung des neuen Sensors ist das
+              Fahrzeug nicht buchbar (R-08/R-09).
             </p>
             {UNTERWEGS.has(f.status) ? (
               <div className="hinweis warn">
-                Das Fahrzeug ist gerade vermietet. Der Tausch wird mit Zeitpunkt protokolliert; bitte die Abweichung
-                zur laufenden Miete erfassen.
+                Das Fahrzeug ist gerade vermietet. Der Tausch wird mit Zeitpunkt protokolliert;
+                bitte die Abweichung zur laufenden Miete erfassen.
               </div>
             ) : null}
             <FormularRahmen
@@ -69,9 +83,18 @@ export default async function SensorTausch({ params }: { params: Promise<{ id: s
               versteckt={{ fahrzeugId: f.id, sensorId: sensor.id }}
             >
               <Feld name="seriennummer" label="Seriennummer (neu)" pflicht />
-              <Feld name="modell" label="Modell" standard={sensor.modell ?? ''} hinweis="Temperaturschreiber nach EN 12830" />
+              <Feld
+                name="modell"
+                label="Modell"
+                standard={sensor.modell ?? ''}
+                hinweis="Temperaturschreiber nach EN 12830"
+              />
               <Textfeld name="grund" label="Grund für den Tausch" pflicht breit />
-              <Haken name="mitKalibrierung" label="Kalibrierung des neuen Sensors gleich erfassen" standard />
+              <Haken
+                name="mitKalibrierung"
+                label="Kalibrierung des neuen Sensors gleich erfassen"
+                standard
+              />
               <Gruppe titel="Kalibrierung (neuer Sensor)">
                 <KalibrierungFelder />
               </Gruppe>

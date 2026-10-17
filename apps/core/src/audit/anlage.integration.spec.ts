@@ -41,7 +41,12 @@ describe.skipIf(!RUN)('Anlegen mit Audit (Integration, braucht DB)', () => {
   let rechnungen: RechnungService;
   let abweichungen: AbweichungService;
   const mandantId = randomUUID();
-  const ops: Principal = { akteurId: `test-anlage-${randomUUID().slice(0, 8)}`, rollen: ['ops'], mandantId, name: 'ops.anlage' };
+  const ops: Principal = {
+    akteurId: `test-anlage-${randomUUID().slice(0, 8)}`,
+    rollen: ['ops'],
+    mandantId,
+    name: 'ops.anlage',
+  };
 
   async function audit(entitaetId: string, typ: string) {
     return client.db
@@ -58,7 +63,10 @@ describe.skipIf(!RUN)('Anlegen mit Audit (Integration, braucht DB)', () => {
       zulGesamtmasseKg: 3500,
       benoetigteFuehrerscheinklasse: 'B',
       hatFahrtenschreiber: false,
-      aggregat: { typ: 'Kühlkoffer', sensoren: [{ messgroesse: 'temperatur_laderaum', einheit: 'C', seriennummer: sn }] },
+      aggregat: {
+        typ: 'Kühlkoffer',
+        sensoren: [{ messgroesse: 'temperatur_laderaum', einheit: 'C', seriennummer: sn }],
+      },
     });
     const sensorId = (await fahrzeuge.holeAkte(fahrzeugId)).aggregate[0]!.sensoren[0]!.id;
     await fahrzeuge.fuegeKalibrierungHinzu(ops, sensorId, {
@@ -67,7 +75,11 @@ describe.skipIf(!RUN)('Anlegen mit Audit (Integration, braucht DB)', () => {
       zertifikatRef: 'KAL-ANLAGE',
     });
     await fahrzeuge.aendereStatus(ops, fahrzeugId, 'verfuegbar');
-    const { id: kundeId } = await kunden.erstelleKunde(ops, { firmenname: 'Anlagekunde', ort: 'Berlin', land: 'DE' });
+    const { id: kundeId } = await kunden.erstelleKunde(ops, {
+      firmenname: 'Anlagekunde',
+      ort: 'Berlin',
+      land: 'DE',
+    });
     await kunden.aendereKundeStatus(ops, kundeId, 'in_pruefung');
     await kunden.aendereKundeStatus(ops, kundeId, 'freigegeben');
     return { fahrzeugId, sensorId, sn, kundeId };
@@ -120,13 +132,20 @@ describe.skipIf(!RUN)('Anlegen mit Audit (Integration, braucht DB)', () => {
         id: fahrzeugId,
         status: 'angelegt',
         zulGesamtmasseKg: 3500,
-        aggregat: { typ: 'Kühlkoffer', sensoren: [{ id: sensorId, seriennummer: sn, aktiv: true }] },
+        aggregat: {
+          typ: 'Kühlkoffer',
+          sensoren: [{ id: sensorId, seriennummer: sn, aktiv: true }],
+        },
       },
     });
 
     // Kalibrierung unter der Sensor-ID, mit dem Erfasser.
     const [kal] = await audit(sensorId, 'kalibrierung');
-    expect(kal?.neuWert).toMatchObject({ sensorId, zertifikatRef: 'KAL-ANLAGE', erfasstVon: ops.akteurId });
+    expect(kal?.neuWert).toMatchObject({
+      sensorId,
+      zertifikatRef: 'KAL-ANLAGE',
+      erfasstVon: ops.akteurId,
+    });
 
     // Verlauf der Akte: Fahrzeug und Sensor zusammen, neueste zuerst.
     const verlauf = await new AuditService(client.db).verlauf({
@@ -135,21 +154,39 @@ describe.skipIf(!RUN)('Anlegen mit Audit (Integration, braucht DB)', () => {
       limit: 10,
       offset: 0,
     });
-    expect(verlauf.eintraege.map((e) => e.entitaetTyp)).toEqual(['fahrzeug_status', 'kalibrierung', 'fahrzeug']);
+    expect(verlauf.eintraege.map((e) => e.entitaetTyp)).toEqual([
+      'fahrzeug_status',
+      'kalibrierung',
+      'fahrzeug',
+    ]);
 
     const [k] = await audit(kundeId, 'kunde');
-    expect(k?.neuWert).toMatchObject({ id: kundeId, firmenname: 'Anlagekunde', ort: 'Berlin', status: 'angelegt', mandantId });
+    expect(k?.neuWert).toMatchObject({
+      id: kundeId,
+      firmenname: 'Anlagekunde',
+      ort: 'Berlin',
+      status: 'angelegt',
+      mandantId,
+    });
   });
 
   it('Fahrer: Audit beim Anlegen; fremder Mandant legt nichts an', async () => {
     const { kundeId } = await fahrzeugUndKunde();
-    const { id } = await kunden.erstelleFahrer(ops, kundeId, { name: 'Erika Anlage', fuehrerscheinKlasse: 'B' });
-    expect((await audit(id, 'fahrer'))[0]?.neuWert).toMatchObject({ id, kundeId, name: 'Erika Anlage', status: 'angelegt' });
+    const { id } = await kunden.erstelleFahrer(ops, kundeId, {
+      name: 'Erika Anlage',
+      fuehrerscheinKlasse: 'B',
+    });
+    expect((await audit(id, 'fahrer'))[0]?.neuWert).toMatchObject({
+      id,
+      kundeId,
+      name: 'Erika Anlage',
+      status: 'angelegt',
+    });
 
     const fremd: Principal = { akteurId: 'test-fremd', rollen: ['ops'], mandantId: randomUUID() };
-    await expect(kunden.erstelleFahrer(fremd, kundeId, { name: 'X', fuehrerscheinKlasse: 'B' })).rejects.toThrow(
-      NotFoundException,
-    );
+    await expect(
+      kunden.erstelleFahrer(fremd, kundeId, { name: 'X', fuehrerscheinKlasse: 'B' }),
+    ).rejects.toThrow(NotFoundException);
     expect(await kunden.listeFahrer(kundeId)).toHaveLength(1);
   });
 
@@ -168,7 +205,12 @@ describe.skipIf(!RUN)('Anlegen mit Audit (Integration, braucht DB)', () => {
     expect(nochmal).toMatchObject({ id: erst.id, idempotent: true });
     const eintraege = await audit(erst.id, 'miete');
     expect(eintraege).toHaveLength(1);
-    expect(eintraege[0]?.neuWert).toMatchObject({ id: erst.id, kundeId, fahrzeugId, status: 'bestaetigt' });
+    expect(eintraege[0]?.neuWert).toMatchObject({
+      id: erst.id,
+      kundeId,
+      fahrzeugId,
+      status: 'bestaetigt',
+    });
   });
 
   it('Rechnung: Audit beim Anlegen, Nummern lückenlos auch nach abgewiesenem Doppel', async () => {
@@ -180,7 +222,9 @@ describe.skipIf(!RUN)('Anlegen mit Audit (Integration, braucht DB)', () => {
     ]);
     const erfolgreich = ergebnisse.filter((e) => e.status === 'fulfilled');
     expect(erfolgreich).toHaveLength(1);
-    const erste = (erfolgreich[0] as PromiseFulfilledResult<{ id: string; rechnungsnummer: string }>).value;
+    const erste = (
+      erfolgreich[0] as PromiseFulfilledResult<{ id: string; rechnungsnummer: string }>
+    ).value;
     const zweite = await rechnungen.erstelle(ops, { mieteId: b, netto: 50 });
     const nr = (r: { rechnungsnummer: string }) => Number(r.rechnungsnummer.split('-')[1]);
     expect(nr(zweite)).toBe(nr(erste) + 1);

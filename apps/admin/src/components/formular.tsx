@@ -6,7 +6,14 @@
  * erhalten, der Absendeknopf ist während des Sendens gesperrt (kein
  * Doppelabsenden).
  */
-import { createContext, useActionState, useContext, useEffect, useRef, type ReactNode } from 'react';
+import {
+  createContext,
+  useActionState,
+  useContext,
+  useEffect,
+  useRef,
+  type ReactNode,
+} from 'react';
 import { useFormStatus } from 'react-dom';
 import type { FormularZustand } from '../lib/formular';
 
@@ -105,7 +112,12 @@ function Rahmen({
     <div className={`feld${breit ? ' breit' : ''}`}>
       <label htmlFor={name}>
         {label}
-        {pflicht ? <span className="pflicht" aria-hidden="true"> *</span> : null}
+        {pflicht ? (
+          <span className="pflicht" aria-hidden="true">
+            {' '}
+            *
+          </span>
+        ) : null}
       </label>
       {children}
       {hinweis && !fehler ? (
@@ -211,7 +223,17 @@ export function Auswahl({
   );
 }
 
-export function Haken({ name, label, standard = false, hinweis }: { name: string; label: string; standard?: boolean; hinweis?: string }) {
+export function Haken({
+  name,
+  label,
+  standard = false,
+  hinweis,
+}: {
+  name: string;
+  label: string;
+  standard?: boolean;
+  hinweis?: string;
+}) {
   const z = useContext(Zustand);
   const an = z.werte ? z.werte[name] === 'on' : standard;
   return (

@@ -11,7 +11,9 @@ const principal: Principal = { akteurId: 'u1', rollen: ['ops'], mandantId: 'm1' 
 /** Fake-Datenbank: Transaktion ruft direkt auf, Audit-Inserts werden gesammelt. */
 function fakeDb() {
   const audit: Record<string, unknown>[] = [];
-  const tx = { insert: () => ({ values: async (v: Record<string, unknown>) => void audit.push(v) }) };
+  const tx = {
+    insert: () => ({ values: async (v: Record<string, unknown>) => void audit.push(v) }),
+  };
   const db = { transaction: async (fn: (t: unknown) => unknown) => fn(tx) } as unknown as Database;
   return { db, audit };
 }
@@ -40,7 +42,10 @@ describe('wechsleStatus', () => {
     const { o, speichere, danach } = optionen({ status: 'a', seit: null }, 'b');
     const r = await wechsleStatus(db, principal, o);
     expect(r).toEqual({ id: 'x1', status: 'b', von: 'a', geaendert: true });
-    expect(speichere).toHaveBeenCalledWith(expect.anything(), { status: 'b', seit: '2026-10-17T08:00:00.000Z' });
+    expect(speichere).toHaveBeenCalledWith(expect.anything(), {
+      status: 'b',
+      seit: '2026-10-17T08:00:00.000Z',
+    });
     expect(audit).toHaveLength(1);
     expect(audit[0]).toMatchObject({
       akteurId: 'u1',
@@ -54,7 +59,10 @@ describe('wechsleStatus', () => {
 
   it('gleicher Status ohne Feldänderung: nichts speichern, kein Audit, kein Folgeschritt', async () => {
     const { db, audit } = fakeDb();
-    const { o, speichere, danach } = optionen({ status: 'b', seit: '2026-10-17T08:00:00.000Z' }, 'b');
+    const { o, speichere, danach } = optionen(
+      { status: 'b', seit: '2026-10-17T08:00:00.000Z' },
+      'b',
+    );
     expect((await wechsleStatus(db, principal, o)).geaendert).toBe(false);
     expect(speichere).not.toHaveBeenCalled();
     expect(danach).not.toHaveBeenCalled();
@@ -63,8 +71,12 @@ describe('wechsleStatus', () => {
 
   it('lehnt unerlaubte Übergänge und unbekannte Datensätze ab', async () => {
     const { db, audit } = fakeDb();
-    await expect(wechsleStatus(db, principal, optionen({ status: 'a' }, 'c').o)).rejects.toThrow(BadRequestException);
-    await expect(wechsleStatus(db, principal, optionen(undefined, 'b').o)).rejects.toThrow(NotFoundException);
+    await expect(wechsleStatus(db, principal, optionen({ status: 'a' }, 'c').o)).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(wechsleStatus(db, principal, optionen(undefined, 'b').o)).rejects.toThrow(
+      NotFoundException,
+    );
     await expect(wechsleStatus(db, principal, optionen({ status: 'zzz' }, 'b').o)).rejects.toThrow(
       'Unbekannter aktueller Status',
     );

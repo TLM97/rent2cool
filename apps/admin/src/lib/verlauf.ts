@@ -85,7 +85,8 @@ export function formatWert(feld: string, wert: unknown): string {
   if (wert === null || wert === undefined || wert === '') return '–';
   if (feld === 'status' && typeof wert === 'string') return statusLabel(wert);
   if (typeof wert === 'boolean') return wert ? 'ja' : 'nein';
-  if (typeof wert === 'number') return feld.endsWith('Cent') ? formatEuro(wert) : wert.toLocaleString('de-DE');
+  if (typeof wert === 'number')
+    return feld.endsWith('Cent') ? formatEuro(wert) : wert.toLocaleString('de-DE');
   if (typeof wert === 'string') return ISO_ZEIT.test(wert) ? formatDatumZeit(wert) : wert;
   return JSON.stringify(wert);
 }
@@ -132,7 +133,11 @@ export function akteur(e: AuditEintrag): string {
   return e.akteurName ?? `Konto ${e.akteurId.slice(0, 8)}`;
 }
 
-export function beschreibe(e: AuditEintrag): { vorgang: string; wer: string; aenderungen: Feldaenderung[] } {
+export function beschreibe(e: AuditEintrag): {
+  vorgang: string;
+  wer: string;
+  aenderungen: Feldaenderung[];
+} {
   const v = vorgang(e);
   const neuAngelegt = v === 'angelegt' || v === 'Kalibrierung erfasst';
   return {

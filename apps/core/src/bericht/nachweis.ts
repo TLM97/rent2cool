@@ -53,7 +53,11 @@ export function berechneNachweis(
     const t1 = new Date(sortiert[i].zeit).getTime();
     const dauerMin = (t1 - t0) / 60_000;
     if (dauerMin > params.lueckeSchwelleMin) {
-      luecken.push({ von: sortiert[i - 1].zeit, bis: sortiert[i].zeit, dauerMin: Math.round(dauerMin) });
+      luecken.push({
+        von: sortiert[i - 1].zeit,
+        bis: sortiert[i].zeit,
+        dauerMin: Math.round(dauerMin),
+      });
     }
   }
 

@@ -22,7 +22,10 @@ describe('JsonNachweisRenderer', () => {
     const r = new JsonNachweisRenderer();
     expect(r.contentType).toBe('application/json');
     const buf = r.render(nachweis);
-    expect(JSON.parse(buf.toString('utf8'))).toMatchObject({ fahrzeugId: 'f1', bewertung: 'eingehalten' });
+    expect(JSON.parse(buf.toString('utf8'))).toMatchObject({
+      fahrzeugId: 'f1',
+      bewertung: 'eingehalten',
+    });
   });
 });
 

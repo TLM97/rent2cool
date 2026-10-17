@@ -7,7 +7,13 @@ import {
   istKundeUebergangErlaubt,
   KUNDE_STATUS,
 } from '@rent2cool/shared';
-import { Leer, Meldungen, Plakette, Seitenkopf, StatusFormular } from '../../../../components/bausteine';
+import {
+  Leer,
+  Meldungen,
+  Plakette,
+  Seitenkopf,
+  StatusFormular,
+} from '../../../../components/bausteine';
 import { Verlauf } from '../../../../components/verlauf';
 import { FormularRahmen } from '../../../../components/formular';
 import { FahrerFelder } from '../../../../components/stammdaten';
@@ -36,7 +42,10 @@ export default async function KundeDetail({
   const suche = await searchParams;
   const kunde = await apiGetOderNull<Kunde>(`/v1/kunden/${id}`);
   if (!kunde) notFound();
-  const [fahrer, sitzung] = await Promise.all([apiGet<Fahrer[]>(`/v1/kunden/${id}/fahrer`), holeSitzung()]);
+  const [fahrer, sitzung] = await Promise.all([
+    apiGet<Fahrer[]>(`/v1/kunden/${id}/fahrer`),
+    holeSitzung(),
+  ]);
   const darfAendern = hatRolle(sitzung?.rollen ?? [], 'ops', 'admin');
   const pfad = `/kunden/${id}`;
 
@@ -111,7 +120,11 @@ export default async function KundeDetail({
                   return (
                     <tr key={f.id}>
                       <td>
-                        {darfAendern ? <Link href={`${pfad}/fahrer/${f.id}`}>{f.name}</Link> : f.name}
+                        {darfAendern ? (
+                          <Link href={`${pfad}/fahrer/${f.id}`}>{f.name}</Link>
+                        ) : (
+                          f.name
+                        )}
                       </td>
                       <td>
                         <Plakette status={f.status} />
@@ -127,7 +140,11 @@ export default async function KundeDetail({
                             aktion={aendereFahrerStatus}
                             id={f.id}
                             zurueck={pfad}
-                            naechste={naechsteStatus(FAHRER_STATUS, f.status, istFahrerUebergangErlaubt)}
+                            naechste={naechsteStatus(
+                              FAHRER_STATUS,
+                              f.status,
+                              istFahrerUebergangErlaubt,
+                            )}
                             label={`Status von ${f.name} ändern`}
                           />
                         </td>
@@ -145,10 +162,14 @@ export default async function KundeDetail({
         <section className="karte" aria-labelledby="fahrer-neu-titel">
           <h2 id="fahrer-neu-titel">Fahrer anlegen</h2>
           <p className="leise">
-            Fahrer gehören zum Kunden (D-004). Nur erfundene Testdaten, solange kein Datenschutzbeauftragter
-            benannt ist (D-015).
+            Fahrer gehören zum Kunden (D-004). Nur erfundene Testdaten, solange kein
+            Datenschutzbeauftragter benannt ist (D-015).
           </p>
-          <FormularRahmen aktion={erstelleFahrer} sendenText="Fahrer anlegen" versteckt={{ kundeId: kunde.id }}>
+          <FormularRahmen
+            aktion={erstelleFahrer}
+            sendenText="Fahrer anlegen"
+            versteckt={{ kundeId: kunde.id }}
+          >
             <FahrerFelder />
           </FormularRahmen>
         </section>

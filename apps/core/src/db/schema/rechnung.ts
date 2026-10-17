@@ -1,5 +1,14 @@
 /** Rechnung (R-63) und fortlaufende Nummernsequenz. Beträge in ganzen Cent. */
-import { index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  index,
+  integer,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { mandant } from './stammdaten';
 import { kunde } from './kunde';
 import { miete } from './miete';

@@ -63,8 +63,17 @@ export class AlarmService {
       opts.mieteId ? eq(alarm.mieteId, opts.mieteId) : undefined,
     );
     const [eintraege, [zaehler]] = await Promise.all([
-      this.db.select().from(alarm).where(filter).orderBy(desc(alarm.ausgeloestAm)).limit(opts.limit).offset(opts.offset),
-      this.db.select({ n: sql<number>`count(*)::int` }).from(alarm).where(filter),
+      this.db
+        .select()
+        .from(alarm)
+        .where(filter)
+        .orderBy(desc(alarm.ausgeloestAm))
+        .limit(opts.limit)
+        .offset(opts.offset),
+      this.db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(alarm)
+        .where(filter),
     ]);
     return { eintraege, gesamt: zaehler?.n ?? 0 };
   }
@@ -92,7 +101,11 @@ export class AlarmService {
       lade: async (tx) =>
         (
           await tx
-            .select({ status: alarm.status, quittiertVon: alarm.quittiertVon, quittiertAm: alarm.quittiertAm })
+            .select({
+              status: alarm.status,
+              quittiertVon: alarm.quittiertVon,
+              quittiertAm: alarm.quittiertAm,
+            })
             .from(alarm)
             .where(and(eq(alarm.id, id), eq(alarm.mandantId, mandant)))
             .for('update')
@@ -108,7 +121,10 @@ export class AlarmService {
   }
 
   quittiere(principal: Principal, id: string): Promise<StatusErgebnis<AlarmStatus>> {
-    return this.setze(principal, id, 'quittiert', { quittiertVon: principal.akteurId, quittiertAm: new Date() });
+    return this.setze(principal, id, 'quittiert', {
+      quittiertVon: principal.akteurId,
+      quittiertAm: new Date(),
+    });
   }
 
   schliesse(principal: Principal, id: string): Promise<StatusErgebnis<AlarmStatus>> {

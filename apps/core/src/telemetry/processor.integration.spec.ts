@@ -18,8 +18,7 @@ import { verarbeiteNachricht } from './processor';
 
 const RUN = process.env.RUN_INTEGRATION === '1';
 const url =
-  process.env.DATABASE_URL ??
-  'postgres://rent2cool:rent2cool_local_dev@localhost:5432/rent2cool';
+  process.env.DATABASE_URL ?? 'postgres://rent2cool:rent2cool_local_dev@localhost:5432/rent2cool';
 
 function nachricht(id: string, fahrzeugId: string): TelemetrieNachricht {
   return {
@@ -56,10 +55,7 @@ describe.skipIf(!RUN)('Verarbeiter (Integration, braucht DB)', () => {
     expect(r1).toBe('gespeichert');
     expect(r2).toBe('duplikat');
 
-    const zeilen = await client.db
-      .select()
-      .from(messwert)
-      .where(eq(messwert.nachrichtId, id));
+    const zeilen = await client.db.select().from(messwert).where(eq(messwert.nachrichtId, id));
     // 2 Messwerte, nicht 4 -> keine Doppelspeicherung.
     expect(zeilen).toHaveLength(2);
   });

@@ -7,11 +7,7 @@
  * damit der Server ohne echtes Kafka testbar ist.
  */
 import Fastify, { type FastifyInstance } from 'fastify';
-import {
-  nowUtcIso,
-  validierePayloadUndSignatur,
-  type HealthReport,
-} from '@rent2cool/shared';
+import { nowUtcIso, validierePayloadUndSignatur, type HealthReport } from '@rent2cool/shared';
 
 export interface ServerDeps {
   signierSchluessel: string;
@@ -27,7 +23,9 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   const app = Fastify({
     logger: {
       level: deps.logLevel ?? 'info',
-      ...(deps.pretty ? { transport: { target: 'pino-pretty', options: { singleLine: true } } } : {}),
+      ...(deps.pretty
+        ? { transport: { target: 'pino-pretty', options: { singleLine: true } } }
+        : {}),
       redact: { paths: ['req.headers.authorization'], remove: true },
     },
     bodyLimit: 1_048_576, // 1 MB je Nachricht reicht reichlich

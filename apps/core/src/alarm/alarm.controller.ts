@@ -23,7 +23,9 @@ import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 function parse<S extends z.ZodTypeAny>(schema: S, wert: unknown): z.infer<S> {
   const r = schema.safeParse(wert);
   if (!r.success) {
-    throw new BadRequestException(r.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '));
+    throw new BadRequestException(
+      r.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
+    );
   }
   return r.data;
 }

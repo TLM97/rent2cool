@@ -38,7 +38,11 @@ export function hatRolle(rollen: readonly string[], ...erlaubt: string[]): boole
 }
 
 /** Abgelaufen, wenn `expiresAtSek` fehlt oder (mit Puffer) in der Vergangenheit liegt. */
-export function istAbgelaufen(expiresAtSek: number | undefined, jetztMs = Date.now(), pufferMs = 30_000): boolean {
+export function istAbgelaufen(
+  expiresAtSek: number | undefined,
+  jetztMs = Date.now(),
+  pufferMs = 30_000,
+): boolean {
   if (!expiresAtSek) return true;
   return expiresAtSek * 1000 - pufferMs <= jetztMs;
 }

@@ -15,7 +15,12 @@ describe('AuditService', () => {
     } as unknown as Database;
 
     const service = new AuditService(db);
-    const principal: Principal = { akteurId: 'user-9', rollen: ['admin', 'ops'], mandantId: 'm-1', name: 'admin.dev' };
+    const principal: Principal = {
+      akteurId: 'user-9',
+      rollen: ['admin', 'ops'],
+      mandantId: 'm-1',
+      name: 'admin.dev',
+    };
     await service.protokolliere(principal, {
       aktion: 'POST',
       entitaetTyp: 'demo',

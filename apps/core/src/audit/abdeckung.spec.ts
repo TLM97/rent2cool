@@ -46,7 +46,9 @@ describe('Audit-Abdeckung', () => {
         if (methode === undefined || LESEND.has(methode)) continue;
         schreibend++;
         if (!Reflect.getMetadata(AUDITED_KEY, handler)) {
-          fehlend.push(`${c.name}.${name} (${String(Reflect.getMetadata(PATH_METADATA, handler))})`);
+          fehlend.push(
+            `${c.name}.${name} (${String(Reflect.getMetadata(PATH_METADATA, handler))})`,
+          );
         }
       }
     }

@@ -70,7 +70,10 @@ describe.skipIf(!RUN)('Statuswechsel mit Audit (Integration, braucht DB)', () =>
       durchgefuehrtAm: new Date().toISOString(),
       gueltigBis: new Date(Date.now() + 365 * 86_400_000).toISOString(),
     });
-    const { id: kundeId } = await kunden.erstelleKunde(ops, { firmenname: 'Statuskunde', land: 'DE' });
+    const { id: kundeId } = await kunden.erstelleKunde(ops, {
+      firmenname: 'Statuskunde',
+      land: 'DE',
+    });
     await kunden.aendereKundeStatus(ops, kundeId, 'in_pruefung');
     await kunden.aendereKundeStatus(ops, kundeId, 'freigegeben');
     const r = await mieten.erstelle(ops, {
@@ -97,7 +100,10 @@ describe.skipIf(!RUN)('Statuswechsel mit Audit (Integration, braucht DB)', () =>
     mieten = new MieteService(client.db, fahrzeuge, kunden, berichte);
     rechnungen = new RechnungService(client.db, fakeConfig, mieten);
     abweichungen = new AbweichungService(client.db);
-    await client.db.insert(mandant).values({ id: PLACEHOLDER_MANDANT_ID, name: 'Test' }).onConflictDoNothing();
+    await client.db
+      .insert(mandant)
+      .values({ id: PLACEHOLDER_MANDANT_ID, name: 'Test' })
+      .onConflictDoNothing();
   });
   afterAll(async () => {
     await client.sql.end({ timeout: 5 });
@@ -150,7 +156,9 @@ describe.skipIf(!RUN)('Statuswechsel mit Audit (Integration, braucht DB)', () =>
     expect(ergebnisse.filter((e) => e.status === 'rejected')).toHaveLength(1);
     const eintraege = await audit(id, 'miete_status');
     expect(eintraege).toHaveLength(1);
-    expect((await mieten.holeMiete(id)).status).toBe((eintraege[0]!.neuWert as { status: string }).status);
+    expect((await mieten.holeMiete(id)).status).toBe(
+      (eintraege[0]!.neuWert as { status: string }).status,
+    );
   });
 
   it('Rechnung stellen rechnet die Miete in derselben Transaktion ab – beides im Audit', async () => {
@@ -162,9 +170,15 @@ describe.skipIf(!RUN)('Statuswechsel mit Audit (Integration, braucht DB)', () =>
 
     expect((await mieten.holeMiete(id)).status).toBe('abgerechnet');
     const [r] = await audit(rechnung.id, 'rechnung_status');
-    expect(r).toMatchObject({ altWert: { status: 'entwurf', gestelltAm: null }, neuWert: { status: 'gestellt' } });
+    expect(r).toMatchObject({
+      altWert: { status: 'entwurf', gestelltAm: null },
+      neuWert: { status: 'gestellt' },
+    });
     const m = await audit(id, 'miete_status');
-    expect(m.at(-1)).toMatchObject({ altWert: { status: 'beendet' }, neuWert: { status: 'abgerechnet' } });
+    expect(m.at(-1)).toMatchObject({
+      altWert: { status: 'beendet' },
+      neuWert: { status: 'abgerechnet' },
+    });
   });
 
   it('Abweichung: Feldänderung ohne Statuswechsel wird protokolliert', async () => {

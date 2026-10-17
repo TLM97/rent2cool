@@ -78,7 +78,10 @@ describe.skipIf(!RUN)('Rechnung (Integration, braucht DB)', () => {
     );
     mieten = new MieteService(client.db, fahrzeuge, kunden, berichte);
     rechnungen = new RechnungService(client.db, fakeConfig, mieten);
-    await client.db.insert(mandant).values({ id: PLACEHOLDER_MANDANT_ID, name: 'Test' }).onConflictDoNothing();
+    await client.db
+      .insert(mandant)
+      .values({ id: PLACEHOLDER_MANDANT_ID, name: 'Test' })
+      .onConflictDoNothing();
   });
   afterAll(async () => {
     await client.sql.end({ timeout: 5 });

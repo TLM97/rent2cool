@@ -1,5 +1,9 @@
 /** Anzeige und Verlinkung des Bezugs einer Abweichung (Alarm, Miete, Fahrzeug). */
-export const BEZUG: Record<string, string> = { alarm: 'Alarm', miete: 'Miete', fahrzeug: 'Fahrzeug' };
+export const BEZUG: Record<string, string> = {
+  alarm: 'Alarm',
+  miete: 'Miete',
+  fahrzeug: 'Fahrzeug',
+};
 
 export const SCHWEREGRADE = ['niedrig', 'mittel', 'hoch', 'kritisch'] as const;
 

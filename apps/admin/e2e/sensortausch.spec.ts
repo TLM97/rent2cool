@@ -46,7 +46,9 @@ test('Sensor tauschen mit und ohne Kalibrierung', async ({ page }) => {
   await page.getByLabel('Grund für den Tausch').fill('Messwerte springen (Test)');
   await page.getByLabel('Kalibrierung des neuen Sensors gleich erfassen').uncheck();
   await page.getByRole('button', { name: 'Sensor tauschen' }).click();
-  await expect(page.getByRole('status')).toContainText('Ohne Kalibrierung ist das Fahrzeug nicht buchbar');
+  await expect(page.getByRole('status')).toContainText(
+    'Ohne Kalibrierung ist das Fahrzeug nicht buchbar',
+  );
   await expect(page.locator('.hinweis.fehler', { hasText: 'Nicht buchbar' })).toBeVisible();
   await expect(page.locator('tr.ausgebaut')).toContainText('Messwerte springen (Test)');
   await expect(page.getByText('nicht kalibriert')).toBeVisible();
@@ -62,7 +64,9 @@ test('Sensor tauschen mit und ohne Kalibrierung', async ({ page }) => {
   await page.getByLabel('Seriennummer (neu)').fill(`SN-${lauf}-2`);
   await page.getByLabel('Grund für den Tausch').fill('Routinetausch (Test)');
   await page.getByRole('button', { name: 'Sensor tauschen' }).click();
-  await expect(page.locator('.hinweis[role=alert]')).toContainText(`bereits in ${kennzeichen} eingebaut`);
+  await expect(page.locator('.hinweis[role=alert]')).toContainText(
+    `bereits in ${kennzeichen} eingebaut`,
+  );
   await expect(page.getByLabel('Grund für den Tausch')).toHaveValue('Routinetausch (Test)');
 
   // … dann richtig, mit Kalibrierung → bleibt buchbar.

@@ -15,14 +15,26 @@ export default function FahrzeugNeu() {
         brotkrume={{ href: '/fahrzeuge', text: 'Fahrzeuge' }}
       />
       <section className="karte">
-        <FormularRahmen aktion={erstelleFahrzeug} sendenText="Fahrzeug anlegen" abbrechenHref="/fahrzeuge">
+        <FormularRahmen
+          aktion={erstelleFahrzeug}
+          sendenText="Fahrzeug anlegen"
+          abbrechenHref="/fahrzeuge"
+        >
           <FahrzeugFelder />
-          <Haken name="mitAufbau" label="Kühlaufbau mit Laderaum-Temperatursensor erfassen" standard />
+          <Haken
+            name="mitAufbau"
+            label="Kühlaufbau mit Laderaum-Temperatursensor erfassen"
+            standard
+          />
           <Gruppe titel="Kühlaufbau (Aggregat) und Sensor">
             <Feld name="aggregatTyp" label="Typ des Aufbaus" standard="Kühlkoffer" />
             <Feld name="aggregatHersteller" label="Hersteller" />
             <Feld name="aggregatSeriennummer" label="Seriennummer Aufbau" />
-            <Feld name="sensorModell" label="Sensor-Modell" hinweis="Temperaturschreiber nach EN 12830" />
+            <Feld
+              name="sensorModell"
+              label="Sensor-Modell"
+              hinweis="Temperaturschreiber nach EN 12830"
+            />
             <Feld name="sensorSeriennummer" label="Sensor-Seriennummer" />
           </Gruppe>
         </FormularRahmen>

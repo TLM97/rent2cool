@@ -13,7 +13,11 @@ describe('bewerteBuchbarkeit', () => {
   });
 
   it('nicht buchbar bei abgelaufener Kalibrierung', () => {
-    const r = bewerteBuchbarkeit('verfuegbar', [{ sensorId: 's1', gueltigBis: vergangenheit }], jetzt);
+    const r = bewerteBuchbarkeit(
+      'verfuegbar',
+      [{ sensorId: 's1', gueltigBis: vergangenheit }],
+      jetzt,
+    );
     expect(r.buchbar).toBe(false);
     expect(r.gruende[0]).toContain('abgelaufen');
   });

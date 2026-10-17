@@ -21,8 +21,13 @@ const STUNDE = 3_600_000;
 export default async function MieteNeu({ searchParams }: { searchParams: Promise<SuchParameter> }) {
   const params = await searchParams;
   const kundeId = erster(params.kundeId);
-  const kunden = await apiGet<Liste<Kunde>>('/v1/kunden', { status: 'freigegeben', limit: AUSWAHL_LIMIT, offset: 0 });
-  const kunde = kundeId && istUuid(kundeId) ? await apiGetOderNull<Kunde>(`/v1/kunden/${kundeId}`) : null;
+  const kunden = await apiGet<Liste<Kunde>>('/v1/kunden', {
+    status: 'freigegeben',
+    limit: AUSWAHL_LIMIT,
+    offset: 0,
+  });
+  const kunde =
+    kundeId && istUuid(kundeId) ? await apiGetOderNull<Kunde>(`/v1/kunden/${kundeId}`) : null;
 
   return (
     <>
@@ -37,7 +42,10 @@ export default async function MieteNeu({ searchParams }: { searchParams: Promise
           <span className="schritt">1</span> Kunde
         </h2>
         {kunden.eintraege.length === 0 ? (
-          <Leer>Es gibt noch keinen freigegebenen Kunden. Kunden müssen vor der ersten Buchung geprüft werden.</Leer>
+          <Leer>
+            Es gibt noch keinen freigegebenen Kunden. Kunden müssen vor der ersten Buchung geprüft
+            werden.
+          </Leer>
         ) : (
           <form method="get" className="filterleiste">
             <div className="feld">
@@ -67,7 +75,11 @@ export default async function MieteNeu({ searchParams }: { searchParams: Promise
 
 async function Schritt2({ kunde }: { kunde: Kunde }) {
   const [fahrzeuge, fahrer] = await Promise.all([
-    apiGet<Liste<Fahrzeug>>('/v1/fahrzeuge', { status: 'verfuegbar', limit: AUSWAHL_LIMIT, offset: 0 }),
+    apiGet<Liste<Fahrzeug>>('/v1/fahrzeuge', {
+      status: 'verfuegbar',
+      limit: AUSWAHL_LIMIT,
+      offset: 0,
+    }),
     apiGet<Fahrer[]>(`/v1/kunden/${kunde.id}/fahrer`),
   ]);
   const freigegeben = fahrer.filter((f) => f.status === 'freigegeben');
@@ -80,7 +92,9 @@ async function Schritt2({ kunde }: { kunde: Kunde }) {
         <span className="schritt">2</span> Fahrzeug, Fahrer und Zeitraum für {kunde.firmenname}
       </h2>
       {kunde.status !== 'freigegeben' ? (
-        <div className="hinweis warn">Dieser Kunde ist nicht freigegeben – der Kern wird die Buchung ablehnen.</div>
+        <div className="hinweis warn">
+          Dieser Kunde ist nicht freigegeben – der Kern wird die Buchung ablehnen.
+        </div>
       ) : null}
       {fahrzeuge.eintraege.length === 0 ? (
         <Leer>Kein Fahrzeug im Status „verfügbar“.</Leer>
@@ -101,13 +115,20 @@ async function Schritt2({ kunde }: { kunde: Kunde }) {
               wert: f.id,
               text: `${f.kennzeichen} · Klasse ${f.benoetigteFuehrerscheinklasse}${f.hatFahrtenschreiber ? ' · Ausland' : ''}`,
             }))}
-            hinweis={fahrzeuge.gesamt > AUSWAHL_LIMIT ? `Nur die ersten ${AUSWAHL_LIMIT} von ${fahrzeuge.gesamt}.` : undefined}
+            hinweis={
+              fahrzeuge.gesamt > AUSWAHL_LIMIT
+                ? `Nur die ersten ${AUSWAHL_LIMIT} von ${fahrzeuge.gesamt}.`
+                : undefined
+            }
           />
           <Auswahl
             name="fahrerId"
             label="Fahrer"
             leer={freigegeben.length === 0 ? 'Kein freigegebener Fahrer' : 'später festlegen'}
-            optionen={freigegeben.map((f) => ({ wert: f.id, text: `${f.name} · Klasse ${f.fuehrerscheinKlasse}` }))}
+            optionen={freigegeben.map((f) => ({
+              wert: f.id,
+              text: `${f.name} · Klasse ${f.fuehrerscheinKlasse}`,
+            }))}
             hinweis="Nur freigegebene Fahrer des Kunden (R-22)."
           />
           <Feld
@@ -117,12 +138,21 @@ async function Schritt2({ kunde }: { kunde: Kunde }) {
             pflicht
             standard={isoZuBerlinLokal(start)}
           />
-          <Feld name="endeGeplant" label="Ende (Ortszeit)" typ="datetime-local" pflicht standard={isoZuBerlinLokal(ende)} />
+          <Feld
+            name="endeGeplant"
+            label="Ende (Ortszeit)"
+            typ="datetime-local"
+            pflicht
+            standard={isoZuBerlinLokal(ende)}
+          />
           <Auswahl
             name="temperaturprofil"
             label="Temperaturprofil"
             leer="Standard des Fahrzeugs"
-            optionen={STANDARD_TEMPERATURPROFILE.map((p) => ({ wert: p.name, text: `${p.name} °C` }))}
+            optionen={STANDARD_TEMPERATURPROFILE.map((p) => ({
+              wert: p.name,
+              text: `${p.name} °C`,
+            }))}
           />
           <Haken
             name="auslandsfahrtGeplant"

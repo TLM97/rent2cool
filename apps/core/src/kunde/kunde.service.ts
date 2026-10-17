@@ -1,8 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import {
   bewerteFahrerEinsatz,
@@ -15,7 +11,13 @@ import {
   type KundeStatus,
   type Principal,
 } from '@rent2cool/shared';
-import { ermittleAenderungen, neueWerte, pruefeVersion, versionVon, type StammdatenErgebnis } from '../audit/aenderung';
+import {
+  ermittleAenderungen,
+  neueWerte,
+  pruefeVersion,
+  versionVon,
+  type StammdatenErgebnis,
+} from '../audit/aenderung';
 import { protokolliereAnlage, schreibeAudit } from '../audit/audit.service';
 import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Database } from '../db/client';
@@ -59,8 +61,17 @@ export class KundeService {
       opts.status ? eq(kunde.status, opts.status) : undefined,
     );
     const [eintraege, [zaehler]] = await Promise.all([
-      this.db.select().from(kunde).where(filter).orderBy(desc(kunde.erstelltAm)).limit(opts.limit).offset(opts.offset),
-      this.db.select({ n: sql<number>`count(*)::int` }).from(kunde).where(filter),
+      this.db
+        .select()
+        .from(kunde)
+        .where(filter)
+        .orderBy(desc(kunde.erstelltAm))
+        .limit(opts.limit)
+        .offset(opts.offset),
+      this.db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(kunde)
+        .where(filter),
     ]);
     return { eintraege, gesamt: zaehler?.n ?? 0 };
   }
@@ -77,7 +88,11 @@ export class KundeService {
    * Stammdaten ändern: nur geänderte Felder, mit Versionsprüfung und
    * Audit-Eintrag (alt/neu) in derselben Transaktion.
    */
-  async aendereKunde(principal: Principal, id: string, p: KundeAendern): Promise<StammdatenErgebnis> {
+  async aendereKunde(
+    principal: Principal,
+    id: string,
+    p: KundeAendern,
+  ): Promise<StammdatenErgebnis> {
     const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
     const { version, ...eingabe } = p;
     return this.db.transaction(async (tx) => {
@@ -110,7 +125,11 @@ export class KundeService {
     });
   }
 
-  async aendereKundeStatus(principal: Principal, id: string, nach: KundeStatus): Promise<StatusErgebnis<KundeStatus>> {
+  async aendereKundeStatus(
+    principal: Principal,
+    id: string,
+    nach: KundeStatus,
+  ): Promise<StatusErgebnis<KundeStatus>> {
     const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
     return wechsleStatus(this.db, principal, {
       entitaetTyp: 'kunde_status',
@@ -137,7 +156,11 @@ export class KundeService {
   }
 
   // --- Fahrer ---
-  async erstelleFahrer(principal: Principal, kundeId: string, p: FahrerErstellen): Promise<{ id: string }> {
+  async erstelleFahrer(
+    principal: Principal,
+    kundeId: string,
+    p: FahrerErstellen,
+  ): Promise<{ id: string }> {
     const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
     return this.db.transaction(async (tx) => {
       const [k] = await tx
@@ -154,7 +177,9 @@ export class KundeService {
           name: p.name,
           fuehrerscheinKlasse: p.fuehrerscheinKlasse,
           fuehrerscheinNummer: p.fuehrerscheinNummer ?? null,
-          fuehrerscheinGueltigBis: p.fuehrerscheinGueltigBis ? new Date(p.fuehrerscheinGueltigBis) : null,
+          fuehrerscheinGueltigBis: p.fuehrerscheinGueltigBis
+            ? new Date(p.fuehrerscheinGueltigBis)
+            : null,
         })
         .returning();
       await protokolliereAnlage(tx, principal, 'fahrer', row!.id, row);
@@ -170,7 +195,11 @@ export class KundeService {
     return row;
   }
 
-  async aendereFahrer(principal: Principal, id: string, p: FahrerAendern): Promise<StammdatenErgebnis> {
+  async aendereFahrer(
+    principal: Principal,
+    id: string,
+    p: FahrerAendern,
+  ): Promise<StammdatenErgebnis> {
     const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
     const { version, fuehrerscheinGueltigBis, ...rest } = p;
     const eingabe = {
@@ -185,7 +214,10 @@ export class KundeService {
     return this.db.transaction(async (tx) => {
       const [vorher] = await tx.select().from(fahrer).where(eq(fahrer.id, id)).for('update');
       const [besitzer] = vorher
-        ? await tx.select({ mandantId: kunde.mandantId }).from(kunde).where(eq(kunde.id, vorher.kundeId))
+        ? await tx
+            .select({ mandantId: kunde.mandantId })
+            .from(kunde)
+            .where(eq(kunde.id, vorher.kundeId))
         : [];
       if (!vorher || besitzer?.mandantId !== mandant) {
         throw new NotFoundException('Fahrer nicht gefunden');
@@ -212,10 +244,18 @@ export class KundeService {
   }
 
   async listeFahrer(kundeId: string): Promise<(typeof fahrer.$inferSelect)[]> {
-    return this.db.select().from(fahrer).where(eq(fahrer.kundeId, kundeId)).orderBy(desc(fahrer.erstelltAm));
+    return this.db
+      .select()
+      .from(fahrer)
+      .where(eq(fahrer.kundeId, kundeId))
+      .orderBy(desc(fahrer.erstelltAm));
   }
 
-  async aendereFahrerStatus(principal: Principal, id: string, nach: FahrerStatus): Promise<StatusErgebnis<FahrerStatus>> {
+  async aendereFahrerStatus(
+    principal: Principal,
+    id: string,
+    nach: FahrerStatus,
+  ): Promise<StatusErgebnis<FahrerStatus>> {
     const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
     return wechsleStatus(this.db, principal, {
       entitaetTyp: 'fahrer_status',
@@ -245,7 +285,11 @@ export class KundeService {
   }
 
   /** Darf der Fahrer das Fahrzeug fahren? (R-22) */
-  async einsatzbereit(fahrerId: string, fahrzeugId: string, stichtag: Date): Promise<EinsatzErgebnis> {
+  async einsatzbereit(
+    fahrerId: string,
+    fahrzeugId: string,
+    stichtag: Date,
+  ): Promise<EinsatzErgebnis> {
     const [f] = await this.db.select().from(fahrer).where(eq(fahrer.id, fahrerId));
     if (!f) {
       throw new NotFoundException('Fahrer nicht gefunden');

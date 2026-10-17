@@ -1,12 +1,18 @@
-import {
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, desc, eq, inArray, max, sql } from 'drizzle-orm';
-import { istFahrzeugStatus, istUebergangErlaubt, type FahrzeugStatus, type Principal } from '@rent2cool/shared';
-import { ermittleAenderungen, neueWerte, pruefeVersion, versionVon, type StammdatenErgebnis } from '../audit/aenderung';
+import {
+  istFahrzeugStatus,
+  istUebergangErlaubt,
+  type FahrzeugStatus,
+  type Principal,
+} from '@rent2cool/shared';
+import {
+  ermittleAenderungen,
+  neueWerte,
+  pruefeVersion,
+  versionVon,
+  type StammdatenErgebnis,
+} from '../audit/aenderung';
 import { protokolliereAnlage, schreibeAudit } from '../audit/audit.service';
 import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Database } from '../db/client';
@@ -68,7 +74,9 @@ export class FahrzeugService {
           .returning();
       } catch (e: unknown) {
         if (istPgFehler(e, PG_FEHLER.EINDEUTIG, 'uq_fahrzeug_kennzeichen')) {
-          throw new ConflictException(`Kennzeichen "${p.kennzeichen}" existiert bereits für diesen Mandanten`);
+          throw new ConflictException(
+            `Kennzeichen "${p.kennzeichen}" existiert bereits für diesen Mandanten`,
+          );
         }
         throw e;
       }
@@ -76,7 +84,8 @@ export class FahrzeugService {
         throw new Error('Fahrzeug wurde nicht angelegt');
       }
 
-      let aufbau: (typeof aggregat.$inferSelect & { sensoren: (typeof sensor.$inferSelect)[] }) | null = null;
+      let aufbau:
+        (typeof aggregat.$inferSelect & { sensoren: (typeof sensor.$inferSelect)[] }) | null = null;
       if (p.aggregat) {
         const [ag] = await tx
           .insert(aggregat)
@@ -139,7 +148,9 @@ export class FahrzeugService {
           .where(eq(fahrzeug.id, id));
       } catch (e: unknown) {
         if (istPgFehler(e, PG_FEHLER.EINDEUTIG, 'uq_fahrzeug_kennzeichen')) {
-          throw new ConflictException(`Kennzeichen "${p.kennzeichen}" existiert bereits für diesen Mandanten`);
+          throw new ConflictException(
+            `Kennzeichen "${p.kennzeichen}" existiert bereits für diesen Mandanten`,
+          );
         }
         throw e;
       }
@@ -172,7 +183,10 @@ export class FahrzeugService {
         .orderBy(desc(fahrzeug.erstelltAm))
         .limit(opts.limit)
         .offset(opts.offset),
-      this.db.select({ n: sql<number>`count(*)::int` }).from(fahrzeug).where(filter),
+      this.db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(fahrzeug)
+        .where(filter),
     ]);
     return { eintraege, gesamt: zaehler?.n ?? 0 };
   }
@@ -223,7 +237,11 @@ export class FahrzeugService {
    * und neuem Sensor. Wiederholt die App dieselbe Anfrage (gleiche
    * Seriennummer), kommt das vorhandene Ergebnis zurück (D-003).
    */
-  async tauscheSensor(principal: Principal, sensorId: string, p: SensorTausch): Promise<SensorTauschErgebnis> {
+  async tauscheSensor(
+    principal: Principal,
+    sensorId: string,
+    p: SensorTausch,
+  ): Promise<SensorTauschErgebnis> {
     const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
     return this.db.transaction(async (tx) => {
       const [alt] = await tx
@@ -238,9 +256,17 @@ export class FahrzeugService {
       }
 
       if (!alt.s.aktiv) {
-        const [nachfolger] = await tx.select().from(sensor).where(eq(sensor.vorgaengerId, sensorId));
+        const [nachfolger] = await tx
+          .select()
+          .from(sensor)
+          .where(eq(sensor.vorgaengerId, sensorId));
         if (nachfolger && nachfolger.seriennummer === p.seriennummer) {
-          return { alterSensorId: sensorId, neuerSensorId: nachfolger.id, fahrzeugId: alt.fahrzeugId, idempotent: true };
+          return {
+            alterSensorId: sensorId,
+            neuerSensorId: nachfolger.id,
+            fahrzeugId: alt.fahrzeugId,
+            idempotent: true,
+          };
         }
         throw new ConflictException(
           nachfolger
@@ -255,10 +281,18 @@ export class FahrzeugService {
         .from(sensor)
         .innerJoin(aggregat, eq(sensor.aggregatId, aggregat.id))
         .innerJoin(fahrzeug, eq(aggregat.fahrzeugId, fahrzeug.id))
-        .where(and(eq(sensor.seriennummer, p.seriennummer), eq(sensor.aktiv, true), eq(fahrzeug.mandantId, mandant)))
+        .where(
+          and(
+            eq(sensor.seriennummer, p.seriennummer),
+            eq(sensor.aktiv, true),
+            eq(fahrzeug.mandantId, mandant),
+          ),
+        )
         .limit(1);
       if (doppelt) {
-        throw new ConflictException(`Sensor SN ${p.seriennummer} ist bereits in ${doppelt.kennzeichen} eingebaut.`);
+        throw new ConflictException(
+          `Sensor SN ${p.seriennummer} ist bereits in ${doppelt.kennzeichen} eingebaut.`,
+        );
       }
 
       const jetzt = new Date();
@@ -300,11 +334,21 @@ export class FahrzeugService {
           kalibrierung: p.kalibrierung ? { id: kalibrierungId, ...p.kalibrierung } : null,
         },
       });
-      return { alterSensorId: sensorId, neuerSensorId: neu!.id, fahrzeugId: alt.fahrzeugId, kalibrierungId, idempotent: false };
+      return {
+        alterSensorId: sensorId,
+        neuerSensorId: neu!.id,
+        fahrzeugId: alt.fahrzeugId,
+        kalibrierungId,
+        idempotent: false,
+      };
     });
   }
 
-  async aendereStatus(principal: Principal, id: string, nach: FahrzeugStatus): Promise<StatusErgebnis<FahrzeugStatus>> {
+  async aendereStatus(
+    principal: Principal,
+    id: string,
+    nach: FahrzeugStatus,
+  ): Promise<StatusErgebnis<FahrzeugStatus>> {
     const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
     return wechsleStatus(this.db, principal, {
       entitaetTyp: 'fahrzeug_status',
@@ -334,7 +378,11 @@ export class FahrzeugService {
    * Kalibrierung erfassen. Audit unter der Sensor-ID, damit der Verlauf der
    * Fahrzeugakte Kalibrierungen und Tausch eines Sensors zusammen zeigt.
    */
-  async fuegeKalibrierungHinzu(principal: Principal, sensorId: string, k: KalibrierungEingabe): Promise<{ id: string }> {
+  async fuegeKalibrierungHinzu(
+    principal: Principal,
+    sensorId: string,
+    k: KalibrierungEingabe,
+  ): Promise<{ id: string }> {
     const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
     return this.db.transaction(async (tx) => {
       const [s] = await tx
@@ -368,7 +416,9 @@ export class FahrzeugService {
   async faelligeKalibrierungen(
     mandantId: string | undefined,
     bis: Date,
-  ): Promise<{ fahrzeugId: string; kennzeichen: string; sensorId: string; gueltigBis: string | null }[]> {
+  ): Promise<
+    { fahrzeugId: string; kennzeichen: string; sensorId: string; gueltigBis: string | null }[]
+  > {
     const mandant = mandantId ?? PLACEHOLDER_MANDANT_ID;
     const rows = await this.db
       .select({

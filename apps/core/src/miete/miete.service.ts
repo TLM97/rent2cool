@@ -152,22 +152,22 @@ export class MieteService {
       return await this.db.transaction(async (tx) => {
         const [row] = await tx
           .insert(miete)
-        .values({
-          mandantId: mandant,
-          kundeId: p.kundeId,
-          fahrzeugId: p.fahrzeugId,
-          fahrerId: p.fahrerId ?? null,
-          standortAbholId: p.standortAbholId ?? null,
-          standortRueckgabeId: p.standortRueckgabeId ?? null,
-          region: p.region ?? null,
-          startGeplant: start,
-          endeGeplant: ende,
-          tarif: p.tarif ?? null,
-          auslandsfahrtGeplant: p.auslandsfahrtGeplant,
-          temperaturprofil: p.temperaturprofil ?? null,
-          status: 'bestaetigt',
-          idempotencyKey: p.idempotencyKey ?? null,
-        })
+          .values({
+            mandantId: mandant,
+            kundeId: p.kundeId,
+            fahrzeugId: p.fahrzeugId,
+            fahrerId: p.fahrerId ?? null,
+            standortAbholId: p.standortAbholId ?? null,
+            standortRueckgabeId: p.standortRueckgabeId ?? null,
+            region: p.region ?? null,
+            startGeplant: start,
+            endeGeplant: ende,
+            tarif: p.tarif ?? null,
+            auslandsfahrtGeplant: p.auslandsfahrtGeplant,
+            temperaturprofil: p.temperaturprofil ?? null,
+            status: 'bestaetigt',
+            idempotencyKey: p.idempotencyKey ?? null,
+          })
           .returning();
         await protokolliereAnlage(tx, principal, 'miete', row!.id, row);
         return { id: row!.id, status: 'bestaetigt' as const, idempotent: false };
@@ -203,8 +203,17 @@ export class MieteService {
       opts.fahrzeugId ? eq(miete.fahrzeugId, opts.fahrzeugId) : undefined,
     );
     const [eintraege, [zaehler]] = await Promise.all([
-      this.db.select().from(miete).where(filter).orderBy(desc(miete.startGeplant)).limit(opts.limit).offset(opts.offset),
-      this.db.select({ n: sql<number>`count(*)::int` }).from(miete).where(filter),
+      this.db
+        .select()
+        .from(miete)
+        .where(filter)
+        .orderBy(desc(miete.startGeplant))
+        .limit(opts.limit)
+        .offset(opts.offset),
+      this.db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(miete)
+        .where(filter),
     ]);
     return { eintraege, gesamt: zaehler?.n ?? 0 };
   }
@@ -256,7 +265,10 @@ export class MieteService {
         } catch (e: unknown) {
           // z. B. angefragt → bestätigt, während das Fahrzeug inzwischen anderweitig gebucht ist.
           if (istPgFehler(e, PG_FEHLER.AUSSCHLUSS, UEBERSCHNEIDUNG_REGEL)) {
-            throw new ConflictException({ fehler: 'Statuswechsel abgelehnt', gruende: [UEBERSCHNEIDUNG] });
+            throw new ConflictException({
+              fehler: 'Statuswechsel abgelehnt',
+              gruende: [UEBERSCHNEIDUNG],
+            });
           }
           throw e;
         }

@@ -11,15 +11,15 @@ Entscheidungen in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 ## Monorepo
 
-| Paket | Zweck |
-|---|---|
-| `apps/core` | Kern: Backend + Datenbank (NestJS + Fastify, Drizzle/PostgreSQL+TimescaleDB). Gesundheits-Endpunkte, Config aus Env, Logs, OpenTelemetry, **Telematik-Verarbeiter** (T-003). |
-| `apps/ingest` | Telematik-Eingang (eigener Prozess, prüft Format + Signatur, schreibt nur in die Warteschlange). |
-| `apps/admin` | Interne Admin-Oberfläche (Next.js, Keycloak-Login) für Ops und QA – siehe „Admin-Oberfläche". |
-| `apps/web` | Öffentliche Website + Kundenportal (Next.js), ohne Schreibzugriff auf GDP-Daten. *Gerüst.* |
-| `apps/mobile` | App für Fahrer (React Native/Expo). *Gerüst.* |
-| `packages/shared` | Geteilte Typen für alle Pakete (inkl. neutrales Telematik-Format). |
-| `tools/simulator` | Telematik-Simulator: virtuelle Fahrzeuge als erster Adapter, inkl. Lasttest (T-003). |
+| Paket             | Zweck                                                                                                                                                                        |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/core`       | Kern: Backend + Datenbank (NestJS + Fastify, Drizzle/PostgreSQL+TimescaleDB). Gesundheits-Endpunkte, Config aus Env, Logs, OpenTelemetry, **Telematik-Verarbeiter** (T-003). |
+| `apps/ingest`     | Telematik-Eingang (eigener Prozess, prüft Format + Signatur, schreibt nur in die Warteschlange).                                                                             |
+| `apps/admin`      | Interne Admin-Oberfläche (Next.js, Keycloak-Login) für Ops und QA – siehe „Admin-Oberfläche".                                                                                |
+| `apps/web`        | Öffentliche Website + Kundenportal (Next.js), ohne Schreibzugriff auf GDP-Daten. _Gerüst._                                                                                   |
+| `apps/mobile`     | App für Fahrer (React Native/Expo). _Gerüst._                                                                                                                                |
+| `packages/shared` | Geteilte Typen für alle Pakete (inkl. neutrales Telematik-Format).                                                                                                           |
+| `tools/simulator` | Telematik-Simulator: virtuelle Fahrzeuge als erster Adapter, inkl. Lasttest (T-003).                                                                                         |
 
 Werkzeuge: **pnpm Workspaces + Turborepo**, **TypeScript** (strikt) überall.
 
@@ -60,14 +60,14 @@ Infrastruktur stoppen: `pnpm stack:down`. Logs: `pnpm stack:logs`.
 
 ### Lokale Dienste
 
-| Dienst | Adresse | Hinweis |
-|---|---|---|
-| Kern (API) | http://localhost:3000 | |
-| PostgreSQL/Timescale | localhost:5432 | DB/User `rent2cool` |
-| Redpanda (Kafka-API) | localhost:19092 | |
-| Valkey (Redis-API) | localhost:6379 | BullMQ |
-| MinIO (S3-API) | http://localhost:9000 | Konsole: http://localhost:9001 |
-| Keycloak (OIDC) | http://localhost:8080 | Realm `rent2cool` (Platzhalter) |
+| Dienst               | Adresse               | Hinweis                         |
+| -------------------- | --------------------- | ------------------------------- |
+| Kern (API)           | http://localhost:3000 |                                 |
+| PostgreSQL/Timescale | localhost:5432        | DB/User `rent2cool`             |
+| Redpanda (Kafka-API) | localhost:19092       |                                 |
+| Valkey (Redis-API)   | localhost:6379        | BullMQ                          |
+| MinIO (S3-API)       | http://localhost:9000 | Konsole: http://localhost:9001  |
+| Keycloak (OIDC)      | http://localhost:8080 | Realm `rent2cool` (Platzhalter) |
 
 ## Nützliche Befehle (Repo-weit)
 
@@ -163,11 +163,12 @@ zuerst):
   Nachweis ab**, gibt die Referenz zurück. Rollen: `ops`, `admin`; auditiert.
 
 **Modular** aufgebaut, damit Formate und Ablage ohne Umbau wechselbar sind:
+
 - **Format** über `NachweisRenderer` (v1: JSON; PDF/CSV = weiterer Renderer).
 - **Speicher** über `BerichtSpeicher` (v1: In-Memory; S3/MinIO als Austausch).
 - **Signatur** über `Signierer` (v1: HMAC-Platzhalter, D-015; später PKI).
 
-> v1 bezieht sich auf **Fahrzeug + Zeitraum**; sobald die Entität *Miete*
+> v1 bezieht sich auf **Fahrzeug + Zeitraum**; sobald die Entität _Miete_
 > freigegeben ist (Datenmodell T-002), wird der Nachweis an eine Miete gebunden.
 
 ## Fahrzeugakte
@@ -178,6 +179,7 @@ Buchung und Temperaturnachweis. Entitäten: **Fahrzeug**, **Aggregat**
 Stammdaten-Basis **Mandant** und **Standort** (D-011, Platzhalter `PLACEHOLDER_HQ`).
 
 API im Kern (rollengeschützt, Schreibzugriffe auditiert – T-004):
+
 - `POST /v1/fahrzeuge` — Akte anlegen (optional mit Aggregat + Sensoren). `ops`/`admin`.
 - `GET /v1/fahrzeuge` — paginierte Liste (Filter: Status, Standort).
 - `GET /v1/fahrzeuge/:id` — vollständige Akte (Aggregate + Sensoren).
@@ -198,6 +200,7 @@ ist die **Fahrerlaubnis-Prüfung (R-22)**: Status, Führerschein-Gültigkeit und
 Klasse gegen das Fahrzeuggewicht.
 
 API im Kern (rollengeschützt, Schreibzugriffe auditiert):
+
 - `POST /v1/kunden`, `GET /v1/kunden` (paginiert), `GET /v1/kunden/:id`,
   `POST /v1/kunden/:id/status` (geprüfte Übergänge).
 - `POST /v1/kunden/:kundeId/fahrer`, `GET /v1/kunden/:kundeId/fahrer`.
@@ -216,6 +219,7 @@ API im Kern (rollengeschützt, Schreibzugriffe auditiert):
 
 Bringt Fahrzeugakte und Kunden/Fahrer zusammen (D-009). Beim Anlegen prüft der
 Kern die **Buchungsregeln** und bestätigt bei Erfolg:
+
 - Kunde ist `freigegeben` (D-010),
 - Auslandsfahrt ⇒ nur Fahrzeuge mit Fahrtenschreiber (D-006),
 - Fahrzeug buchbar (verfügbar + gültige Kalibrierung),
@@ -226,6 +230,7 @@ Buchungen sind **idempotent** über `idempotencyKey` (D-003). Der
 **Temperaturnachweis** lässt sich direkt an eine Miete binden.
 
 API im Kern (rollengeschützt, auditiert):
+
 - `POST /v1/mieten` — buchen (Regelprüfung + Bestätigung; idempotent).
 - `GET /v1/mieten` (paginiert, Filter), `GET /v1/mieten/:id`.
 - `POST /v1/mieten/:id/status` — Status (geprüfte Übergänge; setzt
@@ -241,6 +246,7 @@ vom Steuerberater zu bestätigen). **Fortlaufende Rechnungsnummer** je Mandant u
 Jahr (`JAHR-00001`, atomar vergeben). Eine Rechnung je Miete (v1).
 
 API im Kern (rollengeschützt, auditiert):
+
 - `POST /v1/rechnungen` — Rechnung zu einer Miete (Netto in Euro; Steuer/Brutto
   berechnet). `ops`/`admin`.
 - `GET /v1/rechnungen` (paginiert, Filter), `GET /v1/rechnungen/:id`.
@@ -260,6 +266,7 @@ CAPA-Verfahren (`erfasst → in_bewertung → bewertet → massnahmen_offen →
 geschlossen`, bzw. `verworfen`), bearbeitet von `qa_approver`.
 
 API im Kern (rollengeschützt, Schreibzugriffe auditiert):
+
 - `GET /v1/alarme` (paginiert, Filter Status/Fahrzeug/Miete), `GET /v1/alarme/:id`,
   `POST /v1/alarme/:id/quittieren`, `POST /v1/alarme/:id/schliessen`.
 - `POST /v1/abweichungen`, `GET /v1/abweichungen`, `GET /v1/abweichungen/:id`,

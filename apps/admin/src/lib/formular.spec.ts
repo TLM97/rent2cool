@@ -75,7 +75,10 @@ describe('Fehler und Folgestatus', () => {
     ).toEqual({ kennzeichen: 'Kennzeichen fehlt', 'aggregat.sensoren.0.einheit': 'Pflichtfeld' });
   });
   it('liefert nur erlaubte Folgestatus', () => {
-    expect(naechsteStatus(KUNDE_STATUS, 'in_pruefung', istKundeUebergangErlaubt)).toEqual(['freigegeben', 'abgelehnt']);
+    expect(naechsteStatus(KUNDE_STATUS, 'in_pruefung', istKundeUebergangErlaubt)).toEqual([
+      'freigegeben',
+      'abgelehnt',
+    ]);
     expect(naechsteStatus(KUNDE_STATUS, 'abgelehnt', istKundeUebergangErlaubt)).toEqual([]);
     expect(naechsteStatus(KUNDE_STATUS, 'gibtsnicht', istKundeUebergangErlaubt)).toEqual([]);
   });

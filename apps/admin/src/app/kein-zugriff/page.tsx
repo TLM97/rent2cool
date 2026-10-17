@@ -10,8 +10,8 @@ export default function KeinZugriff() {
         <Marke />
         <h1>Kein Zugriff</h1>
         <p>
-          Ihr Konto hat keine Berechtigung für die interne Oberfläche. Kunden und Fahrer nutzen das Kundenportal
-          bzw. die App.
+          Ihr Konto hat keine Berechtigung für die interne Oberfläche. Kunden und Fahrer nutzen das
+          Kundenportal bzw. die App.
         </p>
         <form action="/api/abmelden" method="post">
           <button className="knopf zweitrangig" type="submit">

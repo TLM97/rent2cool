@@ -26,7 +26,9 @@ import { FahrzeugService } from './fahrzeug.service';
 function parse<S extends z.ZodTypeAny>(schema: S, wert: unknown): z.infer<S> {
   const r = schema.safeParse(wert);
   if (!r.success) {
-    throw new BadRequestException(r.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '));
+    throw new BadRequestException(
+      r.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
+    );
   }
   return r.data;
 }
@@ -117,7 +119,11 @@ export class SensorController {
   @Roles('ops', 'admin')
   @AuditImService('sensor_tausch')
   @HttpCode(201)
-  tausche(@CurrentUser() user: Principal, @Param('sensorId') sensorId: string, @Body() body: unknown) {
+  tausche(
+    @CurrentUser() user: Principal,
+    @Param('sensorId') sensorId: string,
+    @Body() body: unknown,
+  ) {
     return this.service.tauscheSensor(user, sensorId, parse(sensorTauschSchema, body));
   }
 }

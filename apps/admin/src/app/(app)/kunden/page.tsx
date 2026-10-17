@@ -71,7 +71,13 @@ export default async function Kunden({ searchParams }: { searchParams: Promise<S
             </table>
           </div>
         )}
-        <Blaettern pfad="/kunden" params={params} gesamt={daten.gesamt} limit={blatt.limit} offset={blatt.offset} />
+        <Blaettern
+          pfad="/kunden"
+          params={params}
+          gesamt={daten.gesamt}
+          limit={blatt.limit}
+          offset={blatt.offset}
+        />
       </section>
     </>
   );

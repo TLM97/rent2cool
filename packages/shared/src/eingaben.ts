@@ -13,7 +13,8 @@ import { RECHNUNG_STATUS } from './rechnung';
 
 const pflicht = (feld = 'Pflichtfeld') => z.string().trim().min(1, feld);
 const auswahl = (meldung = 'Bitte auswählen') => z.string().uuid(meldung);
-const zeitpunkt = (meldung = 'Ungültiges Datum') => z.string().datetime({ offset: true, message: meldung });
+const zeitpunkt = (meldung = 'Ungültiges Datum') =>
+  z.string().datetime({ offset: true, message: meldung });
 /** Optionales Textfeld beim Ändern: fehlt = unverändert, `null` = leeren. */
 const leerbar = () => z.string().trim().nullable().optional();
 /**
@@ -176,7 +177,9 @@ export const mieteStatusSchema = z.object({ status: z.enum(MIETE_STATUS) });
 export const rechnungErstellenSchema = z.object({
   mieteId: auswahl('Miete fehlt'),
   /** Nettobetrag in Euro (wird in Cent umgerechnet). */
-  netto: z.coerce.number({ invalid_type_error: 'Betrag erwartet' }).positive('Muss größer als 0 sein'),
+  netto: z.coerce
+    .number({ invalid_type_error: 'Betrag erwartet' })
+    .positive('Muss größer als 0 sein'),
   /** Optionaler Steuersatz in Prozent; sonst Standard aus der Konfiguration. */
   steuerSatz: z.coerce.number().int('Ganze Zahl erwartet').min(0).max(100).optional(),
 });

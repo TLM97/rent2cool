@@ -57,7 +57,10 @@ export default async function FahrzeugDetail({
               </Link>
             ) : null}
             {darfAbweichung ? (
-              <Link className="knopf zweitrangig" href={`/abweichungen/neu?bezugTyp=fahrzeug&bezugId=${f.id}`}>
+              <Link
+                className="knopf zweitrangig"
+                href={`/abweichungen/neu?bezugTyp=fahrzeug&bezugId=${f.id}`}
+              >
                 Abweichung erfassen
               </Link>
             ) : null}
@@ -90,7 +93,9 @@ export default async function FahrzeugDetail({
         <section className="karte" aria-labelledby="buchbar-titel">
           <h2 id="buchbar-titel">Buchbarkeit</h2>
           {buchbarkeit.buchbar ? (
-            <div className="hinweis erfolg">Buchbar – verfügbar und alle Sensoren gültig kalibriert.</div>
+            <div className="hinweis erfolg">
+              Buchbar – verfügbar und alle Sensoren gültig kalibriert.
+            </div>
           ) : (
             <div className="hinweis fehler">
               Nicht buchbar:
@@ -211,7 +216,8 @@ export default async function FahrzeugDetail({
         <section className="karte" aria-labelledby="kalib-titel">
           <h2 id="kalib-titel">Kalibrierung erfassen</h2>
           <p className="leise">
-            Nachweis nach EN 12830. Ohne gültige Kalibrierung ist das Fahrzeug nicht buchbar (R-08/R-09).
+            Nachweis nach EN 12830. Ohne gültige Kalibrierung ist das Fahrzeug nicht buchbar
+            (R-08/R-09).
           </p>
           <FormularRahmen
             aktion={erfasseKalibrierung}
@@ -236,7 +242,10 @@ export default async function FahrzeugDetail({
         entitaetIds={[f.id, ...alleSensoren.map((s) => s.id)]}
         typen={['fahrzeug', 'fahrzeug_status', 'kalibrierung', 'sensor_tausch']}
         bezeichnungen={Object.fromEntries(
-          alleSensoren.map((s) => [s.id, `Sensor ${s.seriennummer ? `SN ${s.seriennummer}` : kurzeId(s.id)}`]),
+          alleSensoren.map((s) => [
+            s.id,
+            `Sensor ${s.seriennummer ? `SN ${s.seriennummer}` : kurzeId(s.id)}`,
+          ]),
         )}
       />
     </>

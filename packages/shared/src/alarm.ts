@@ -55,7 +55,10 @@ const ABW_UEBERGAENGE: Record<AbweichungStatus, readonly AbweichungStatus[]> = {
 export function istAbweichungStatus(wert: string): wert is AbweichungStatus {
   return (ABWEICHUNG_STATUS as readonly string[]).includes(wert);
 }
-export function istAbweichungUebergangErlaubt(von: AbweichungStatus, nach: AbweichungStatus): boolean {
+export function istAbweichungUebergangErlaubt(
+  von: AbweichungStatus,
+  nach: AbweichungStatus,
+): boolean {
   return ABW_UEBERGAENGE[von].includes(nach);
 }
 
@@ -79,9 +82,19 @@ export function findeAlarmKandidaten(
   for (const m of messwerte) {
     if (m.messgroesse === 'temperatur_laderaum') {
       if (m.wert > profil.maxC) {
-        kandidaten.push({ typ: 'temperatur_ueber', messgroesse: m.messgroesse, wert: m.wert, schwelle: profil.maxC });
+        kandidaten.push({
+          typ: 'temperatur_ueber',
+          messgroesse: m.messgroesse,
+          wert: m.wert,
+          schwelle: profil.maxC,
+        });
       } else if (m.wert < profil.minC) {
-        kandidaten.push({ typ: 'temperatur_unter', messgroesse: m.messgroesse, wert: m.wert, schwelle: profil.minC });
+        kandidaten.push({
+          typ: 'temperatur_unter',
+          messgroesse: m.messgroesse,
+          wert: m.wert,
+          schwelle: profil.minC,
+        });
       }
     } else if (m.messgroesse === 'tuer_offen' && m.wert === 1) {
       kandidaten.push({ typ: 'tuer_offen', messgroesse: m.messgroesse, wert: m.wert });

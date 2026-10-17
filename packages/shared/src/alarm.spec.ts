@@ -22,11 +22,17 @@ describe('Alarm-/Abweichung-Statusmodelle', () => {
 });
 
 describe('findeAlarmKandidaten', () => {
-  const w = (messgroesse: string, wert: number): TelemetrieWert => ({ messgroesse, wert, einheit: 'x' });
+  const w = (messgroesse: string, wert: number): TelemetrieWert => ({
+    messgroesse,
+    wert,
+    einheit: 'x',
+  });
 
   it('meldet Temperatur über der Grenze', () => {
     const k = findeAlarmKandidaten([w('temperatur_laderaum', 9.5)], profil);
-    expect(k).toEqual([expect.objectContaining({ typ: 'temperatur_ueber', schwelle: 8, wert: 9.5 })]);
+    expect(k).toEqual([
+      expect.objectContaining({ typ: 'temperatur_ueber', schwelle: 8, wert: 9.5 }),
+    ]);
   });
   it('meldet Temperatur unter der Grenze', () => {
     const k = findeAlarmKandidaten([w('temperatur_laderaum', 1)], profil);

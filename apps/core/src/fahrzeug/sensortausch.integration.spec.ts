@@ -35,14 +35,20 @@ describe.skipIf(!RUN)('Sensortausch (Integration, braucht DB)', () => {
   }
 
   /** Verfügbares, kalibriertes Fahrzeug mit einem Laderaum-Sensor. */
-  async function fahrzeugMitSensor(): Promise<{ fahrzeugId: string; sensorId: string; sn: string }> {
+  async function fahrzeugMitSensor(): Promise<{
+    fahrzeugId: string;
+    sensorId: string;
+    sn: string;
+  }> {
     const sn = `SN-${randomUUID().slice(0, 8)}`;
     const { id: fahrzeugId } = await service.erstelle(ops, {
       kennzeichen: `T-${randomUUID().slice(0, 8)}`,
       zulGesamtmasseKg: 3500,
       benoetigteFuehrerscheinklasse: 'B',
       hatFahrtenschreiber: false,
-      aggregat: { sensoren: [{ messgroesse: 'temperatur_laderaum', einheit: 'C', seriennummer: sn }] },
+      aggregat: {
+        sensoren: [{ messgroesse: 'temperatur_laderaum', einheit: 'C', seriennummer: sn }],
+      },
     });
     const sensorId = (await service.holeAkte(fahrzeugId)).aggregate[0]!.sensoren[0]!.id;
     await service.fuegeKalibrierungHinzu(ops, sensorId, kalibrierung());
@@ -67,7 +73,10 @@ describe.skipIf(!RUN)('Sensortausch (Integration, braucht DB)', () => {
     expect((await service.buchbarkeit(fahrzeugId, new Date())).buchbar).toBe(true);
 
     const neuSn = `${sn}-NEU`;
-    const r = await service.tauscheSensor(ops, sensorId, { seriennummer: neuSn, grund: 'Messwerte springen' });
+    const r = await service.tauscheSensor(ops, sensorId, {
+      seriennummer: neuSn,
+      grund: 'Messwerte springen',
+    });
     expect(r).toMatchObject({ alterSensorId: sensorId, fahrzeugId, idempotent: false });
 
     const sensoren = (await service.holeAkte(fahrzeugId)).aggregate[0]!.sensoren;
@@ -76,7 +85,12 @@ describe.skipIf(!RUN)('Sensortausch (Integration, braucht DB)', () => {
     expect(alt).toMatchObject({ aktiv: false, ausbauGrund: 'Messwerte springen' });
     expect(alt.ausgebautAm).not.toBeNull();
     expect(alt.kalibriertBis).not.toBeNull(); // Historie bleibt erhalten
-    expect(neu).toMatchObject({ aktiv: true, seriennummer: neuSn, vorgaengerId: sensorId, messgroesse: 'temperatur_laderaum' });
+    expect(neu).toMatchObject({
+      aktiv: true,
+      seriennummer: neuSn,
+      vorgaengerId: sensorId,
+      messgroesse: 'temperatur_laderaum',
+    });
     expect(neu.kalibriertBis).toBeNull();
     expect(neu.eingebautAm.getTime()).toBe(alt.ausgebautAm!.getTime()); // lückenlos
 
@@ -99,7 +113,11 @@ describe.skipIf(!RUN)('Sensortausch (Integration, braucht DB)', () => {
 
   it('mit Kalibrierung bleibt das Fahrzeug buchbar; Wiederholung ist idempotent', async () => {
     const { fahrzeugId, sensorId, sn } = await fahrzeugMitSensor();
-    const eingabe = { seriennummer: `${sn}-B`, grund: 'Routinetausch', kalibrierung: kalibrierung() };
+    const eingabe = {
+      seriennummer: `${sn}-B`,
+      grund: 'Routinetausch',
+      kalibrierung: kalibrierung(),
+    };
     const erst = await service.tauscheSensor(ops, sensorId, eingabe);
     expect(erst.kalibrierungId).toBeDefined();
     expect((await service.buchbarkeit(fahrzeugId, new Date())).buchbar).toBe(true);
@@ -110,9 +128,9 @@ describe.skipIf(!RUN)('Sensortausch (Integration, braucht DB)', () => {
     expect(alle).toHaveLength(1);
 
     // Anderer neuer Sensor für einen bereits ersetzten → Konflikt.
-    await expect(service.tauscheSensor(ops, sensorId, { seriennummer: 'ANDERS', grund: 'x' })).rejects.toThrow(
-      ConflictException,
-    );
+    await expect(
+      service.tauscheSensor(ops, sensorId, { seriennummer: 'ANDERS', grund: 'x' }),
+    ).rejects.toThrow(ConflictException);
   });
 
   it('gleichzeitige Tausch-Anfragen: genau ein neuer Sensor', async () => {
@@ -122,19 +140,21 @@ describe.skipIf(!RUN)('Sensortausch (Integration, braucht DB)', () => {
       service.tauscheSensor(ops, sensorId, { seriennummer: `${sn}-P2`, grund: 'parallel' }),
     ]);
     expect(ergebnisse.filter((e) => e.status === 'fulfilled')).toHaveLength(1);
-    expect(await client.db.select().from(sensor).where(eq(sensor.vorgaengerId, sensorId))).toHaveLength(1);
+    expect(
+      await client.db.select().from(sensor).where(eq(sensor.vorgaengerId, sensorId)),
+    ).toHaveLength(1);
   });
 
   it('verhindert Doppel-Einbau und Zugriff fremder Mandanten', async () => {
     const a = await fahrzeugMitSensor();
     const b = await fahrzeugMitSensor();
-    await expect(service.tauscheSensor(ops, b.sensorId, { seriennummer: a.sn, grund: 'x' })).rejects.toThrow(
-      /bereits in .* eingebaut/,
-    );
+    await expect(
+      service.tauscheSensor(ops, b.sensorId, { seriennummer: a.sn, grund: 'x' }),
+    ).rejects.toThrow(/bereits in .* eingebaut/);
     const fremd: Principal = { akteurId: 'fremd', rollen: ['ops'], mandantId: randomUUID() };
-    await expect(service.tauscheSensor(fremd, a.sensorId, { seriennummer: 'Z', grund: 'x' })).rejects.toThrow(
-      NotFoundException,
-    );
+    await expect(
+      service.tauscheSensor(fremd, a.sensorId, { seriennummer: 'Z', grund: 'x' }),
+    ).rejects.toThrow(NotFoundException);
     // Nichts verändert.
     const [s] = await client.db.select().from(sensor).where(eq(sensor.id, b.sensorId));
     expect(s?.aktiv).toBe(true);
@@ -142,6 +162,8 @@ describe.skipIf(!RUN)('Sensortausch (Integration, braucht DB)', () => {
 
   it('die Datenbank erzwingt: aktiv genau dann, wenn nicht ausgebaut', async () => {
     const { sensorId } = await fahrzeugMitSensor();
-    await expect(client.db.update(sensor).set({ aktiv: false }).where(eq(sensor.id, sensorId))).rejects.toThrow();
+    await expect(
+      client.db.update(sensor).set({ aktiv: false }).where(eq(sensor.id, sensorId)),
+    ).rejects.toThrow();
   });
 });

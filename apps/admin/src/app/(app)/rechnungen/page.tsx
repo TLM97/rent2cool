@@ -9,15 +9,26 @@ import type { Liste, Rechnung } from '../../../lib/typen';
 
 export const metadata: Metadata = { title: 'Rechnungen' };
 
-export default async function Rechnungen({ searchParams }: { searchParams: Promise<SuchParameter> }) {
+export default async function Rechnungen({
+  searchParams,
+}: {
+  searchParams: Promise<SuchParameter>;
+}) {
   const params = await searchParams;
   const status = erster(params.status);
   const blatt = blattAus(params);
-  const daten = await apiGet<Liste<Rechnung>>('/v1/rechnungen', { status, limit: blatt.limit, offset: blatt.offset });
+  const daten = await apiGet<Liste<Rechnung>>('/v1/rechnungen', {
+    status,
+    limit: blatt.limit,
+    offset: blatt.offset,
+  });
 
   return (
     <>
-      <Seitenkopf titel="Rechnungen" untertitel="Eine Rechnung je beendeter Miete, fortlaufend nummeriert (R-63)." />
+      <Seitenkopf
+        titel="Rechnungen"
+        untertitel="Eine Rechnung je beendeter Miete, fortlaufend nummeriert (R-63)."
+      />
       <section className="karte">
         <StatusFilter pfad="/rechnungen" aktuell={status} optionen={RECHNUNG_STATUS} />
         {daten.eintraege.length === 0 ? (
@@ -71,7 +82,13 @@ export default async function Rechnungen({ searchParams }: { searchParams: Promi
             </table>
           </div>
         )}
-        <Blaettern pfad="/rechnungen" params={params} gesamt={daten.gesamt} limit={blatt.limit} offset={blatt.offset} />
+        <Blaettern
+          pfad="/rechnungen"
+          params={params}
+          gesamt={daten.gesamt}
+          limit={blatt.limit}
+          offset={blatt.offset}
+        />
       </section>
     </>
   );

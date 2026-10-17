@@ -58,7 +58,9 @@ test('Kunde, Fahrer und Fahrzeug bearbeiten', async ({ page, context }) => {
   await expect(page.getByRole('status')).toContainText('Änderungen gespeichert');
   await zweiter.getByLabel('Ort').fill('München');
   await zweiter.getByRole('button', { name: 'Änderungen speichern' }).click();
-  await expect(zweiter.locator('.hinweis[role=alert]')).toContainText('inzwischen von jemand anderem geändert');
+  await expect(zweiter.locator('.hinweis[role=alert]')).toContainText(
+    'inzwischen von jemand anderem geändert',
+  );
   await expect(zweiter.getByLabel('Ort')).toHaveValue('München');
   await zweiter.screenshot({ path: `${SCREENS}/17-konflikt.png`, fullPage: true });
   await zweiter.close();
@@ -77,7 +79,9 @@ test('Kunde, Fahrer und Fahrzeug bearbeiten', async ({ page, context }) => {
   await page.getByLabel('Führerschein gültig bis').fill('2035-06-30');
   await page.getByRole('button', { name: 'Änderungen speichern' }).click();
   await expect(page.getByRole('status')).toContainText('Änderungen gespeichert');
-  const zeile = page.getByRole('region', { name: /^Fahrer \(/ }).getByRole('row', { name: new RegExp(fahrerName) });
+  const zeile = page
+    .getByRole('region', { name: /^Fahrer \(/ })
+    .getByRole('row', { name: new RegExp(fahrerName) });
   await expect(zeile).toContainText('C1');
   await expect(zeile).toContainText('30.06.2035');
   // Kundenverlauf enthält auch die Fahrer.

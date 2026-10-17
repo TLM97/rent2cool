@@ -27,7 +27,10 @@ export default async function RechnungDetail({
   const suche = await searchParams;
   const r = await apiGetOderNull<Rechnung>(`/v1/rechnungen/${id}`);
   if (!r) notFound();
-  const [kunde, sitzung] = await Promise.all([apiGetOderNull<Kunde>(`/v1/kunden/${r.kundeId}`), holeSitzung()]);
+  const [kunde, sitzung] = await Promise.all([
+    apiGetOderNull<Kunde>(`/v1/kunden/${r.kundeId}`),
+    holeSitzung(),
+  ]);
   const darfAendern = hatRolle(sitzung?.rollen ?? [], 'ops', 'admin');
 
   return (

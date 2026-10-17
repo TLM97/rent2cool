@@ -23,7 +23,10 @@ export const kunde = pgTable(
     erstelltAm: timestamp('erstellt_am', { withTimezone: true }).notNull().defaultNow(),
     aktualisiertAm: timestamp('aktualisiert_am', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('idx_kunde_mandant_status').on(t.mandantId, t.status), index('idx_kunde_ust').on(t.ustId)],
+  (t) => [
+    index('idx_kunde_mandant_status').on(t.mandantId, t.status),
+    index('idx_kunde_ust').on(t.ustId),
+  ],
 );
 
 export const fahrer = pgTable(

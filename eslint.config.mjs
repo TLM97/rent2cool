@@ -1,29 +1,29 @@
 // @ts-check
-import eslint from "@eslint/js";
-import tseslint from "typescript-eslint";
+import eslint from '@eslint/js';
+import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
     ignores: [
-      "**/dist/**",
-      "**/.next/**",
-      "**/node_modules/**",
-      "**/coverage/**",
-      "**/*.config.*",
-      "**/next-env.d.ts",
-      "**/test-results/**",
-      "**/playwright-report/**",
-      "apps/core/drizzle/**",
+      '**/dist/**',
+      '**/.next/**',
+      '**/node_modules/**',
+      '**/coverage/**',
+      '**/*.config.*',
+      '**/next-env.d.ts',
+      '**/test-results/**',
+      '**/playwright-report/**',
+      'apps/core/drizzle/**',
     ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
     rules: {
-      "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/no-unused-vars": [
-        "error",
-        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
     },
   },

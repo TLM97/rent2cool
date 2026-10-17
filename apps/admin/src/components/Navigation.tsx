@@ -25,7 +25,8 @@ const GRUPPEN: { titel: string; eintraege: { href: string; text: string }[] }[] 
 
 export function Navigation() {
   const pfad = usePathname();
-  const aktiv = (href: string) => (href === '/' ? pfad === '/' : pfad === href || pfad.startsWith(`${href}/`));
+  const aktiv = (href: string) =>
+    href === '/' ? pfad === '/' : pfad === href || pfad.startsWith(`${href}/`);
 
   return (
     <nav className="navigation" aria-label="Hauptnavigation">

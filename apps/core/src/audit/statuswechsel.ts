@@ -63,7 +63,10 @@ export function wechsleStatus<S extends string, D extends Datensatz>(
     if (a.felder.length === 0) {
       return { id: o.id, status: o.nach, von, geaendert: false };
     }
-    await o.speichere(tx, Object.fromEntries(a.felder.map((f) => [f, werte[f as keyof typeof werte]])));
+    await o.speichere(
+      tx,
+      Object.fromEntries(a.felder.map((f) => [f, werte[f as keyof typeof werte]])),
+    );
     await schreibeAudit(tx, principal, {
       aktion: 'POST',
       entitaetTyp: o.entitaetTyp,

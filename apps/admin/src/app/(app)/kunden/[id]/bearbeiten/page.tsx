@@ -15,7 +15,10 @@ export const metadata: Metadata = { title: 'Kunde bearbeiten' };
 export default async function KundeBearbeiten({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!istUuid(id)) notFound();
-  const [kunde, sitzung] = await Promise.all([apiGetOderNull<Kunde>(`/v1/kunden/${id}`), holeSitzung()]);
+  const [kunde, sitzung] = await Promise.all([
+    apiGetOderNull<Kunde>(`/v1/kunden/${id}`),
+    holeSitzung(),
+  ]);
   if (!kunde) notFound();
   const pfad = `/kunden/${kunde.id}`;
 
@@ -33,8 +36,8 @@ export default async function KundeBearbeiten({ params }: { params: Promise<{ id
           <>
             {kunde.status === 'freigegeben' ? (
               <div className="hinweis warn">
-                Der Kunde ist freigegeben. Ändern sich Firma, Handelsregister oder USt-ID, bitte erneut prüfen – die
-                Freigabe wird nicht automatisch zurückgesetzt.
+                Der Kunde ist freigegeben. Ändern sich Firma, Handelsregister oder USt-ID, bitte
+                erneut prüfen – die Freigabe wird nicht automatisch zurückgesetzt.
               </div>
             ) : null}
             <FormularRahmen

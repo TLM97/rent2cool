@@ -61,7 +61,9 @@ describe.skipIf(!RUN)('Kunde & Fahrer (Integration, braucht DB)', () => {
     });
 
     // Noch nicht einsatzbereit (Status angelegt)
-    expect((await kunden.einsatzbereit(fahrerId, fahrzeugId, new Date())).einsatzbereit).toBe(false);
+    expect((await kunden.einsatzbereit(fahrerId, fahrzeugId, new Date())).einsatzbereit).toBe(
+      false,
+    );
 
     // Freigeben: angelegt -> identitaet_pruefung -> freigegeben
     await kunden.aendereFahrerStatus(AKTEUR, fahrerId, 'identitaet_pruefung');
@@ -72,7 +74,9 @@ describe.skipIf(!RUN)('Kunde & Fahrer (Integration, braucht DB)', () => {
 
     // Sperre -> nicht mehr einsatzbereit
     await kunden.aendereFahrerStatus(AKTEUR, fahrerId, 'gesperrt');
-    expect((await kunden.einsatzbereit(fahrerId, fahrzeugId, new Date())).einsatzbereit).toBe(false);
+    expect((await kunden.einsatzbereit(fahrerId, fahrzeugId, new Date())).einsatzbereit).toBe(
+      false,
+    );
   });
 
   it('verweigert einen unerlaubten Kunde-Statusübergang', async () => {

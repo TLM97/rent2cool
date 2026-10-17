@@ -72,7 +72,11 @@ export default async function AbweichungDetail({
       {darfBewerten && naechste.length > 0 ? (
         <section className="karte" aria-labelledby="bewerten-titel">
           <h2 id="bewerten-titel">Bewerten und weiterführen</h2>
-          <FormularRahmen aktion={bewerteAbweichung} sendenText="Speichern" versteckt={{ id: a.id }}>
+          <FormularRahmen
+            aktion={bewerteAbweichung}
+            sendenText="Speichern"
+            versteckt={{ id: a.id }}
+          >
             <Auswahl
               name="status"
               label="Neuer Status"
@@ -86,7 +90,12 @@ export default async function AbweichungDetail({
               standard={a.verantwortlich ?? sitzung?.name ?? ''}
             />
             <Textfeld name="bewertung" label="Bewertung" breit standard={a.bewertung ?? ''} />
-            <Textfeld name="massnahmen" label="Maßnahmen (CAPA)" breit standard={a.massnahmen ?? ''} />
+            <Textfeld
+              name="massnahmen"
+              label="Maßnahmen (CAPA)"
+              breit
+              standard={a.massnahmen ?? ''}
+            />
           </FormularRahmen>
         </section>
       ) : null}

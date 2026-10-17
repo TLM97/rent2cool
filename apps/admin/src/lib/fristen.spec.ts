@@ -9,7 +9,10 @@ describe('fuehrerscheinFrist', () => {
     expect(fuehrerscheinFrist(inTagen(200), jetzt)).toEqual({ text: 'gültig', ton: 'ok' });
   });
   it('Warnung innerhalb von 30 Tagen', () => {
-    expect(fuehrerscheinFrist(inTagen(10), jetzt)).toEqual({ text: 'läuft in 10 T. ab', ton: 'warn' });
+    expect(fuehrerscheinFrist(inTagen(10), jetzt)).toEqual({
+      text: 'läuft in 10 T. ab',
+      ton: 'warn',
+    });
   });
   it('kritisch, wenn abgelaufen oder ohne Datum', () => {
     expect(fuehrerscheinFrist(inTagen(-1), jetzt).ton).toBe('kritisch');

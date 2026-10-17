@@ -5,18 +5,14 @@
  */
 import { z } from 'zod';
 
-const booleanish = z
-  .enum(['true', 'false', '1', '0'])
-  .transform((v) => v === 'true' || v === '1');
+const booleanish = z.enum(['true', 'false', '1', '0']).transform((v) => v === 'true' || v === '1');
 
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 
   CORE_HTTP_HOST: z.string().default('0.0.0.0'),
   CORE_HTTP_PORT: z.coerce.number().int().positive().default(3000),
-  LOG_LEVEL: z
-    .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal'])
-    .default('info'),
+  LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
 
   PUBLIC_BASE_DOMAIN: z.string().default('rent2cool.example'),
 

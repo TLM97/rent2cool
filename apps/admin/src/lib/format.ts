@@ -29,7 +29,9 @@ export function formatDatum(iso: string | null | undefined): string {
 
 export function formatEuro(cent: number | null | undefined, waehrung = 'EUR'): string {
   if (cent === null || cent === undefined) return '–';
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: waehrung }).format(cent / 100);
+  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: waehrung }).format(
+    cent / 100,
+  );
 }
 
 export function formatTemperatur(c: number | null | undefined): string {

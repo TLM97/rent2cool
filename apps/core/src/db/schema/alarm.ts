@@ -1,5 +1,13 @@
 /** Alarm (aus Telematik-Auswertung) und GDP-Abweichung (CAPA). T-002 §4.13/§4.14. */
-import { doublePrecision, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  doublePrecision,
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { mandant } from './stammdaten';
 import { fahrzeug } from './fahrzeugakte';
 import { miete } from './miete';

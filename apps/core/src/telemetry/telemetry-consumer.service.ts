@@ -35,7 +35,10 @@ export class TelemetryConsumerService implements OnModuleInit, OnModuleDestroy {
   private readonly profile = new KonfigProfilQuelle();
   // Cache Fahrzeug -> {mandantId, Profil} für die Alarm-Auswertung (hält den
   // Hot-Path schlank; bei 4.000 Fahrzeugen ein kleiner Cache, D-003).
-  private readonly profilCache = new Map<string, { mandantId: string; profil: Temperaturprofil } | null>();
+  private readonly profilCache = new Map<
+    string,
+    { mandantId: string; profil: Temperaturprofil } | null
+  >();
 
   constructor(
     private readonly config: ConfigService<Env, true>,
@@ -101,7 +104,9 @@ export class TelemetryConsumerService implements OnModuleInit, OnModuleDestroy {
           try {
             const ctx = await this.profilKontext(parsed.data.fahrzeugId);
             if (ctx) {
-              await this.alarme.auswerteNachricht(parsed.data, ctx.profil, { mandantId: ctx.mandantId });
+              await this.alarme.auswerteNachricht(parsed.data, ctx.profil, {
+                mandantId: ctx.mandantId,
+              });
             }
           } catch (e) {
             this.logger.warn(`Alarm-Auswertung fehlgeschlagen: ${String(e)}`);

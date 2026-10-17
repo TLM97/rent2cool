@@ -41,7 +41,9 @@ const PRUEFEN = 'Bitte die markierten Felder prüfen.';
 interface Schema<T> {
   safeParse(
     wert: unknown,
-  ): { success: true; data: T } | { success: false; error: { issues: { path: (string | number)[]; message: string }[] } };
+  ):
+    | { success: true; data: T }
+    | { success: false; error: { issues: { path: (string | number)[]; message: string }[] } };
 }
 
 type Ergebnis<T> = { ok: true; daten: T } | { ok: false; zustand: FormularZustand };
@@ -56,7 +58,8 @@ function pruefe<T>(schema: Schema<T>, roh: unknown, werte: Record<string, string
 /** Kern-Fehler (z. B. abgelehnte Buchung mit Gründen) in einen Formularzustand übersetzen. */
 function kernFehler(e: unknown, werte: Record<string, string>): FormularZustand {
   if (!(e instanceof ApiFehler)) throw e; // u. a. Redirect zur Anmeldung weiterreichen
-  const details = (e.details as { message?: { fehler?: unknown; gruende?: unknown } } | undefined)?.message;
+  const details = (e.details as { message?: { fehler?: unknown; gruende?: unknown } } | undefined)
+    ?.message;
   if (details && typeof details === 'object' && Array.isArray(details.gruende)) {
     return {
       fehler: typeof details.fehler === 'string' ? details.fehler : e.message,
@@ -80,7 +83,9 @@ interface Aenderung {
 }
 
 function aenderungsMeldung(r: Aenderung): string {
-  return r.geaendert.length === 0 ? 'Keine Änderungen – nichts gespeichert.' : 'Änderungen gespeichert.';
+  return r.geaendert.length === 0
+    ? 'Keine Änderungen – nichts gespeichert.'
+    : 'Änderungen gespeichert.';
 }
 
 function weiter(pfad: string, erfolg: string): never {
@@ -89,7 +94,10 @@ function weiter(pfad: string, erfolg: string): never {
 }
 
 // --- Fahrzeug ---
-export async function erstelleFahrzeug(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+export async function erstelleFahrzeug(
+  _z: FormularZustand,
+  fd: FormData,
+): Promise<FormularZustand> {
   const werte = werteAus(fd);
   const roh = {
     kennzeichen: text(fd, 'kennzeichen') ?? '',
@@ -149,7 +157,10 @@ export async function aendereFahrzeug(_z: FormularZustand, fd: FormData): Promis
   weiter(`/fahrzeuge/${id}`, aenderungsMeldung(r));
 }
 
-export async function erfasseKalibrierung(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+export async function erfasseKalibrierung(
+  _z: FormularZustand,
+  fd: FormData,
+): Promise<FormularZustand> {
   const werte = werteAus(fd);
   const fahrzeugId = text(fd, 'fahrzeugId') ?? '';
   const sensorId = text(fd, 'sensorId') ?? '';
@@ -197,7 +208,10 @@ export async function tauscheSensor(_z: FormularZustand, fd: FormData): Promise<
   if (!p.ok) {
     // Fehler der Kalibrierung („kalibrierung.gueltigBis“) dem Formularfeld zuordnen.
     const feldFehler = Object.fromEntries(
-      Object.entries(p.zustand.feldFehler ?? {}).map(([k, v]) => [k.replace(/^kalibrierung\./, ''), v]),
+      Object.entries(p.zustand.feldFehler ?? {}).map(([k, v]) => [
+        k.replace(/^kalibrierung\./, ''),
+        v,
+      ]),
     );
     return { ...p.zustand, feldFehler };
   }
@@ -282,7 +296,10 @@ export async function erstelleFahrer(_z: FormularZustand, fd: FormData): Promise
   } catch (e) {
     return kernFehler(e, werte);
   }
-  weiter(`/kunden/${kundeId}`, 'Fahrer angelegt. Nächster Schritt: Identitäts- und Führerscheinprüfung.');
+  weiter(
+    `/kunden/${kundeId}`,
+    'Fahrer angelegt. Nächster Schritt: Identitäts- und Führerscheinprüfung.',
+  );
 }
 
 export async function aendereFahrer(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
@@ -341,7 +358,10 @@ export async function erstelleMiete(_z: FormularZustand, fd: FormData): Promise<
 }
 
 // --- Rechnung ---
-export async function erstelleRechnung(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+export async function erstelleRechnung(
+  _z: FormularZustand,
+  fd: FormData,
+): Promise<FormularZustand> {
   const werte = werteAus(fd);
   const roh = {
     mieteId: text(fd, 'mieteId') ?? '',
@@ -360,7 +380,10 @@ export async function erstelleRechnung(_z: FormularZustand, fd: FormData): Promi
 }
 
 // --- Abweichung ---
-export async function erstelleAbweichung(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+export async function erstelleAbweichung(
+  _z: FormularZustand,
+  fd: FormData,
+): Promise<FormularZustand> {
   const werte = werteAus(fd);
   const roh = {
     bezugTyp: text(fd, 'bezugTyp') ?? '',
@@ -379,7 +402,10 @@ export async function erstelleAbweichung(_z: FormularZustand, fd: FormData): Pro
   weiter(`/abweichungen/${id}`, 'Abweichung erfasst.');
 }
 
-export async function bewerteAbweichung(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+export async function bewerteAbweichung(
+  _z: FormularZustand,
+  fd: FormData,
+): Promise<FormularZustand> {
   const werte = werteAus(fd);
   const id = text(fd, 'id') ?? '';
   if (!istUuid(id)) return { fehler: 'Abweichung fehlt.', werte };

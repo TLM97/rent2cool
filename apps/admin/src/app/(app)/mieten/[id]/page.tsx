@@ -2,11 +2,23 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { istMieteUebergangErlaubt, MIETE_STATUS, type TemperaturNachweis } from '@rent2cool/shared';
-import { Leer, Meldungen, Plakette, Seitenkopf, StatusFormular } from '../../../../components/bausteine';
+import {
+  Leer,
+  Meldungen,
+  Plakette,
+  Seitenkopf,
+  StatusFormular,
+} from '../../../../components/bausteine';
 import { Verlauf } from '../../../../components/verlauf';
 import { Feld, FormularRahmen } from '../../../../components/formular';
 import { apiGet, apiGetOderNull } from '../../../../lib/api';
-import { formatDatumZeit, formatEuro, formatTemperatur, kurzeId, statusLabel } from '../../../../lib/format';
+import {
+  formatDatumZeit,
+  formatEuro,
+  formatTemperatur,
+  kurzeId,
+  statusLabel,
+} from '../../../../lib/format';
 import { naechsteStatus } from '../../../../lib/formular';
 import { istUuid, type SuchParameter } from '../../../../lib/seiten';
 import { holeSitzung } from '../../../../lib/sitzung';
@@ -50,7 +62,10 @@ export default async function MieteDetail({
         brotkrume={{ href: '/mieten', text: 'Mieten' }}
         aktionen={
           darfAbweichung ? (
-            <Link className="knopf zweitrangig" href={`/abweichungen/neu?bezugTyp=miete&bezugId=${miete.id}`}>
+            <Link
+              className="knopf zweitrangig"
+              href={`/abweichungen/neu?bezugTyp=miete&bezugId=${miete.id}`}
+            >
               Abweichung erfassen
             </Link>
           ) : null
@@ -64,7 +79,9 @@ export default async function MieteDetail({
           <dl className="eigenschaften">
             <dt>Kunde</dt>
             <dd>
-              <Link href={`/kunden/${miete.kundeId}`}>{kunde?.firmenname ?? kurzeId(miete.kundeId)}</Link>
+              <Link href={`/kunden/${miete.kundeId}`}>
+                {kunde?.firmenname ?? kurzeId(miete.kundeId)}
+              </Link>
             </dd>
             <dt>Fahrzeug</dt>
             <dd>
@@ -83,7 +100,9 @@ export default async function MieteDetail({
             <dt>Auslandsfahrt</dt>
             <dd>{miete.auslandsfahrtGeplant ? 'geplant' : 'nein'}</dd>
             <dt>Temperaturprofil</dt>
-            <dd>{miete.temperaturprofil ? `${miete.temperaturprofil} °C` : 'Standard des Fahrzeugs'}</dd>
+            <dd>
+              {miete.temperaturprofil ? `${miete.temperaturprofil} °C` : 'Standard des Fahrzeugs'}
+            </dd>
             {darfAendern ? (
               <>
                 <dt>Status</dt>
@@ -107,14 +126,16 @@ export default async function MieteDetail({
           ) : (
             <>
               <p>
-                <Plakette status={nachweis.bewertung} /> <span className="leise">Profil {nachweis.profil.name} °C</span>
+                <Plakette status={nachweis.bewertung} />{' '}
+                <span className="leise">Profil {nachweis.profil.name} °C</span>
               </p>
               <dl className="eigenschaften">
                 <dt>Messwerte</dt>
                 <dd>{nachweis.kennzahlen.anzahl}</dd>
                 <dt>min / mittel / max</dt>
                 <dd>
-                  {formatTemperatur(nachweis.kennzahlen.minC)} / {formatTemperatur(nachweis.kennzahlen.mittelC)} /{' '}
+                  {formatTemperatur(nachweis.kennzahlen.minC)} /{' '}
+                  {formatTemperatur(nachweis.kennzahlen.mittelC)} /{' '}
                   {formatTemperatur(nachweis.kennzahlen.maxC)}
                 </dd>
                 <dt>Grenzverletzungen</dt>
@@ -123,7 +144,8 @@ export default async function MieteDetail({
                 <dd>{nachweis.luecken.length}</dd>
                 <dt>Integrität</dt>
                 <dd className="mono" title={nachweis.integritaet.datenHash}>
-                  {nachweis.integritaet.algorithmus} · {nachweis.integritaet.datenHash.slice(0, 16)}…
+                  {nachweis.integritaet.algorithmus} · {nachweis.integritaet.datenHash.slice(0, 16)}
+                  …
                 </dd>
               </dl>
             </>
@@ -139,12 +161,18 @@ export default async function MieteDetail({
               <strong>{rechnung.rechnungsnummer}</strong>
             </Link>{' '}
             <Plakette status={rechnung.status} />{' '}
-            <span className="leise">{formatEuro(rechnung.bruttoCent, rechnung.waehrung)} brutto</span>
+            <span className="leise">
+              {formatEuro(rechnung.bruttoCent, rechnung.waehrung)} brutto
+            </span>
           </p>
         ) : miete.status !== 'beendet' ? (
           <Leer>Eine Rechnung kann erst nach Ende der Miete erstellt werden.</Leer>
         ) : darfAendern ? (
-          <FormularRahmen aktion={erstelleRechnung} sendenText="Rechnung erstellen" versteckt={{ mieteId: miete.id }}>
+          <FormularRahmen
+            aktion={erstelleRechnung}
+            sendenText="Rechnung erstellen"
+            versteckt={{ mieteId: miete.id }}
+          >
             <Feld
               name="netto"
               label="Nettobetrag (EUR)"
@@ -154,7 +182,14 @@ export default async function MieteDetail({
               pflicht
               hinweis="Die Rechnungsnummer vergibt der Kern fortlaufend (R-63)."
             />
-            <Feld name="steuerSatz" label="USt-Satz (%)" typ="number" schritt="1" min="0" hinweis="leer = Standardsatz" />
+            <Feld
+              name="steuerSatz"
+              label="USt-Satz (%)"
+              typ="number"
+              schritt="1"
+              min="0"
+              hinweis="leer = Standardsatz"
+            />
           </FormularRahmen>
         ) : (
           <Leer>Noch keine Rechnung.</Leer>
@@ -179,7 +214,9 @@ export default async function MieteDetail({
                 {nachweis.grenzverletzungen.slice(0, 50).map((g) => (
                   <tr key={g.zeit}>
                     <td>{formatDatumZeit(g.zeit)}</td>
-                    <td>{statusLabel(g.art === 'ueber' ? 'temperatur_ueber' : 'temperatur_unter')}</td>
+                    <td>
+                      {statusLabel(g.art === 'ueber' ? 'temperatur_ueber' : 'temperatur_unter')}
+                    </td>
                     <td className="zahl">{formatTemperatur(g.wert)}</td>
                   </tr>
                 ))}

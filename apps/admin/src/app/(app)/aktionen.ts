@@ -26,7 +26,12 @@ function mitMeldung(pfad: string, art: 'fehler' | 'erfolg', text: string): strin
   return `${basis}?${q.toString()}`;
 }
 
-async function ausfuehren(pfad: string, body: unknown, zurueck: string, erfolg: string): Promise<never> {
+async function ausfuehren(
+  pfad: string,
+  body: unknown,
+  zurueck: string,
+  erfolg: string,
+): Promise<never> {
   let ziel: string;
   try {
     await apiPost(pfad, body);
@@ -58,16 +63,30 @@ export async function aendereFahrzeugStatus(formData: FormData): Promise<void> {
   const status = String(formData.get('status') ?? '');
   const zurueck = `/fahrzeuge/${istUuid(id) ? id : ''}`;
   if (!istUuid(id) || !status) redirect(mitMeldung('/fahrzeuge', 'fehler', 'Ungültige Eingabe'));
-  await ausfuehren(`/v1/fahrzeuge/${id}/status`, { status }, zurueck, `Status auf „${statusLabel(status)}“ gesetzt.`);
+  await ausfuehren(
+    `/v1/fahrzeuge/${id}/status`,
+    { status },
+    zurueck,
+    `Status auf „${statusLabel(status)}“ gesetzt.`,
+  );
 }
 
 /** Gemeinsamer Statuswechsel: `<basis>/<id>/status` im Kern, zurück zur Detailseite. */
-async function statusWechsel(formData: FormData, kernBasis: string, seitenBasis: string): Promise<void> {
+async function statusWechsel(
+  formData: FormData,
+  kernBasis: string,
+  seitenBasis: string,
+): Promise<void> {
   const id = String(formData.get('id') ?? '');
   const status = String(formData.get('status') ?? '');
   const zurueck = zurueckPfad(formData, istUuid(id) ? `${seitenBasis}/${id}` : seitenBasis);
   if (!istUuid(id) || !status) redirect(mitMeldung(zurueck, 'fehler', 'Ungültige Eingabe'));
-  await ausfuehren(`${kernBasis}/${id}/status`, { status }, zurueck, `Status auf „${statusLabel(status)}“ gesetzt.`);
+  await ausfuehren(
+    `${kernBasis}/${id}/status`,
+    { status },
+    zurueck,
+    `Status auf „${statusLabel(status)}“ gesetzt.`,
+  );
 }
 
 export async function aendereKundeStatus(formData: FormData): Promise<void> {

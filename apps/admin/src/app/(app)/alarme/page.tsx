@@ -1,7 +1,14 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ALARM_STATUS } from '@rent2cool/shared';
-import { Blaettern, Leer, Meldungen, Plakette, Seitenkopf, StatusFilter } from '../../../components/bausteine';
+import {
+  Blaettern,
+  Leer,
+  Meldungen,
+  Plakette,
+  Seitenkopf,
+  StatusFilter,
+} from '../../../components/bausteine';
 import { apiGet } from '../../../lib/api';
 import { formatDatumZeit, formatTemperatur, kurzeId, statusLabel } from '../../../lib/format';
 import { blattAus, erster, seitenLink, type SuchParameter } from '../../../lib/seiten';
@@ -112,7 +119,13 @@ export default async function Alarme({ searchParams }: { searchParams: Promise<S
             </table>
           </div>
         )}
-        <Blaettern pfad="/alarme" params={params} gesamt={daten.gesamt} limit={blatt.limit} offset={blatt.offset} />
+        <Blaettern
+          pfad="/alarme"
+          params={params}
+          gesamt={daten.gesamt}
+          limit={blatt.limit}
+          offset={blatt.offset}
+        />
       </section>
     </>
   );

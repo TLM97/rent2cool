@@ -16,8 +16,7 @@ import { InMemoryBerichtSpeicher } from './speicher';
 
 const RUN = process.env.RUN_INTEGRATION === '1';
 const url =
-  process.env.DATABASE_URL ??
-  'postgres://rent2cool:rent2cool_local_dev@localhost:5432/rent2cool';
+  process.env.DATABASE_URL ?? 'postgres://rent2cool:rent2cool_local_dev@localhost:5432/rent2cool';
 
 describe.skipIf(!RUN)('Temperaturnachweis (Integration, braucht DB)', () => {
   let client: ReturnType<typeof createDbClient>;

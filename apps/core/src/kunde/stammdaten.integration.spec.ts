@@ -54,7 +54,12 @@ describe.skipIf(!RUN)('Stammdaten ändern (Integration, braucht DB)', () => {
     });
     const v1 = (await kunden.holeKunde(id)).aktualisiertAm.toISOString();
 
-    const r = await kunden.aendereKunde(ops, id, { version: v1, ort: 'Potsdam', ustId: null, land: 'DE' });
+    const r = await kunden.aendereKunde(ops, id, {
+      version: v1,
+      ort: 'Potsdam',
+      ustId: null,
+      land: 'DE',
+    });
     expect(r.geaendert).toEqual(['ort', 'ustId']);
     const nachher = await kunden.holeKunde(id);
     expect(nachher.ort).toBe('Potsdam');
@@ -76,11 +81,15 @@ describe.skipIf(!RUN)('Stammdaten ändern (Integration, braucht DB)', () => {
     expect(await auditFuer(id)).toHaveLength(1);
 
     // Veralteter Stand → 409, nichts überschrieben.
-    await expect(kunden.aendereKunde(ops, id, { version: v1, ort: 'Hamburg' })).rejects.toThrow(ConflictException);
+    await expect(kunden.aendereKunde(ops, id, { version: v1, ort: 'Hamburg' })).rejects.toThrow(
+      ConflictException,
+    );
     expect((await kunden.holeKunde(id)).ort).toBe('Potsdam');
 
     // Anderer Mandant sieht den Kunden nicht.
-    await expect(kunden.aendereKunde(fremd, id, { version: r.version, ort: 'X' })).rejects.toThrow(NotFoundException);
+    await expect(kunden.aendereKunde(fremd, id, { version: r.version, ort: 'X' })).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('Kunde: gleichzeitiges Speichern mit demselben Stand – genau eines gewinnt', async () => {
@@ -96,7 +105,10 @@ describe.skipIf(!RUN)('Stammdaten ändern (Integration, braucht DB)', () => {
   });
 
   it('Fahrer: Führerscheindaten ändern und leeren', async () => {
-    const { id: kundeId } = await kunden.erstelleKunde(ops, { firmenname: 'Fahrerfirma', land: 'DE' });
+    const { id: kundeId } = await kunden.erstelleKunde(ops, {
+      firmenname: 'Fahrerfirma',
+      land: 'DE',
+    });
     const { id } = await kunden.erstelleFahrer(ops, kundeId, {
       name: 'Erika Muster',
       fuehrerscheinKlasse: 'B',
@@ -111,12 +123,20 @@ describe.skipIf(!RUN)('Stammdaten ändern (Integration, braucht DB)', () => {
     });
     expect(r.geaendert).toEqual(['fuehrerscheinKlasse', 'fuehrerscheinGueltigBis']);
     const [eintrag] = await auditFuer(id);
-    expect(eintrag?.altWert).toEqual({ fuehrerscheinKlasse: 'B', fuehrerscheinGueltigBis: '2030-12-31T22:59:00.000Z' });
-    expect(eintrag?.neuWert).toEqual({ fuehrerscheinKlasse: 'C1', fuehrerscheinGueltigBis: '2035-06-30T21:59:00.000Z' });
+    expect(eintrag?.altWert).toEqual({
+      fuehrerscheinKlasse: 'B',
+      fuehrerscheinGueltigBis: '2030-12-31T22:59:00.000Z',
+    });
+    expect(eintrag?.neuWert).toEqual({
+      fuehrerscheinKlasse: 'C1',
+      fuehrerscheinGueltigBis: '2035-06-30T21:59:00.000Z',
+    });
 
     await kunden.aendereFahrer(ops, id, { version: r.version, fuehrerscheinGueltigBis: null });
     expect((await kunden.holeFahrer(id)).fuehrerscheinGueltigBis).toBeNull();
-    await expect(kunden.aendereFahrer(fremd, id, { version: r.version, name: 'X' })).rejects.toThrow(NotFoundException);
+    await expect(
+      kunden.aendereFahrer(fremd, id, { version: r.version, name: 'X' }),
+    ).rejects.toThrow(NotFoundException);
   });
 
   it('Fahrzeug: Stammdaten ändern, doppeltes Kennzeichen wird abgelehnt', async () => {
@@ -141,14 +161,22 @@ describe.skipIf(!RUN)('Stammdaten ändern (Integration, braucht DB)', () => {
       hatFahrtenschreiber: true,
       vin: null,
     });
-    expect(r.geaendert).toEqual(['zulGesamtmasseKg', 'benoetigteFuehrerscheinklasse', 'hatFahrtenschreiber']);
+    expect(r.geaendert).toEqual([
+      'zulGesamtmasseKg',
+      'benoetigteFuehrerscheinklasse',
+      'hatFahrtenschreiber',
+    ]);
     const [eintrag] = await auditFuer(id);
-    expect(eintrag?.altWert).toEqual({ zulGesamtmasseKg: 3500, benoetigteFuehrerscheinklasse: 'B', hatFahrtenschreiber: false });
+    expect(eintrag?.altWert).toEqual({
+      zulGesamtmasseKg: 3500,
+      benoetigteFuehrerscheinklasse: 'B',
+      hatFahrtenschreiber: false,
+    });
 
     const vAnderes = (await fahrzeuge.holeAkte(anderes)).fahrzeug.aktualisiertAm.toISOString();
-    await expect(fahrzeuge.aendere(ops, anderes, { version: vAnderes, kennzeichen: kz })).rejects.toThrow(
-      ConflictException,
-    );
+    await expect(
+      fahrzeuge.aendere(ops, anderes, { version: vAnderes, kennzeichen: kz }),
+    ).rejects.toThrow(ConflictException);
     expect(await auditFuer(anderes)).toHaveLength(0);
   });
 });

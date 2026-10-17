@@ -8,7 +8,12 @@
  */
 import { createDbClient } from '../client';
 import { mandant, standort } from '../schema';
-import { PLACEHOLDER_HQ_ID, PLACEHOLDER_MANDANT_ID, placeholderDpo, placeholderHq } from './placeholder-data';
+import {
+  PLACEHOLDER_HQ_ID,
+  PLACEHOLDER_MANDANT_ID,
+  placeholderDpo,
+  placeholderHq,
+} from './placeholder-data';
 
 async function main(): Promise<void> {
   const databaseUrl = process.env.DATABASE_URL;

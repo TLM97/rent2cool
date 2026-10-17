@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  formatRechnungsnummer,
-  istRechnungUebergangErlaubt,
-  rechneBetraege,
-} from './rechnung';
+import { formatRechnungsnummer, istRechnungUebergangErlaubt, rechneBetraege } from './rechnung';
 
 describe('Rechnung-Statusmodell', () => {
   it('erlaubt/verbietet Übergänge', () => {

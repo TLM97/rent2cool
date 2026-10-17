@@ -7,3 +7,6 @@ pnpm-lock.yaml
 **/test-results/**
 **/playwright-report/**
 apps/core/drizzle/**
+# Planungsdateien gehören der Planung (CLAUDE.md) – nicht automatisch umformatieren.
+docs/**
+CLAUDE.md

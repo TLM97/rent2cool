@@ -64,7 +64,11 @@ export class VirtualVehicle {
 
     const messwerte: TelemetrieWert[] = [
       { messgroesse: 'temperatur_laderaum', wert: tempC, einheit: 'C' },
-      { messgroesse: 'temperatur_aussen', wert: Number((8 + Math.random() * 15).toFixed(2)), einheit: 'C' },
+      {
+        messgroesse: 'temperatur_aussen',
+        wert: Number((8 + Math.random() * 15).toFixed(2)),
+        einheit: 'C',
+      },
       { messgroesse: 'position_lat', wert: Number(this.lat.toFixed(6)), einheit: 'grad' },
       { messgroesse: 'position_lng', wert: Number(this.lng.toFixed(6)), einheit: 'grad' },
       { messgroesse: 'kilometerstand', wert: Number(this.km.toFixed(1)), einheit: 'km' },
@@ -72,7 +76,11 @@ export class VirtualVehicle {
       { messgroesse: 'tuer_offen', wert: tuerOffen, einheit: 'bool' },
       { messgroesse: 'wegfahrsperre', wert: geschwindigkeit === 0 ? 1 : 0, einheit: 'bool' },
       { messgroesse: 'batterie', wert: Number((12 + Math.random()).toFixed(2)), einheit: 'v' },
-      { messgroesse: 'luftfeuchte', wert: Number((40 + Math.random() * 20).toFixed(1)), einheit: 'pct' },
+      {
+        messgroesse: 'luftfeuchte',
+        wert: Number((40 + Math.random() * 20).toFixed(1)),
+        einheit: 'pct',
+      },
     ];
 
     return {

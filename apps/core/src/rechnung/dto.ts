@@ -1,7 +1,11 @@
 /** Eingabevalidierung für Rechnungen (Schemas geteilt in @rent2cool/shared, D-001). */
 import { z } from 'zod';
 
-export { rechnungErstellenSchema, rechnungStatusSchema, type RechnungErstellen } from '@rent2cool/shared';
+export {
+  rechnungErstellenSchema,
+  rechnungStatusSchema,
+  type RechnungErstellen,
+} from '@rent2cool/shared';
 
 export const listeAbfrageSchema = z.object({
   status: z.string().optional(),

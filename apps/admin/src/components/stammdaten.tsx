@@ -13,7 +13,13 @@ const KLASSEN = FUEHRERSCHEINKLASSEN.map((k) => ({ wert: k, text: k }));
 export function FahrzeugFelder({ werte }: { werte?: Fahrzeug }) {
   return (
     <>
-      <Feld name="kennzeichen" label="Kennzeichen" pflicht hinweis="z. B. B-RC 1001" standard={werte?.kennzeichen} />
+      <Feld
+        name="kennzeichen"
+        label="Kennzeichen"
+        pflicht
+        hinweis="z. B. B-RC 1001"
+        standard={werte?.kennzeichen}
+      />
       <Feld name="vin" label="Fahrgestellnummer (VIN)" standard={werte?.vin ?? ''} />
       <Feld
         name="zulGesamtmasseKg"
@@ -77,12 +83,20 @@ export function FahrerFelder({ werte }: { werte?: Fahrer }) {
         standard={werte?.fuehrerscheinKlasse ?? 'B'}
         optionen={KLASSEN}
       />
-      <Feld name="fuehrerscheinNummer" label="Führerscheinnummer" standard={werte?.fuehrerscheinNummer ?? ''} />
+      <Feld
+        name="fuehrerscheinNummer"
+        label="Führerscheinnummer"
+        standard={werte?.fuehrerscheinNummer ?? ''}
+      />
       <Feld
         name="fuehrerscheinGueltigBis"
         label="Führerschein gültig bis"
         typ="date"
-        standard={werte?.fuehrerscheinGueltigBis ? isoZuBerlinLokal(werte.fuehrerscheinGueltigBis, true) : ''}
+        standard={
+          werte?.fuehrerscheinGueltigBis
+            ? isoZuBerlinLokal(werte.fuehrerscheinGueltigBis, true)
+            : ''
+        }
       />
     </>
   );
@@ -95,7 +109,13 @@ export function KalibrierungFelder({ heute = new Date() }: { heute?: Date }) {
   return (
     <>
       <Feld name="pruefstelle" label="Prüfstelle" />
-      <Feld name="durchgefuehrtAm" label="Geprüft am" typ="date" pflicht standard={isoZuBerlinLokal(heute, true)} />
+      <Feld
+        name="durchgefuehrtAm"
+        label="Geprüft am"
+        typ="date"
+        pflicht
+        standard={isoZuBerlinLokal(heute, true)}
+      />
       <Feld
         name="gueltigBis"
         label="Gültig bis (einschließlich)"

@@ -53,7 +53,13 @@ export function protokolliereAnlage(
   entitaetId: string,
   datensatz: unknown,
 ): Promise<void> {
-  return schreibeAudit(tx, principal, { aktion: 'POST', entitaetTyp, entitaetId, altWert: null, neuWert: datensatz });
+  return schreibeAudit(tx, principal, {
+    aktion: 'POST',
+    entitaetTyp,
+    entitaetId,
+    altWert: null,
+    neuWert: datensatz,
+  });
 }
 
 @Injectable()
@@ -76,7 +82,10 @@ export class AuditService {
     limit: number;
     offset: number;
   }): Promise<{ eintraege: (typeof auditEvent.$inferSelect)[]; gesamt: number }> {
-    const filter = and(inArray(auditEvent.entitaetId, opts.entitaetIds), inArray(auditEvent.entitaetTyp, opts.typen));
+    const filter = and(
+      inArray(auditEvent.entitaetId, opts.entitaetIds),
+      inArray(auditEvent.entitaetTyp, opts.typen),
+    );
     const [eintraege, [zaehler]] = await Promise.all([
       this.db
         .select()
@@ -85,7 +94,10 @@ export class AuditService {
         .orderBy(desc(auditEvent.zeit))
         .limit(opts.limit)
         .offset(opts.offset),
-      this.db.select({ n: sql<number>`count(*)::int` }).from(auditEvent).where(filter),
+      this.db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(auditEvent)
+        .where(filter),
     ]);
     return { eintraege, gesamt: zaehler?.n ?? 0 };
   }

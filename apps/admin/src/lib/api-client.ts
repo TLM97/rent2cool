@@ -68,7 +68,12 @@ export interface ApiClient {
 export function erstelleApiClient(optionen: ApiClientOptionen): ApiClient {
   const f = optionen.fetcher ?? fetch;
 
-  async function anfrage<T>(methode: 'GET' | 'POST' | 'PATCH', pfad: string, abfrage?: Abfrage, body?: unknown): Promise<T> {
+  async function anfrage<T>(
+    methode: 'GET' | 'POST' | 'PATCH',
+    pfad: string,
+    abfrage?: Abfrage,
+    body?: unknown,
+  ): Promise<T> {
     const token = await optionen.token();
     if (!token) {
       throw new ApiFehler(401, 'Nicht angemeldet');

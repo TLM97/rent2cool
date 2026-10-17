@@ -8,7 +8,11 @@ import { BEZUG, SCHWEREGRADE, bezugLink } from '../bezug';
 
 export const metadata: Metadata = { title: 'Abweichung erfassen' };
 
-export default async function AbweichungNeu({ searchParams }: { searchParams: Promise<SuchParameter> }) {
+export default async function AbweichungNeu({
+  searchParams,
+}: {
+  searchParams: Promise<SuchParameter>;
+}) {
   const params = await searchParams;
   const typ = erster(params.bezugTyp);
   const bezugTyp = (ABWEICHUNG_BEZUG as readonly string[]).includes(typ ?? '') ? typ! : 'miete';
@@ -24,7 +28,11 @@ export default async function AbweichungNeu({ searchParams }: { searchParams: Pr
         brotkrume={{ href: '/abweichungen', text: 'Abweichungen' }}
       />
       <section className="karte">
-        <FormularRahmen aktion={erstelleAbweichung} sendenText="Abweichung erfassen" abbrechenHref={zurueck}>
+        <FormularRahmen
+          aktion={erstelleAbweichung}
+          sendenText="Abweichung erfassen"
+          abbrechenHref={zurueck}
+        >
           <Auswahl
             name="bezugTyp"
             label="Bezug"
@@ -32,7 +40,13 @@ export default async function AbweichungNeu({ searchParams }: { searchParams: Pr
             standard={bezugTyp}
             optionen={ABWEICHUNG_BEZUG.map((b) => ({ wert: b, text: BEZUG[b] ?? b }))}
           />
-          <Feld name="bezugId" label="Bezugs-ID" pflicht standard={bezugId} hinweis="Wird beim Aufruf aus Miete, Fahrzeug oder Alarm vorbelegt." />
+          <Feld
+            name="bezugId"
+            label="Bezugs-ID"
+            pflicht
+            standard={bezugId}
+            hinweis="Wird beim Aufruf aus Miete, Fahrzeug oder Alarm vorbelegt."
+          />
           <Textfeld name="beschreibung" label="Beschreibung" pflicht breit />
           <Auswahl
             name="schweregrad"

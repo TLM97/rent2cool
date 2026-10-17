@@ -31,7 +31,10 @@ describe.skipIf(!RUN)('Alarme & Abweichungen (Integration, braucht DB)', () => {
     alarme = new AlarmService(client.db);
     abweichungen = new AbweichungService(client.db);
     fahrzeuge = new FahrzeugService(client.db);
-    await client.db.insert(mandant).values({ id: PLACEHOLDER_MANDANT_ID, name: 'Test' }).onConflictDoNothing();
+    await client.db
+      .insert(mandant)
+      .values({ id: PLACEHOLDER_MANDANT_ID, name: 'Test' })
+      .onConflictDoNothing();
   });
   afterAll(async () => {
     await client.sql.end({ timeout: 5 });
@@ -64,14 +67,22 @@ describe.skipIf(!RUN)('Alarme & Abweichungen (Integration, braucht DB)', () => {
     const fz = await fahrzeugId();
     const n = nachricht(fz);
 
-    const erstmals = await alarme.auswerteNachricht(n, profil, { mandantId: PLACEHOLDER_MANDANT_ID });
+    const erstmals = await alarme.auswerteNachricht(n, profil, {
+      mandantId: PLACEHOLDER_MANDANT_ID,
+    });
     expect(erstmals).toBe(2); // temperatur_ueber + tuer_offen
 
     // Neuauswertung derselben Nachricht -> keine neuen Alarme (idempotent).
-    const nochmal = await alarme.auswerteNachricht(n, profil, { mandantId: PLACEHOLDER_MANDANT_ID });
+    const nochmal = await alarme.auswerteNachricht(n, profil, {
+      mandantId: PLACEHOLDER_MANDANT_ID,
+    });
     expect(nochmal).toBe(0);
 
-    const liste = await alarme.liste(PLACEHOLDER_MANDANT_ID, { fahrzeugId: fz, limit: 50, offset: 0 });
+    const liste = await alarme.liste(PLACEHOLDER_MANDANT_ID, {
+      fahrzeugId: fz,
+      limit: 50,
+      offset: 0,
+    });
     expect(liste.gesamt).toBe(2);
 
     const alarmId = liste.eintraege[0]!.id;
@@ -82,7 +93,11 @@ describe.skipIf(!RUN)('Alarme & Abweichungen (Integration, braucht DB)', () => {
   it('führt eine Abweichung durch das CAPA-Verfahren', async () => {
     const fz = await fahrzeugId();
     await alarme.auswerteNachricht(nachricht(fz), profil, { mandantId: PLACEHOLDER_MANDANT_ID });
-    const liste = await alarme.liste(PLACEHOLDER_MANDANT_ID, { fahrzeugId: fz, limit: 1, offset: 0 });
+    const liste = await alarme.liste(PLACEHOLDER_MANDANT_ID, {
+      fahrzeugId: fz,
+      limit: 1,
+      offset: 0,
+    });
 
     const { id } = await abweichungen.erstelle(AKTEUR, {
       bezugTyp: 'alarm',
@@ -91,8 +106,13 @@ describe.skipIf(!RUN)('Alarme & Abweichungen (Integration, braucht DB)', () => {
       schweregrad: 'hoch',
     });
     await abweichungen.aendereStatus(AKTEUR, id, 'in_bewertung', {});
-    await abweichungen.aendereStatus(AKTEUR, id, 'bewertet', { bewertung: 'Kühlkette kurz unterbrochen' });
-    await abweichungen.aendereStatus(AKTEUR, id, 'geschlossen', { massnahmen: 'Ware geprüft, freigegeben', verantwortlich: 'qa-user' });
+    await abweichungen.aendereStatus(AKTEUR, id, 'bewertet', {
+      bewertung: 'Kühlkette kurz unterbrochen',
+    });
+    await abweichungen.aendereStatus(AKTEUR, id, 'geschlossen', {
+      massnahmen: 'Ware geprüft, freigegeben',
+      verantwortlich: 'qa-user',
+    });
     const a = await abweichungen.hole(id);
     expect(a.status).toBe('geschlossen');
     expect(a.geschlossenAm).not.toBeNull();

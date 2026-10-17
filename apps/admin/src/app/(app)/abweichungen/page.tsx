@@ -12,12 +12,20 @@ import { BEZUG } from './bezug';
 
 export const metadata: Metadata = { title: 'Abweichungen' };
 
-export default async function Abweichungen({ searchParams }: { searchParams: Promise<SuchParameter> }) {
+export default async function Abweichungen({
+  searchParams,
+}: {
+  searchParams: Promise<SuchParameter>;
+}) {
   const params = await searchParams;
   const status = erster(params.status);
   const blatt = blattAus(params);
   const [daten, sitzung] = await Promise.all([
-    apiGet<Liste<Abweichung>>('/v1/abweichungen', { status, limit: blatt.limit, offset: blatt.offset }),
+    apiGet<Liste<Abweichung>>('/v1/abweichungen', {
+      status,
+      limit: blatt.limit,
+      offset: blatt.offset,
+    }),
     holeSitzung(),
   ]);
   const darfErfassen = hatRolle(sitzung?.rollen ?? [], 'ops', 'admin', 'qa_approver');
@@ -60,7 +68,8 @@ export default async function Abweichungen({ searchParams }: { searchParams: Pro
                       <Link href={`/abweichungen/${a.id}`}>{a.beschreibung}</Link>
                     </td>
                     <td>
-                      {BEZUG[a.bezugTyp] ?? a.bezugTyp} <span className="mono leise">{kurzeId(a.bezugId)}</span>
+                      {BEZUG[a.bezugTyp] ?? a.bezugTyp}{' '}
+                      <span className="mono leise">{kurzeId(a.bezugId)}</span>
                     </td>
                     <td>{a.schweregrad ?? '–'}</td>
                     <td>
@@ -72,7 +81,13 @@ export default async function Abweichungen({ searchParams }: { searchParams: Pro
             </table>
           </div>
         )}
-        <Blaettern pfad="/abweichungen" params={params} gesamt={daten.gesamt} limit={blatt.limit} offset={blatt.offset} />
+        <Blaettern
+          pfad="/abweichungen"
+          params={params}
+          gesamt={daten.gesamt}
+          limit={blatt.limit}
+          offset={blatt.offset}
+        />
       </section>
     </>
   );

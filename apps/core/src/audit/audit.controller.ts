@@ -32,7 +32,9 @@ export class AuditController {
   async verlauf(@Query() q: unknown) {
     const r = verlaufSchema.safeParse(q);
     if (!r.success) {
-      throw new BadRequestException(r.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '));
+      throw new BadRequestException(
+        r.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
+      );
     }
     const { entitaetId, typ, limit, offset } = r.data;
     const res = await this.audit.verlauf({ entitaetIds: entitaetId, typen: typ, limit, offset });

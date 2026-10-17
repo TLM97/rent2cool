@@ -51,8 +51,17 @@ export class AbweichungService {
       opts.status ? eq(abweichung.status, opts.status) : undefined,
     );
     const [eintraege, [zaehler]] = await Promise.all([
-      this.db.select().from(abweichung).where(filter).orderBy(desc(abweichung.erfasstAm)).limit(opts.limit).offset(opts.offset),
-      this.db.select({ n: sql<number>`count(*)::int` }).from(abweichung).where(filter),
+      this.db
+        .select()
+        .from(abweichung)
+        .where(filter)
+        .orderBy(desc(abweichung.erfasstAm))
+        .limit(opts.limit)
+        .offset(opts.offset),
+      this.db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(abweichung)
+        .where(filter),
     ]);
     return { eintraege, gesamt: zaehler?.n ?? 0 };
   }

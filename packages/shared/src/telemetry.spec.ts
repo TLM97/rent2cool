@@ -51,10 +51,7 @@ describe('Telematik-Format und Signatur', () => {
 
   it('meldet signatur-Fehler bei falscher Signatur', () => {
     const huelle = baueHuelle(beispielNachricht(), SCHLUESSEL);
-    const ergebnis = validierePayloadUndSignatur(
-      { ...huelle, signatur: 'deadbeef' },
-      SCHLUESSEL,
-    );
+    const ergebnis = validierePayloadUndSignatur({ ...huelle, signatur: 'deadbeef' }, SCHLUESSEL);
     expect(ergebnis.ok).toBe(false);
     if (!ergebnis.ok) {
       expect(ergebnis.grund).toBe('signatur');

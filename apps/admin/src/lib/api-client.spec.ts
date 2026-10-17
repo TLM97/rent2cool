@@ -3,9 +3,9 @@ import { ApiFehler, baueUrl, erstelleApiClient, meldungAus } from './api-client'
 
 describe('baueUrl', () => {
   it('setzt Pfad und Query, lässt leere Werte weg', () => {
-    expect(baueUrl('http://localhost:3000', '/v1/fahrzeuge', { limit: 25, status: '', x: undefined })).toBe(
-      'http://localhost:3000/v1/fahrzeuge?limit=25',
-    );
+    expect(
+      baueUrl('http://localhost:3000', '/v1/fahrzeuge', { limit: 25, status: '', x: undefined }),
+    ).toBe('http://localhost:3000/v1/fahrzeuge?limit=25');
   });
   it('behält einen Pfad-Präfix der Basis-URL', () => {
     expect(baueUrl('http://host/api', 'v1/mieten')).toBe('http://host/api/v1/mieten');

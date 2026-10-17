@@ -59,10 +59,7 @@ export function signiere(payload: string, schluessel: string): string {
 }
 
 /** Baut eine signierte Hülle aus einer Nachricht. */
-export function baueHuelle(
-  nachricht: TelemetrieNachricht,
-  schluessel: string,
-): SignierteHuelle {
+export function baueHuelle(nachricht: TelemetrieNachricht, schluessel: string): SignierteHuelle {
   const payload = JSON.stringify(nachricht);
   return { payload, alg: 'HMAC-SHA256', signatur: signiere(payload, schluessel) };
 }
@@ -86,10 +83,7 @@ export type HuellenPruefung =
  * Validiert Format UND Signatur einer eingehenden Hülle und gibt die
  * geparste Nachricht zurück. Reine Funktion – ohne Netzwerk, gut testbar.
  */
-export function validierePayloadUndSignatur(
-  roh: unknown,
-  schluessel: string,
-): HuellenPruefung {
+export function validierePayloadUndSignatur(roh: unknown, schluessel: string): HuellenPruefung {
   const huelle = signierteHuelleSchema.safeParse(roh);
   if (!huelle.success) {
     return { ok: false, grund: 'format', detail: huelle.error.message };

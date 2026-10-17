@@ -17,7 +17,10 @@ const GEBUCHT = new Set(['reserviert', 'vermietet', 'in_ruecknahme']);
 export default async function FahrzeugBearbeiten({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!istUuid(id)) notFound();
-  const [akte, sitzung] = await Promise.all([apiGetOderNull<FahrzeugAkte>(`/v1/fahrzeuge/${id}`), holeSitzung()]);
+  const [akte, sitzung] = await Promise.all([
+    apiGetOderNull<FahrzeugAkte>(`/v1/fahrzeuge/${id}`),
+    holeSitzung(),
+  ]);
   if (!akte) notFound();
   const f = akte.fahrzeug;
   const pfad = `/fahrzeuge/${f.id}`;
@@ -36,8 +39,8 @@ export default async function FahrzeugBearbeiten({ params }: { params: Promise<{
           <>
             {GEBUCHT.has(f.status) ? (
               <div className="hinweis warn">
-                Das Fahrzeug ist gebucht oder unterwegs. Änderungen an Klasse oder Fahrtenschreiber prüfen bestehende
-                Buchungen nicht erneut.
+                Das Fahrzeug ist gebucht oder unterwegs. Änderungen an Klasse oder Fahrtenschreiber
+                prüfen bestehende Buchungen nicht erneut.
               </div>
             ) : null}
             <FormularRahmen

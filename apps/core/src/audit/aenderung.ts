@@ -67,6 +67,9 @@ export interface StammdatenErgebnis {
 }
 
 /** Nur die geänderten Felder der Eingabe, in ihrer Originalform (z. B. Date) – für das UPDATE. */
-export function neueWerte<T extends Record<string, unknown>>(eingabe: T, a: Aenderungen): Partial<T> {
+export function neueWerte<T extends Record<string, unknown>>(
+  eingabe: T,
+  a: Aenderungen,
+): Partial<T> {
   return Object.fromEntries(a.felder.map((f) => [f, eingabe[f]])) as Partial<T>;
 }

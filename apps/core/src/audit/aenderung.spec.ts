@@ -15,7 +15,9 @@ describe('ermittleAenderungen', () => {
 
   it('vergleicht Zeitpunkte über ihren ISO-Wert und behandelt null/undefined gleich', () => {
     const d = new Date('2030-12-31T22:59:00.000Z');
-    expect(ermittleAenderungen({ bis: d, vin: null }, { bis: new Date(d), vin: null }).felder).toEqual([]);
+    expect(
+      ermittleAenderungen({ bis: d, vin: null }, { bis: new Date(d), vin: null }).felder,
+    ).toEqual([]);
     const r = ermittleAenderungen({ bis: d }, { bis: new Date('2031-01-31T22:59:00.000Z') });
     expect(r.alt).toEqual({ bis: '2030-12-31T22:59:00.000Z' });
     expect(r.neu).toEqual({ bis: '2031-01-31T22:59:00.000Z' });

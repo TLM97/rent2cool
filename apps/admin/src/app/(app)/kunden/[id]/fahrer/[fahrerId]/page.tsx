@@ -13,7 +13,11 @@ import { aendereFahrer } from '../../../../formulare';
 
 export const metadata: Metadata = { title: 'Fahrer bearbeiten' };
 
-export default async function FahrerBearbeiten({ params }: { params: Promise<{ id: string; fahrerId: string }> }) {
+export default async function FahrerBearbeiten({
+  params,
+}: {
+  params: Promise<{ id: string; fahrerId: string }>;
+}) {
   const { id, fahrerId } = await params;
   if (!istUuid(id) || !istUuid(fahrerId)) notFound();
   const [kunde, fahrer, sitzung] = await Promise.all([
@@ -42,8 +46,8 @@ export default async function FahrerBearbeiten({ params }: { params: Promise<{ i
           <>
             {fahrer.status === 'freigegeben' ? (
               <div className="hinweis warn">
-                Der Fahrer ist freigegeben. Bei neuen Führerscheindaten bitte den Führerschein erneut prüfen – die
-                Freigabe wird nicht automatisch zurückgesetzt (R-22).
+                Der Fahrer ist freigegeben. Bei neuen Führerscheindaten bitte den Führerschein
+                erneut prüfen – die Freigabe wird nicht automatisch zurückgesetzt (R-22).
               </div>
             ) : null}
             <FormularRahmen

@@ -85,8 +85,12 @@ export const sensor = pgTable(
   },
   (t) => [
     index('idx_sensor_aggregat').on(t.aggregatId),
-    uniqueIndex('uq_sensor_vorgaenger').on(t.vorgaengerId).where(sql`vorgaenger_id IS NOT NULL`),
-    index('idx_sensor_seriennummer_aktiv').on(t.seriennummer).where(sql`aktiv`),
+    uniqueIndex('uq_sensor_vorgaenger')
+      .on(t.vorgaengerId)
+      .where(sql`vorgaenger_id IS NOT NULL`),
+    index('idx_sensor_seriennummer_aktiv')
+      .on(t.seriennummer)
+      .where(sql`aktiv`),
   ],
 );
 

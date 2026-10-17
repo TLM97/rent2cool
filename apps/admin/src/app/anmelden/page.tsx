@@ -25,7 +25,10 @@ export default async function Anmelden({ searchParams }: { searchParams: Promise
       <div className="karte">
         <Marke />
         <h1>Anmelden</h1>
-        <p>Interne Oberfläche für Flotte, Buchungen und Qualität. Die Anmeldung läuft über Ihr Rent2Cool-Konto.</p>
+        <p>
+          Interne Oberfläche für Flotte, Buchungen und Qualität. Die Anmeldung läuft über Ihr
+          Rent2Cool-Konto.
+        </p>
         {grund && GRUENDE[grund] ? (
           <div className="hinweis info" role="status">
             {GRUENDE[grund]}

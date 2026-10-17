@@ -43,7 +43,11 @@ describe.skipIf(!RUN)('Doppelbuchung (Integration, braucht DB)', () => {
   let mieten: MieteService;
   let ohnePruefung: MieteService;
   const mandantId = randomUUID();
-  const ops: Principal = { akteurId: `test-doppel-${randomUUID().slice(0, 8)}`, rollen: ['ops'], mandantId };
+  const ops: Principal = {
+    akteurId: `test-doppel-${randomUUID().slice(0, 8)}`,
+    rollen: ['ops'],
+    mandantId,
+  };
   /** Fester Bezugspunkt in der Zukunft, volle Stunde. */
   const basis = Math.ceil((Date.now() + 48 * STUNDE) / STUNDE) * STUNDE;
   const zeit = (h: number) => new Date(basis + h * STUNDE).toISOString();
@@ -62,13 +66,21 @@ describe.skipIf(!RUN)('Doppelbuchung (Integration, braucht DB)', () => {
       gueltigBis: new Date(Date.now() + 365 * 24 * STUNDE).toISOString(),
     });
     await fahrzeuge.aendereStatus(ops, fahrzeugId, 'verfuegbar');
-    const { id: kundeId } = await kunden.erstelleKunde(ops, { firmenname: 'Doppelkunde', land: 'DE' });
+    const { id: kundeId } = await kunden.erstelleKunde(ops, {
+      firmenname: 'Doppelkunde',
+      land: 'DE',
+    });
     await kunden.aendereKundeStatus(ops, kundeId, 'in_pruefung');
     await kunden.aendereKundeStatus(ops, kundeId, 'freigegeben');
     return { fahrzeugId, kundeId };
   }
 
-  const buchung = (f: { fahrzeugId: string; kundeId: string }, von: number, bis: number, key?: string) => ({
+  const buchung = (
+    f: { fahrzeugId: string; kundeId: string },
+    von: number,
+    bis: number,
+    key?: string,
+  ) => ({
     kundeId: f.kundeId,
     fahrzeugId: f.fahrzeugId,
     auslandsfahrtGeplant: false,
@@ -124,7 +136,9 @@ describe.skipIf(!RUN)('Doppelbuchung (Integration, braucht DB)', () => {
       .select()
       .from(auditEvent)
       .where(and(eq(auditEvent.entitaetTyp, 'miete'), eq(auditEvent.akteurId, ops.akteurId)));
-    expect(audit.filter((a) => (a.neuWert as { fahrzeugId?: string }).fahrzeugId === f.fahrzeugId)).toHaveLength(1);
+    expect(
+      audit.filter((a) => (a.neuWert as { fahrzeugId?: string }).fahrzeugId === f.fahrzeugId),
+    ).toHaveLength(1);
   });
 
   it('auch wenn alle an der Vorabprüfung vorbeikommen: genau eine, Rest sauber abgelehnt', async () => {
@@ -179,7 +193,9 @@ describe.skipIf(!RUN)('Doppelbuchung (Integration, braucht DB)', () => {
         status: 'angefragt',
       })
       .returning({ id: miete.id });
-    await expect(mieten.aendereStatus(ops, angefragt!.id, 'bestaetigt')).rejects.toThrow(ConflictException);
+    await expect(mieten.aendereStatus(ops, angefragt!.id, 'bestaetigt')).rejects.toThrow(
+      ConflictException,
+    );
     expect((await mieten.holeMiete(angefragt!.id)).status).toBe('angefragt');
   });
 

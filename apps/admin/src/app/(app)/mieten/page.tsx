@@ -83,7 +83,13 @@ export default async function Mieten({ searchParams }: { searchParams: Promise<S
             </table>
           </div>
         )}
-        <Blaettern pfad="/mieten" params={params} gesamt={daten.gesamt} limit={blatt.limit} offset={blatt.offset} />
+        <Blaettern
+          pfad="/mieten"
+          params={params}
+          gesamt={daten.gesamt}
+          limit={blatt.limit}
+          offset={blatt.offset}
+        />
       </section>
     </>
   );

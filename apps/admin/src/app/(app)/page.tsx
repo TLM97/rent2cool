@@ -37,26 +37,49 @@ function Kennzahl({
 }
 
 export default async function Uebersicht() {
-  const [fahrzeuge, verfuegbar, aktiveMieten, offeneAlarme, abweichungen, rechnungen, kalibrierungen, fuehrerscheine] =
-    await Promise.all([
-      apiGetOderNull<Liste<Fahrzeug>>('/v1/fahrzeuge', { limit: 1 }),
-      apiGetOderNull<Liste<Fahrzeug>>('/v1/fahrzeuge', { status: 'verfuegbar', limit: 1 }),
-      apiGetOderNull<Liste<Miete>>('/v1/mieten', { status: 'aktiv', limit: 1 }),
-      apiGetOderNull<Liste<Alarm>>('/v1/alarme', { status: 'offen', limit: 6 }),
-      apiGetOderNull<Liste<Abweichung>>('/v1/abweichungen', { status: 'erfasst', limit: 1 }),
-      apiGetOderNull<Liste<Rechnung>>('/v1/rechnungen', { status: 'gestellt', limit: 1 }),
-      apiGetOderNull<FaelligeKalibrierung[]>('/v1/fahrzeuge/faellige-kalibrierungen'),
-      apiGetOderNull<FaelligerFuehrerschein[]>('/v1/fahrer/faellige-fuehrerscheine'),
-    ]);
+  const [
+    fahrzeuge,
+    verfuegbar,
+    aktiveMieten,
+    offeneAlarme,
+    abweichungen,
+    rechnungen,
+    kalibrierungen,
+    fuehrerscheine,
+  ] = await Promise.all([
+    apiGetOderNull<Liste<Fahrzeug>>('/v1/fahrzeuge', { limit: 1 }),
+    apiGetOderNull<Liste<Fahrzeug>>('/v1/fahrzeuge', { status: 'verfuegbar', limit: 1 }),
+    apiGetOderNull<Liste<Miete>>('/v1/mieten', { status: 'aktiv', limit: 1 }),
+    apiGetOderNull<Liste<Alarm>>('/v1/alarme', { status: 'offen', limit: 6 }),
+    apiGetOderNull<Liste<Abweichung>>('/v1/abweichungen', { status: 'erfasst', limit: 1 }),
+    apiGetOderNull<Liste<Rechnung>>('/v1/rechnungen', { status: 'gestellt', limit: 1 }),
+    apiGetOderNull<FaelligeKalibrierung[]>('/v1/fahrzeuge/faellige-kalibrierungen'),
+    apiGetOderNull<FaelligerFuehrerschein[]>('/v1/fahrer/faellige-fuehrerscheine'),
+  ]);
 
   return (
     <>
-      <Seitenkopf titel="Übersicht" untertitel="Lage der Flotte, offene Qualitätsfälle und Fristen auf einen Blick." />
+      <Seitenkopf
+        titel="Übersicht"
+        untertitel="Lage der Flotte, offene Qualitätsfälle und Fristen auf einen Blick."
+      />
 
       <section className="kennzahlen" aria-label="Kennzahlen">
-        <Kennzahl wert={fahrzeuge?.gesamt ?? null} bezeichnung="Fahrzeuge gesamt" href="/fahrzeuge" />
-        <Kennzahl wert={verfuegbar?.gesamt ?? null} bezeichnung="verfügbar" href="/fahrzeuge?status=verfuegbar" />
-        <Kennzahl wert={aktiveMieten?.gesamt ?? null} bezeichnung="aktive Mieten" href="/mieten?status=aktiv" />
+        <Kennzahl
+          wert={fahrzeuge?.gesamt ?? null}
+          bezeichnung="Fahrzeuge gesamt"
+          href="/fahrzeuge"
+        />
+        <Kennzahl
+          wert={verfuegbar?.gesamt ?? null}
+          bezeichnung="verfügbar"
+          href="/fahrzeuge?status=verfuegbar"
+        />
+        <Kennzahl
+          wert={aktiveMieten?.gesamt ?? null}
+          bezeichnung="aktive Mieten"
+          href="/mieten?status=aktiv"
+        />
         <Kennzahl
           wert={offeneAlarme?.gesamt ?? null}
           bezeichnung="offene Alarme"
@@ -69,7 +92,11 @@ export default async function Uebersicht() {
           href="/abweichungen?status=erfasst"
           ton="warn"
         />
-        <Kennzahl wert={rechnungen?.gesamt ?? null} bezeichnung="offene Rechnungen" href="/rechnungen?status=gestellt" />
+        <Kennzahl
+          wert={rechnungen?.gesamt ?? null}
+          bezeichnung="offene Rechnungen"
+          href="/rechnungen?status=gestellt"
+        />
         <Kennzahl
           wert={kalibrierungen?.length ?? null}
           bezeichnung="Kalibrierungen fällig (30 T.)"
@@ -109,7 +136,9 @@ export default async function Uebersicht() {
                     <tr key={a.id}>
                       <td>{formatDatumZeit(a.ausgeloestAm)}</td>
                       <td>{statusLabel(a.typ)}</td>
-                      <td className="zahl">{a.typ.startsWith('temperatur') ? formatTemperatur(a.wert) : '–'}</td>
+                      <td className="zahl">
+                        {a.typ.startsWith('temperatur') ? formatTemperatur(a.wert) : '–'}
+                      </td>
                       <td>
                         <Link className="mono" href={`/fahrzeuge/${a.fahrzeugId}`}>
                           {kurzeId(a.fahrzeugId)}

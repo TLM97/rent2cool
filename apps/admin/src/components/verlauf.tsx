@@ -64,7 +64,9 @@ export async function Verlauf({
                     <td>{formatDatumZeit(e.zeit)}</td>
                     <td title={e.akteurId}>
                       {b.wer}
-                      {e.akteurRolle ? <div className="leise">{e.akteurRolle.replaceAll(',', ', ')}</div> : null}
+                      {e.akteurRolle ? (
+                        <div className="leise">{e.akteurRolle.replaceAll(',', ', ')}</div>
+                      ) : null}
                     </td>
                     <td>
                       {e.entitaetId && bezeichnungen[e.entitaetId] ? (

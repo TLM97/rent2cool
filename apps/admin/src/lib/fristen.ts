@@ -1,7 +1,12 @@
 import type { Ton } from './format';
 
 /** Fristanzeige: abgelaufen / läuft bald ab / gültig. `ohneText`, wenn kein Datum vorliegt. */
-function frist(gueltigBis: string | null, ohneText: string, jetztMs: number, warnTage: number): { text: string; ton: Ton } {
+function frist(
+  gueltigBis: string | null,
+  ohneText: string,
+  jetztMs: number,
+  warnTage: number,
+): { text: string; ton: Ton } {
   if (!gueltigBis) return { text: ohneText, ton: 'kritisch' };
   const ende = new Date(gueltigBis).getTime();
   if (Number.isNaN(ende)) return { text: ohneText, ton: 'kritisch' };

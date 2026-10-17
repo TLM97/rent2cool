@@ -11,7 +11,11 @@ import type { Fahrzeug, Liste } from '../../../lib/typen';
 
 export const metadata: Metadata = { title: 'Fahrzeuge' };
 
-export default async function Fahrzeuge({ searchParams }: { searchParams: Promise<SuchParameter> }) {
+export default async function Fahrzeuge({
+  searchParams,
+}: {
+  searchParams: Promise<SuchParameter>;
+}) {
   const params = await searchParams;
   const status = erster(params.status);
   const blatt = blattAus(params);
@@ -69,7 +73,13 @@ export default async function Fahrzeuge({ searchParams }: { searchParams: Promis
                     <td>{f.benoetigteFuehrerscheinklasse}</td>
                     <td className="zahl">{f.zulGesamtmasseKg.toLocaleString('de-DE')} kg</td>
                     <td>{f.hatFahrtenschreiber ? 'ja' : 'nein'}</td>
-                    <td>{f.standardTemperaturprofil ? `${f.standardTemperaturprofil} °C` : <span className="leise">–</span>}</td>
+                    <td>
+                      {f.standardTemperaturprofil ? (
+                        `${f.standardTemperaturprofil} °C`
+                      ) : (
+                        <span className="leise">–</span>
+                      )}
+                    </td>
                     <td>{formatDatum(f.erstelltAm)}</td>
                   </tr>
                 ))}
@@ -77,7 +87,13 @@ export default async function Fahrzeuge({ searchParams }: { searchParams: Promis
             </table>
           </div>
         )}
-        <Blaettern pfad="/fahrzeuge" params={params} gesamt={daten.gesamt} limit={blatt.limit} offset={blatt.offset} />
+        <Blaettern
+          pfad="/fahrzeuge"
+          params={params}
+          gesamt={daten.gesamt}
+          limit={blatt.limit}
+          offset={blatt.offset}
+        />
       </section>
     </>
   );

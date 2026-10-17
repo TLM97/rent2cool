@@ -2,7 +2,16 @@
  * Stammdaten-Basis: Mandant (Betreiber, D-003) und Standort (D-011).
  * Arbeitsgrundlage nach T-002; finale Freigabe durch die Planung offen.
  */
-import { boolean, doublePrecision, index, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  doublePrecision,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 export const mandant = pgTable('mandant', {
   id: uuid('id').primaryKey().defaultRandom(),
