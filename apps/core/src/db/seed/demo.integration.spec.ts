@@ -154,6 +154,74 @@ describe.skipIf(!RUN)('Demo-Daten (Integration, braucht DB)', () => {
     expect(fs.map((f) => f.name)).toEqual(['Max Mustermann']);
   });
 
+  it('Fahrzeugsuche: nur buchbare im Zeitraum – und jeder Treffer besteht die Buchungsprüfung', async () => {
+    const [m5] = await client.db
+      .select({ start: miete.startGeplant, ende: miete.endeGeplant, kundeId: miete.kundeId })
+      .from(miete)
+      .innerJoin(fahrzeug, eq(miete.fahrzeugId, fahrzeug.id))
+      .where(
+        and(
+          eq(miete.mandantId, mandantId),
+          eq(fahrzeug.kennzeichen, 'DEMO-101'),
+          eq(miete.status, 'bestaetigt'),
+        ),
+      );
+    const kennz = async (
+      o: Partial<Parameters<FahrzeugService['sucheVerfuegbare']>[1]> & { von: Date; bis: Date },
+    ) =>
+      (await fahrzeuge.sucheVerfuegbare(mandantId, { limit: 20, offset: 0, ...o })).eintraege.map(
+        (f) => f.kennzeichen,
+      );
+    const TAG = 86_400_000;
+
+    // Während der Buchung von DEMO-101: belegt; DEMO-104 vermietet, DEMO-105 in Wartung.
+    const imZeitraum = { von: m5!.start, bis: new Date(m5!.start.getTime() + TAG) };
+    expect(await kennz(imZeitraum)).toEqual(['DEMO-102', 'DEMO-103']);
+    // Direkt nach Rückgabe wieder frei (halboffene Zeiträume).
+    expect(await kennz({ von: m5!.ende, bis: new Date(m5!.ende.getTime() + TAG) })).toContain(
+      'DEMO-101',
+    );
+    // In drei Wochen: Kalibrierung von DEMO-103 abgelaufen.
+    const spaeter = { von: new Date(Date.now() + 21 * TAG), bis: new Date(Date.now() + 22 * TAG) };
+    expect(await kennz(spaeter)).toEqual(['DEMO-101', 'DEMO-102']);
+    // Ausland → nur mit Fahrtenschreiber; Kennzeichen-Suche; Führerscheinklasse.
+    expect(await kennz({ ...spaeter, fahrtenschreiber: true })).toEqual(['DEMO-102']);
+    expect(await kennz({ ...spaeter, suche: '101' })).toEqual(['DEMO-101']);
+    expect(await kennz({ ...spaeter, suche: '%' })).toEqual([]);
+    expect(await kennz({ ...spaeter, klassen: ['C1'] })).toEqual([]);
+    expect(await kennz({ ...spaeter, klassen: ['B', 'C1'] })).toEqual(['DEMO-101', 'DEMO-102']);
+    // Blättern mit Gesamtzahl.
+    const seite = await fahrzeuge.sucheVerfuegbare(mandantId, { ...spaeter, limit: 1, offset: 1 });
+    expect(seite).toMatchObject({ gesamt: 2, eintraege: [{ kennzeichen: 'DEMO-102' }] });
+
+    // Suche und Buchung sind sich einig.
+    for (const fenster of [imZeitraum, spaeter]) {
+      const treffer = await fahrzeuge.sucheVerfuegbare(mandantId, {
+        ...fenster,
+        limit: 20,
+        offset: 0,
+      });
+      for (const f of treffer.eintraege) {
+        const gruende = await mieten.pruefeBuchung(mandantId, {
+          kundeId: m5!.kundeId,
+          fahrzeugId: f.id,
+          auslandsfahrtGeplant: false,
+          startGeplant: fenster.von,
+          endeGeplant: fenster.bis,
+        });
+        expect(gruende).toEqual([]);
+      }
+    }
+  });
+
+  it('Kundensuche nach Teil des Firmennamens', async () => {
+    const r = await kunden.listeKunden(mandantId, { suche: 'nordLICHT', limit: 10, offset: 0 });
+    expect(r.eintraege.map((k) => k.firmenname)).toEqual(['Nordlicht Arzneimittel GmbH (Demo)']);
+    expect((await kunden.listeKunden(mandantId, { suche: '_', limit: 10, offset: 0 })).gesamt).toBe(
+      0,
+    );
+  });
+
   it('ein zweiter Lauf ändert nichts', async () => {
     const vorher = await client.db
       .select({ id: miete.id })

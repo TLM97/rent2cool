@@ -10,7 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { z } from 'zod';
-import type { Principal } from '@rent2cool/shared';
+import { abgedeckteKlassen, type Principal } from '@rent2cool/shared';
 import { CurrentUser, Roles } from '../auth/decorators';
 import { AuditImService } from '../audit/audited.decorator';
 import {
@@ -20,6 +20,7 @@ import {
   listeAbfrageSchema,
   sensorTauschSchema,
   statusAendernSchema,
+  verfuegbarAbfrageSchema,
 } from './dto';
 import { FahrzeugService } from './fahrzeug.service';
 
@@ -50,6 +51,23 @@ export class FahrzeugController {
   async liste(@CurrentUser() user: Principal, @Query() q: unknown) {
     const a = parse(listeAbfrageSchema, q);
     const res = await this.service.liste(user.mandantId, a);
+    return { ...res, limit: a.limit, offset: a.offset };
+  }
+
+  /** Buchbare Fahrzeuge im Zeitraum (Suche für die Buchung). */
+  @Get('verfuegbar')
+  @Roles('ops', 'admin', 'kunde_dispo')
+  async verfuegbar(@CurrentUser() user: Principal, @Query() q: unknown) {
+    const a = parse(verfuegbarAbfrageSchema, q);
+    const res = await this.service.sucheVerfuegbare(user.mandantId, {
+      von: new Date(a.von),
+      bis: new Date(a.bis),
+      suche: a.suche,
+      klassen: a.fahrerKlasse ? abgedeckteKlassen(a.fahrerKlasse) : undefined,
+      fahrtenschreiber: a.fahrtenschreiber === 'true',
+      limit: a.limit,
+      offset: a.offset,
+    });
     return { ...res, limit: a.limit, offset: a.offset };
   }
 

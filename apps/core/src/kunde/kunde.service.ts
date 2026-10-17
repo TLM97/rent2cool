@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, desc, eq, isNull, lt, notInArray, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, isNull, lt, notInArray, or, sql } from 'drizzle-orm';
 import {
   bewerteFahrerEinsatz,
   istFahrerStatus,
@@ -22,6 +22,7 @@ import { protokolliereAnlage, schreibeAudit } from '../audit/audit.service';
 import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Database } from '../db/client';
 import { DB } from '../db/db.module';
+import { enthaeltMuster } from '../db/suche';
 import { fahrer, fahrzeug, kunde } from '../db/schema';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 import type { FahrerAendern, FahrerErstellen, KundeAendern, KundeErstellen } from './dto';
@@ -53,12 +54,14 @@ export class KundeService {
 
   async listeKunden(
     mandantId: string | undefined,
-    opts: { status?: string; limit: number; offset: number },
+    opts: { status?: string; suche?: string; limit: number; offset: number },
   ): Promise<{ eintraege: (typeof kunde.$inferSelect)[]; gesamt: number }> {
     const mandant = mandantId ?? PLACEHOLDER_MANDANT_ID;
+    const muster = enthaeltMuster(opts.suche);
     const filter = and(
       eq(kunde.mandantId, mandant),
       opts.status ? eq(kunde.status, opts.status) : undefined,
+      muster ? ilike(kunde.firmenname, muster) : undefined,
     );
     const [eintraege, [zaehler]] = await Promise.all([
       this.db

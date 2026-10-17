@@ -671,3 +671,18 @@ ul.aenderungen {
 ul.aenderungen li + li {
   margin-top: 2px;
 }
+
+ul.trefferliste {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+ul.trefferliste li + li {
+  margin-top: 4px;
+}
+tr[aria-current="true"] td {
+  background: var(--ok-bg);
+}
+
+.eigenschaften + .formular {
+  margin-top: 16px;
+}

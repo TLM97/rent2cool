@@ -76,6 +76,11 @@ const DECKT: Record<string, readonly string[]> = {
 /** Auswählbare Führerscheinklassen (Reihenfolge für Formulare). */
 export const FUEHRERSCHEINKLASSEN = Object.keys(DECKT);
 
+/** Alle Klassen, die ein Fahrer mit `gehalten` fahren darf (z. B. für die Fahrzeugsuche). */
+export function abgedeckteKlassen(gehalten: string): readonly string[] {
+  return DECKT[gehalten] ?? [gehalten];
+}
+
 export function klasseDeckt(gehalten: string, benoetigt: string): boolean {
   return (DECKT[gehalten] ?? [gehalten]).includes(benoetigt);
 }

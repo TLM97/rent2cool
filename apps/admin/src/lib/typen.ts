@@ -164,3 +164,15 @@ export interface FaelligerFuehrerschein {
   kundeId: string;
   gueltigBis: string | null;
 }
+
+/** Treffer der Fahrzeugsuche für eine Buchung (buchbar im Zeitraum). */
+export interface VerfuegbaresFahrzeug {
+  id: string;
+  kennzeichen: string;
+  benoetigteFuehrerscheinklasse: string;
+  hatFahrtenschreiber: boolean;
+  standardTemperaturprofil: string | null;
+  zulGesamtmasseKg: number;
+  /** Frühestes Ablaufdatum der Kalibrierungen aller aktiven Sensoren. */
+  kalibriertBis: string;
+}

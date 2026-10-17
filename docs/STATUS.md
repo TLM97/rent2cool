@@ -13,6 +13,50 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Suche für die Buchung
+
+**Buchung mit Suche statt Auswahllisten – erledigt.** (Auf Toms Auftrag;
+Planung möge die Aufgabe in `TASKS.md` nachziehen. Ersetzt die Abkürzung
+„Auswahllisten auf 200 Einträge begrenzt“ aus dem Eintrag „Formulare“.)
+
+Erledigt:
+- **Kern:** `GET /v1/fahrzeuge/verfuegbar?von&bis&suche&fahrerKlasse&fahrtenschreiber`
+  (Rollen `ops`, `admin`, `kunde_dispo`) – eine Abfrage mit Blättern und
+  Gesamtzahl: verfügbar, alle aktiven Sensoren zum Mietbeginn gültig
+  kalibriert, optional Fahrtenschreiber und vom Fahrer abgedeckte Klasse,
+  keine Überschneidung (nutzt den GiST-Index der Doppelbuchungs-Regel).
+  `GET /v1/kunden?suche=` für die Kundensuche. Freitext wird sicher als
+  „enthält“-Muster verwendet (`%`/`_` der Eingabe wirken nicht).
+- **Suche und Buchung sind sich einig:** Integrationstest prüft für jeden
+  Treffer, dass die Buchungsprüfung keine Gründe liefert; außerdem belegte,
+  vermietete, gewartete und ablaufend kalibrierte Fahrzeuge, angrenzende
+  Zeiträume, Ausland, Klasse, Kennzeichen, Blättern.
+- **Oberfläche:** neuer Buchungsablauf in vier Schritten (Kunde suchen →
+  Zeitraum/Fahrer/Anforderungen → buchbare Fahrzeuge → bestätigen), ohne
+  JavaScript im Browser. Hinweis „läuft während der Miete ab“, wenn eine
+  Kalibrierung vor Mietende endet.
+- **Browser-Test** angepasst: Mit Auslandsfahrt erscheint das Fahrzeug ohne
+  Fahrtenschreiber gar nicht; zwei Disponentinnen wählen in zwei Tabs
+  dasselbe Fahrzeug – die zweite wird mit Grund abgelehnt, ihre Auswahl
+  bleibt erhalten. Alle 8 Browser-Tests grün.
+- **Tests:** shared 42, admin 44, Kern 54 Unit + 60 Integration (114/114).
+
+Offen / Hinweise:
+- Kennzeichen-Suche „enthält“ ohne Trigramm-Index: bei 4.000 Fahrzeugen je
+  Mandant unkritisch (der Zeitraum- und Statusfilter greift zuerst); bei
+  deutlich mehr wäre `pg_trgm` sinnvoll.
+- Standort fehlt weiterhin als Filter (keine Standortverwaltung).
+
+Fragen an Planung:
+- **F-34:** Muss die Kalibrierung bis zum **Ende** der Miete gültig sein
+  (heute: zum Beginn, wie bisher in der Buchungsprüfung)? Ein Messwert nach
+  Ablauf der Kalibrierung ist nach EN 12830 nicht mehr beweiskräftig. Die
+  Suche zeigt den Fall bereits als Hinweis; die Regel umzustellen wäre eine
+  Zeile in Suche und Buchungsprüfung.
+- F-24, F-26 bis F-33 weiter offen (siehe unten).
+
+---
+
 ### 2026-10-17 – Namen in Listen, eigene Test-Datenbank, Integrationstests in der CI
 
 **Erledigt.** (Auf Toms Auftrag; Planung möge die Aufgaben in `TASKS.md`

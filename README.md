@@ -335,6 +335,18 @@ Aufbau (bewusst austauschbar):
 - Buchungen tragen je geöffnetem Formular einen Idempotency-Key – doppeltes
   Absenden legt keine zweite Miete an (D-003).
 
+### Buchung mit Suche
+
+Buchen in vier Schritten: **Kunde suchen** (Teil des Firmennamens, nur
+freigegebene) → **Zeitraum, Fahrer, Auslandsfahrt, optional Kennzeichen** →
+**buchbare Fahrzeuge** im Zeitraum → **bestätigen**. Die Fahrzeugsuche
+(`GET /v1/fahrzeuge/verfuegbar`) wendet dieselben Regeln an wie die Buchung:
+verfügbar, gültig kalibriert zum Mietbeginn, Fahrtenschreiber bei
+Auslandsfahrt, vom Fahrer abgedeckte Klasse, keine Überschneidung. Sie läuft
+als eine Abfrage mit Blättern im Kern und trägt damit auch bei 4.000
+Fahrzeugen (D-003). Läuft eine Kalibrierung während der Miete ab, zeigt die
+Trefferliste einen Hinweis.
+
 ### Stammdaten bearbeiten
 
 Kunde, Fahrer und Fahrzeug lassen sich ändern (`PATCH` im Kern). Anlegen und

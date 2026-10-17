@@ -19,9 +19,21 @@ import type { Database } from '../db/client';
 import { DB } from '../db/db.module';
 import { aggregat, fahrzeug, kalibrierung, sensor } from '../db/schema';
 import { istPgFehler, PG_FEHLER } from '../db/fehler';
+import { enthaeltMuster } from '../db/suche';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 import { bewerteBuchbarkeit, type BuchbarkeitErgebnis, type SensorFrist } from './fristen';
 import type { FahrzeugAendern, FahrzeugErstellen, KalibrierungEingabe, SensorTausch } from './dto';
+
+export interface VerfuegbaresFahrzeug {
+  id: string;
+  kennzeichen: string;
+  benoetigteFuehrerscheinklasse: string;
+  hatFahrtenschreiber: boolean;
+  standardTemperaturprofil: string | null;
+  zulGesamtmasseKg: number;
+  /** Frühestes Ablaufdatum der Kalibrierungen aller aktiven Sensoren. */
+  kalibriertBis: string;
+}
 
 export type AkteSensor = typeof sensor.$inferSelect & { kalibriertBis: Date | null };
 
@@ -413,6 +425,79 @@ export class FahrzeugService {
   }
 
   /** Sensoren, deren jüngste Kalibrierung vor `bis` abläuft oder fehlt. */
+  /**
+   * Buchbare Fahrzeuge für einen Zeitraum – dieselben Regeln wie die Buchung
+   * (MieteService.pruefeBuchung): Status „verfügbar“, jeder aktive Sensor zum
+   * Mietbeginn gültig kalibriert, optional Fahrtenschreiber (Ausland, D-006)
+   * und eine vom Fahrer abgedeckte Klasse (R-22), keine Überschneidung mit
+   * bestätigten/aktiven Mieten (nutzt den GiST-Index aus Migration 0010).
+   * Eine Abfrage mit Seitenweise-Ergebnis – trägt auch bei 4.000 Fahrzeugen (D-003).
+   */
+  async sucheVerfuegbare(
+    mandantId: string | undefined,
+    o: {
+      von: Date;
+      bis: Date;
+      suche?: string;
+      klassen?: readonly string[];
+      fahrtenschreiber?: boolean;
+      limit: number;
+      offset: number;
+    },
+  ): Promise<{ eintraege: VerfuegbaresFahrzeug[]; gesamt: number }> {
+    const mandant = mandantId ?? PLACEHOLDER_MANDANT_ID;
+    const muster = enthaeltMuster(o.suche);
+    const von = o.von.toISOString();
+    const bis = o.bis.toISOString();
+    const zeilen = (await this.db.execute(sql`
+      with sensor_frist as (
+        select a.fahrzeug_id, s.id as sensor_id, max(k.gueltig_bis) as bis
+        from sensor s
+        join aggregat a on a.id = s.aggregat_id
+        join fahrzeug f0 on f0.id = a.fahrzeug_id and f0.mandant_id = ${mandant} and f0.status = 'verfuegbar'
+        left join kalibrierung k on k.sensor_id = s.id
+        where s.aktiv
+        group by a.fahrzeug_id, s.id
+      ), fahrzeug_frist as (
+        select fahrzeug_id, min(bis) as kalibriert_bis, bool_and(bis is not null) as vollstaendig
+        from sensor_frist
+        group by fahrzeug_id
+      )
+      select f.id, f.kennzeichen, f.benoetigte_fuehrerscheinklasse, f.hat_fahrtenschreiber,
+             f.standard_temperaturprofil, f.zul_gesamtmasse_kg, ff.kalibriert_bis,
+             count(*) over () as gesamt
+      from fahrzeug f
+      join fahrzeug_frist ff on ff.fahrzeug_id = f.id
+      where f.mandant_id = ${mandant}
+        and f.status = 'verfuegbar'
+        and ff.vollstaendig
+        and ff.kalibriert_bis >= ${von}::timestamptz
+        ${muster ? sql`and f.kennzeichen ilike ${muster}` : sql``}
+        ${o.klassen && o.klassen.length > 0 ? sql`and f.benoetigte_fuehrerscheinklasse in ${o.klassen}` : sql``}
+        ${o.fahrtenschreiber ? sql`and f.hat_fahrtenschreiber` : sql``}
+        and not exists (
+          select 1 from miete m
+          where m.fahrzeug_id = f.id
+            and m.status in ('bestaetigt', 'aktiv')
+            and tstzrange(m.start_geplant, m.ende_geplant, '[)') && tstzrange(${von}::timestamptz, ${bis}::timestamptz, '[)')
+        )
+      order by f.kennzeichen
+      limit ${o.limit} offset ${o.offset}
+    `)) as unknown as Record<string, unknown>[];
+    return {
+      eintraege: zeilen.map((z) => ({
+        id: String(z.id),
+        kennzeichen: String(z.kennzeichen),
+        benoetigteFuehrerscheinklasse: String(z.benoetigte_fuehrerscheinklasse),
+        hatFahrtenschreiber: Boolean(z.hat_fahrtenschreiber),
+        standardTemperaturprofil: (z.standard_temperaturprofil as string | null) ?? null,
+        zulGesamtmasseKg: Number(z.zul_gesamtmasse_kg),
+        kalibriertBis: new Date(z.kalibriert_bis as string | Date).toISOString(),
+      })),
+      gesamt: zeilen.length > 0 ? Number(zeilen[0]!.gesamt) : 0,
+    };
+  }
+
   /**
    * Sensoren, deren jüngste Kalibrierung vor `bis` abläuft oder fehlt. Die
    * Datenbank filtert (HAVING) – bei 4.000 Fahrzeugen nie alle Sensoren laden (D-003).

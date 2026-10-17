@@ -30,7 +30,7 @@ async function statusWechseln(page: Page, label: string, status: string, meldung
   await expect(page.getByRole('status')).toContainText(meldung);
 }
 
-test('kompletter Ablauf von Fahrzeug bis Abweichung', async ({ page }) => {
+test('kompletter Ablauf von Fahrzeug bis Abweichung', async ({ page, context }) => {
   test.setTimeout(180_000);
   const lauf = Date.now().toString(36).toUpperCase().slice(-5);
   const kennzeichen = `B-RC ${lauf}`;
@@ -88,34 +88,46 @@ test('kompletter Ablauf von Fahrzeug bis Abweichung', async ({ page }) => {
   await statusWechseln(page, `Status von ${fahrerName} ändern`, 'freigegeben', 'Status');
   await page.screenshot({ path: `${SCREENS}/13-kunde-fahrer.png`, fullPage: true });
 
-  // --- Buchung: erst abgelehnt (Ausland ohne Fahrtenschreiber), dann bestätigt ---
+  // --- Buchung: Kunde suchen, Zeitraum/Fahrer, buchbare Fahrzeuge, bestätigen ---
   await page.goto('/mieten');
   await page.getByRole('link', { name: 'Buchung anlegen' }).click();
-  await page.getByLabel('Freigegebener Kunde').selectOption({ label: firma });
-  await page.getByRole('button', { name: 'Weiter' }).click();
-  await page
-    .getByLabel('Fahrzeug (verfügbar)')
-    .selectOption({ label: `${kennzeichen} · Klasse B` });
+  await page.getByLabel('Firmenname (freigegebene Kunden)').fill(`Testpharma ${lauf}`);
+  await page.getByRole('button', { name: 'Kunde suchen' }).click();
+  await page.getByRole('link', { name: firma }).click();
   await page
     .getByLabel('Fahrer', { exact: true })
     .selectOption({ label: `${fahrerName} · Klasse B` });
-  await page.getByLabel('Auslandsfahrt geplant').check();
-  await page.getByRole('button', { name: 'Buchung prüfen und anlegen' }).click();
-  await expect(page.locator('.hinweis[role=alert]')).toContainText('Fahrtenschreiber');
-  await expect(page.getByLabel('Auslandsfahrt geplant')).toBeChecked();
-  // Auswahlfelder behalten nach der Ablehnung ihren Wert (React setzt das Formular zurück).
-  await expect(page.getByLabel('Fahrzeug (verfügbar)').locator('option:checked')).toHaveText(
-    `${kennzeichen} · Klasse B`,
-  );
-  await expect(page.getByLabel('Fahrer', { exact: true }).locator('option:checked')).toHaveText(
-    `${fahrerName} · Klasse B`,
-  );
-  await page.screenshot({ path: `${SCREENS}/14-buchung-abgelehnt.png`, fullPage: true });
+  await page.getByLabel('Kennzeichen enthält').fill(kennzeichen);
 
+  // Mit Auslandsfahrt erscheint das Fahrzeug ohne Fahrtenschreiber gar nicht erst.
+  await page.getByLabel('Auslandsfahrt geplant').check();
+  await page.getByRole('button', { name: 'Fahrzeuge suchen' }).click();
+  await expect(
+    page.getByText('Kein Fahrzeug ist im Zeitraum buchbar (mit Fahrtenschreiber)'),
+  ).toBeVisible();
   await page.getByLabel('Auslandsfahrt geplant').uncheck();
-  await page.getByRole('button', { name: 'Buchung prüfen und anlegen' }).click();
+  await page.getByRole('button', { name: 'Fahrzeuge suchen' }).click();
+  await page.getByRole('link', { name: `${kennzeichen} wählen` }).click();
+  await expect(page.getByRole('heading', { name: 'Buchung bestätigen' })).toBeVisible();
+  await page.screenshot({ path: `${SCREENS}/13b-buchung-suche.png`, fullPage: true });
+
+  // Zweite Disponentin öffnet dieselbe Auswahl, bevor die erste bestätigt.
+  const zweite = await context.newPage();
+  await zweite.goto(page.url());
+  await zweite.getByLabel('Temperaturprofil').selectOption('15-25');
+
+  await page.getByRole('button', { name: 'Buchung bestätigen' }).click();
   await expect(page.getByRole('status')).toContainText('Buchung bestätigt');
   await expect(page.getByRole('link', { name: kennzeichen })).toBeVisible();
+
+  // Die zweite wird mit Grund abgelehnt; ihre Auswahl bleibt erhalten.
+  await zweite.getByRole('button', { name: 'Buchung bestätigen' }).click();
+  await expect(zweite.locator('.hinweis[role=alert]')).toContainText('bereits gebucht');
+  await expect(zweite.getByLabel('Temperaturprofil').locator('option:checked')).toHaveText(
+    '15-25 °C',
+  );
+  await zweite.screenshot({ path: `${SCREENS}/14-buchung-abgelehnt.png`, fullPage: true });
+  await zweite.close();
 
   // --- Miete durchlaufen, Rechnung erstellen ---
   await statusWechseln(page, 'Mietstatus ändern', 'aktiv', 'Status');

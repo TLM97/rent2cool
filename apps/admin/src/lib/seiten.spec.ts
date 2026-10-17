@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blattAus, erster, istUuid, seitenLink } from './seiten';
+import { blattAus, erster, istUuid, linkMit, seitenLink } from './seiten';
 
 describe('Seitenparameter', () => {
   it('liest die Seite, Fallback auf 1', () => {
@@ -23,5 +23,20 @@ describe('Seitenparameter', () => {
   it('prüft UUIDs', () => {
     expect(istUuid('018f3a2b-7c4d-7e2a-9b1c-2f3a4b5c6d7e')).toBe(true);
     expect(istUuid('../../v1/admin')).toBe(false);
+  });
+});
+
+describe('linkMit', () => {
+  it('übernimmt Parameter, ändert und entfernt einzelne, lässt Seite und Meldungen weg', () => {
+    expect(
+      linkMit(
+        '/mieten/neu',
+        { kundeId: 'k1', suche: 'x', seite: '3', erfolg: 'ok' },
+        { fahrzeugId: 'f1', suche: undefined },
+      ),
+    ).toBe('/mieten/neu?kundeId=k1&fahrzeugId=f1');
+  });
+  it('ohne Parameter nur der Pfad', () => {
+    expect(linkMit('/mieten/neu', {}, { a: '' })).toBe('/mieten/neu');
   });
 });

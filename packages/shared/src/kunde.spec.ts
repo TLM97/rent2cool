@@ -3,6 +3,7 @@ import {
   bewerteFahrerEinsatz,
   istFahrerUebergangErlaubt,
   istKundeUebergangErlaubt,
+  abgedeckteKlassen,
   klasseDeckt,
 } from './kunde';
 
@@ -26,6 +27,10 @@ describe('Führerscheinklassen-Abdeckung', () => {
   });
   it('C1 deckt B', () => {
     expect(klasseDeckt('C1', 'B')).toBe(true);
+  });
+  it('liefert alle abgedeckten Klassen (unbekannte Klasse nur sich selbst)', () => {
+    expect(abgedeckteKlassen('C1')).toEqual(['B', 'C1']);
+    expect(abgedeckteKlassen('X')).toEqual(['X']);
   });
 });
 
