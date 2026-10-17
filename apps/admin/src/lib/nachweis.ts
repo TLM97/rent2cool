@@ -16,6 +16,13 @@ export function pruefungsText(version: string, p: PruefungKurz): string {
   return `${v}: Abweichung – ${p.hinweise.join('; ')}`;
 }
 
+/** Siegel des PDF (F-47); das Testsiegel ist ein Platzhalter ohne Rechtswirkung. */
+export const SIEGEL_TEXT: Record<string, string> = {
+  testsiegel: 'Testsiegel',
+  zertifikat: 'gesiegelt',
+  qualifiziert: 'qualifiziert gesiegelt',
+};
+
 export const AUSLOESER_TEXT: Record<string, string> = {
   automatisch: 'automatisch nach Mietende',
   manuell: 'manuell angefordert',

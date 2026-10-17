@@ -60,14 +60,15 @@ Infrastruktur stoppen: `pnpm stack:down`. Logs: `pnpm stack:logs`.
 
 ### Lokale Dienste
 
-| Dienst               | Adresse               | Hinweis                           |
-| -------------------- | --------------------- | --------------------------------- |
-| Kern (API)           | http://localhost:3000 |                                   |
-| PostgreSQL/Timescale | localhost:5432        | DB/User `rent2cool`               |
-| Redpanda (Kafka-API) | localhost:19092       |                                   |
-| Valkey (Redis-API)   | localhost:6379        | BullMQ                            |
-| SeaweedFS (S3-API)   | http://localhost:8333 | Bucket per `objektspeicher-setup` |
-| Keycloak (OIDC)      | http://localhost:8080 | Realm `rent2cool` (Platzhalter)   |
+| Dienst               | Adresse               | Hinweis                             |
+| -------------------- | --------------------- | ----------------------------------- |
+| Kern (API)           | http://localhost:3000 |                                     |
+| PostgreSQL/Timescale | localhost:5432        | DB/User `rent2cool`                 |
+| Redpanda (Kafka-API) | localhost:19092       |                                     |
+| Valkey (Redis-API)   | localhost:6379        | BullMQ                              |
+| SeaweedFS (S3-API)   | http://localhost:8333 | Bucket per `objektspeicher-setup`   |
+| Mailpit (E-Mail)     | http://localhost:8025 | SMTP localhost:1025, fängt alles ab |
+| Keycloak (OIDC)      | http://localhost:8080 | Realm `rent2cool` (Platzhalter)     |
 
 ## Nützliche Befehle (Repo-weit)
 
@@ -200,7 +201,19 @@ verhindert Änderung und Löschung). Neue Erkenntnisse = neue Version.
   Nachlieferung, z. B. aus einem Funkloch)?
 
 In der Mietakte zeigt die Karte „Temperaturnachweis für den Kunden“ alle
-Versionen mit PDF/JSON und „Prüfen“.
+Versionen mit PDF/JSON, Siegel, Zustellung und „Prüfen“.
+
+**Elektronisches Siegel (F-47):** Das PDF trägt eine eingebettete digitale
+Signatur, prüfbar in jedem PDF-Programm. Ohne Konfiguration ein zur Laufzeit
+erzeugtes **Testsiegel ohne Rechtswirkung**; ein eigenes Zertifikat per
+`SIEGEL_P12_BASE64`/`SIEGEL_P12_PASSWORT`; das qualifizierte Siegel eines
+Vertrauensdiensteanbieters kommt als weitere Umsetzung von `Siegeldienst`.
+
+**Zustellung (F-46):** Jede neue Version geht per E-Mail mit dem PDF an den
+QA-Kontakt des Kunden („E-Mail für Temperaturnachweise“ am Kunden) – als
+eigener Job, genau einmal, nie mit veränderter Datei; Ergebnis in der
+Mietakte. Lokal fängt **Mailpit** alle Mails ab: http://localhost:8025.
+Der Download im Kundenportal nutzt `GET /v1/mieten/:id/temperaturnachweise`.
 
 ## Fahrzeugakte
 

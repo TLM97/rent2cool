@@ -115,6 +115,8 @@ export const kundeErstellenSchema = z.object({
   plz: z.string().optional(),
   ort: z.string().optional(),
   land: z.string().default('DE'),
+  /** QA-Kontakt des Kunden: bekommt jeden Temperaturnachweis per E-Mail (F-46). */
+  nachweisEmail: z.string().trim().email('Gültige E-Mail-Adresse erwartet').optional(),
 });
 export type KundeErstellen = z.infer<typeof kundeErstellenSchema>;
 
@@ -129,6 +131,7 @@ export const kundeAendernSchema = z.object({
   plz: leerbar(),
   ort: leerbar(),
   land: pflicht('Land fehlt').optional(),
+  nachweisEmail: z.string().trim().email('Gültige E-Mail-Adresse erwartet').nullable().optional(),
 });
 export type KundeAendern = z.infer<typeof kundeAendernSchema>;
 

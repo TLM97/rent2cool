@@ -316,6 +316,7 @@ export async function erstelleKunde(_z: FormularZustand, fd: FormData): Promise<
     plz: text(fd, 'plz'),
     ort: text(fd, 'ort'),
     land: text(fd, 'land') ?? 'DE',
+    nachweisEmail: text(fd, 'nachweisEmail'),
   };
   const p = pruefe(kundeErstellenSchema, roh, werte);
   if (!p.ok) return p.zustand;
@@ -341,6 +342,7 @@ export async function aendereKunde(_z: FormularZustand, fd: FormData): Promise<F
     plz: leer(fd, 'plz'),
     ort: leer(fd, 'ort'),
     land: text(fd, 'land') ?? '',
+    nachweisEmail: leer(fd, 'nachweisEmail'),
   };
   const p = pruefe(kundeAendernSchema, roh, werte);
   if (!p.ok) return p.zustand;

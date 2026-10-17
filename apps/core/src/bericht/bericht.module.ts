@@ -8,6 +8,8 @@ import {
   NachweisPruefungController,
 } from './bericht.controller';
 import { Berichtsdienst } from './berichtsdienst';
+import { SIEGELDIENST, siegelAusUmgebung } from './siegel';
+import { NachweisZustellung } from './zustellung';
 import {
   BERICHT_SPEICHER,
   BerichtService,
@@ -44,7 +46,17 @@ import { OBJEKT_SPEICHER, type ObjektSpeicher } from '../objektspeicher/objekt-s
       inject: [OBJEKT_SPEICHER],
       useFactory: (s: ObjektSpeicher) => new ObjektBerichtSpeicher(s),
     },
+    {
+      provide: SIEGELDIENST,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<Env, true>) =>
+        siegelAusUmgebung({
+          SIEGEL_P12_BASE64: config.get('SIEGEL_P12_BASE64', { infer: true }),
+          SIEGEL_P12_PASSWORT: config.get('SIEGEL_P12_PASSWORT', { infer: true }),
+        }),
+    },
     NachweisArchiv,
+    NachweisZustellung,
     Berichtsdienst,
   ],
   exports: [BerichtService, NachweisArchiv],

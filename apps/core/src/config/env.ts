@@ -44,6 +44,14 @@ export const envSchema = z.object({
   BERICHT_KARENZ_MIN: z.coerce.number().int().min(0).default(30),
   // Wie oft nach fälligen Nachweisen gesucht wird.
   BERICHT_SUCHE_SEK: z.coerce.number().int().min(10).default(300),
+  // Elektronisches Siegel der Nachweis-PDFs (F-47): Zertifikat als Base64-PKCS#12.
+  // Leer = Testsiegel (zur Laufzeit erzeugt, ohne Rechtswirkung, D-015).
+  SIEGEL_P12_BASE64: z.string().optional(),
+  SIEGEL_P12_PASSWORT: z.string().optional(),
+  // E-Mail (F-46): SMTP-Zugang; lokal Mailpit ohne Anmeldung. Absender mit
+  // Platzhalter-Domain bis die Domain gesichert ist (D-013, D-015).
+  SMTP_URL: z.string().default('smtp://localhost:1025'),
+  MAIL_ABSENDER: z.string().default('Rent2Cool Nachweise <nachweise@rent2cool.example>'),
 
   S3_ENDPOINT: z.string().url(),
   S3_REGION: z.string().default('eu-central-1'),

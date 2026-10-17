@@ -46,7 +46,7 @@ jobs:
         run: pnpm build
 
   integration:
-    name: Integrationstests (PostgreSQL + TimescaleDB, S3, Valkey)
+    name: Integrationstests (PostgreSQL + TimescaleDB, S3, Valkey, Mail)
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -73,6 +73,12 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
+      mail:
+        # Mailpit wie in docker-compose.yml: fängt Mails ab, Prüfung über die API.
+        image: axllent/mailpit:v1.21.8
+        ports:
+          - 1025:1025
+          - 8025:8025
     env:
       # Nur ein Wegwerf-Container der CI; die Tests nutzen daraus rent2cool_test.
       DATABASE_URL: postgres://rent2cool:rent2cool_local_dev@localhost:5432/rent2cool

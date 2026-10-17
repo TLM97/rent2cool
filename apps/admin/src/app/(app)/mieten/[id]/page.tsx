@@ -354,6 +354,7 @@ export default async function MieteDetail({
           'protokoll',
           'protokoll_status',
           'temperaturnachweis',
+          'nachweis_zustellung',
         ]}
         bezeichnungen={Object.fromEntries([
           ...(schluessel ?? []).map((s) => [s.id, `Schlüssel ${s.fahrerName}`]),

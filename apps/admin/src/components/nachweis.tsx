@@ -4,7 +4,7 @@
  */
 import { fordereNachweisAn, pruefeNachweis } from '../app/(app)/aktionen';
 import { formatDatumZeit } from '../lib/format';
-import { AUSLOESER_TEXT } from '../lib/nachweis';
+import { AUSLOESER_TEXT, SIEGEL_TEXT } from '../lib/nachweis';
 import type { NachweisArchivEintrag } from '../lib/typen';
 import { Leer, Plakette } from './bausteine';
 
@@ -46,6 +46,7 @@ export function NachweisArchivKarte({
                   Verletzungen / Lücken
                 </th>
                 <th scope="col">Dateien</th>
+                <th scope="col">An den Kunden</th>
                 <th scope="col">Echtheit</th>
               </tr>
             </thead>
@@ -74,6 +75,27 @@ export function NachweisArchivKarte({
                     <div className="leise mono" title={`SHA-256 PDF ${e.pdfSha256}`}>
                       {e.pdfSha256.slice(0, 12)}…
                     </div>
+                    {e.siegelArt ? (
+                      <div title={e.siegelAussteller ?? undefined}>
+                        <span
+                          className={`plakette ${e.siegelArt === 'testsiegel' ? 'warn' : 'ok'}`}
+                        >
+                          {SIEGEL_TEXT[e.siegelArt]}
+                        </span>
+                      </div>
+                    ) : null}
+                  </td>
+                  <td>
+                    {e.zustellung ? (
+                      <>
+                        <Plakette status={e.zustellung.status} />
+                        <div className="leise">
+                          {e.zustellung.empfaenger ?? e.zustellung.grund ?? ''}
+                        </div>
+                      </>
+                    ) : (
+                      <span className="leise">ausstehend</span>
+                    )}
                   </td>
                   <td>
                     <form action={pruefeNachweis}>

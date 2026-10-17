@@ -79,6 +79,7 @@ test('kompletter Ablauf von Fahrzeug bis Abweichung', async ({ page, context }) 
   await page.getByLabel('Firmenname').fill(firma);
   await page.getByLabel('USt-ID').fill('DE000000000');
   await page.getByLabel('Ort').fill('Berlin');
+  await page.getByLabel('E-Mail für Temperaturnachweise (QA)').fill(`qa-${lauf}@testkunde.example`);
   await page.getByRole('button', { name: 'Kunde anlegen' }).click();
   await expect(page.getByRole('heading', { level: 1, name: firma })).toBeVisible();
   await statusWechseln(page, 'Kundenstatus ändern', 'in_pruefung', 'Status');
@@ -223,6 +224,12 @@ test('kompletter Ablauf von Fahrzeug bis Abweichung', async ({ page, context }) 
     await page.reload();
     await expect(archiv.getByRole('link', { name: 'PDF' })).toBeVisible({ timeout: 1000 });
   }).toPass({ timeout: 20_000 });
+  // … und geht per E-Mail an die QA des Kunden (lokal: Mailpit).
+  await expect(async () => {
+    await page.reload();
+    await expect(archiv.getByText('gesendet')).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 20_000 });
+  await expect(archiv).toContainText(`qa-${lauf}@testkunde.example`);
   await archiv.getByRole('button', { name: 'Prüfen' }).click();
   await expect(page.getByRole('status')).toContainText('Version 1 ist echt');
   await archiv.screenshot({ path: `${SCREENS}/25-nachweis-archiv.png` });

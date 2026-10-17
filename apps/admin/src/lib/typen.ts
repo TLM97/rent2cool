@@ -83,6 +83,8 @@ export interface Kunde {
   plz: string | null;
   ort: string | null;
   land: string;
+  /** QA-Kontakt für Temperaturnachweise (F-46). */
+  nachweisEmail?: string | null;
   status: string;
   erstelltAm: string;
   aktualisiertAm: string;
@@ -302,6 +304,16 @@ export interface NachweisArchivEintrag {
   jsonSha256: string;
   pdfSha256: string;
   pdfGroesse: number;
+  /** Elektronisches Siegel des PDF (F-47). */
+  siegelArt: 'testsiegel' | 'zertifikat' | 'qualifiziert' | null;
+  siegelAussteller: string | null;
+  /** E-Mail an den Kunden (F-46). */
+  zustellung: {
+    status: 'gesendet' | 'uebersprungen' | 'fehlgeschlagen';
+    empfaenger: string | null;
+    grund: string | null;
+    zeit: string;
+  } | null;
   jsonUrl: string;
   pdfUrl: string;
 }

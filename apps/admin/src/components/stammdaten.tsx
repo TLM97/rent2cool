@@ -88,6 +88,14 @@ export function KundeFelder({ werte }: { werte?: Kunde }) {
       <Feld name="plz" label="PLZ" standard={werte?.plz ?? ''} />
       <Feld name="ort" label="Ort" standard={werte?.ort ?? ''} />
       <Feld name="land" label="Land (ISO)" standard={werte?.land ?? 'DE'} />
+      <Feld
+        name="nachweisEmail"
+        label="E-Mail für Temperaturnachweise (QA)"
+        typ="email"
+        breit
+        hinweis="Bekommt nach jeder Miete den gesiegelten Nachweis als PDF."
+        standard={werte?.nachweisEmail ?? ''}
+      />
     </>
   );
 }

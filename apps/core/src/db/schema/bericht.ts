@@ -36,6 +36,9 @@ export const temperaturnachweisArchiv = pgTable(
     pdfSha256: text('pdf_sha256').notNull(),
     pdfGroesse: integer('pdf_groesse').notNull(),
     dokumentSignatur: text('dokument_signatur').notNull(),
+    /** Elektronisches Siegel des PDF (Migration 0016); bei älteren Einträgen leer. */
+    siegelArt: text('siegel_art'),
+    siegelAussteller: text('siegel_aussteller'),
   },
   (t) => [
     uniqueIndex('uq_archiv_miete_version').on(t.mieteId, t.version),
@@ -43,4 +46,25 @@ export const temperaturnachweisArchiv = pgTable(
       .on(t.mieteId)
       .where(sql`ausloeser = 'automatisch'`),
   ],
+);
+
+/** Zustellung eines Nachweises (F-46, Migration 0017): je Nachweis und Kanal ein Ergebnis. */
+export const nachweisZustellung = pgTable(
+  'nachweis_zustellung',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    mandantId: uuid('mandant_id')
+      .notNull()
+      .references(() => mandant.id),
+    archivId: uuid('archiv_id')
+      .notNull()
+      .references(() => temperaturnachweisArchiv.id),
+    kanal: text('kanal').notNull(),
+    empfaenger: text('empfaenger'),
+    status: text('status').notNull(),
+    grund: text('grund'),
+    nachrichtId: text('nachricht_id'),
+    zeit: timestamp('zeit', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('uq_zustellung_archiv_kanal').on(t.archivId, t.kanal)],
 );

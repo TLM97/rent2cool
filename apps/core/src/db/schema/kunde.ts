@@ -19,6 +19,8 @@ export const kunde = pgTable(
     plz: text('plz'),
     ort: text('ort'),
     land: text('land').notNull().default('DE'),
+    /** QA-Kontakt für Temperaturnachweise per E-Mail (F-46, Migration 0017). */
+    nachweisEmail: text('nachweis_email'),
     status: text('status').notNull().default('angelegt'),
     erstelltAm: timestamp('erstellt_am', { withTimezone: true }).notNull().defaultNow(),
     aktualisiertAm: timestamp('aktualisiert_am', { withTimezone: true }).notNull().defaultNow(),

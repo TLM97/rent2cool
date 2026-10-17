@@ -80,6 +80,12 @@ export default async function KundeDetail({
               .filter(Boolean)
               .join(', ') || '–'}
           </dd>
+          <dt>Nachweise an</dt>
+          <dd>
+            {kunde.nachweisEmail ?? (
+              <span className="leise">keine E-Mail hinterlegt – Nachweise nur im Portal</span>
+            )}
+          </dd>
           <dt>angelegt</dt>
           <dd>{formatDatum(kunde.erstelltAm)}</dd>
           {darfAendern && naechsteKunde.length > 0 ? (

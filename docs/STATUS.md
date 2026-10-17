@@ -13,6 +13,64 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Nachweis: elektronisches Siegel und Zustellung per E-Mail
+
+Tom hat F-46 bis F-48 direkt beantwortet: **F-46** Kundenportal und E-Mail,
+**F-47** mit elektronischem Siegel, **F-48** Karenzzeit 30 Minuten (bleibt
+wie eingestellt). Umgesetzt; Planung möge die Aufgabe in `TASKS.md`
+nachziehen.
+
+Erledigt:
+- **Elektronisches Siegel (F-47):** Nachweis-PDFs tragen eine eingebettete
+  PDF-Signatur (`adbe.pkcs7.detached`), prüfbar in jedem PDF-Programm.
+  Schnittstelle `Siegeldienst`: heute **Testsiegel** (zur Laufzeit erzeugtes,
+  selbst ausgestelltes Zertifikat, im PDF und in der Oberfläche als
+  „Testsiegel ohne Rechtswirkung“ gekennzeichnet, nie im Repo) oder ein
+  eigenes Zertifikat per Umgebung. Archiv hält Art und Inhaber des Siegels
+  (Migration `0016`). Test verifiziert die Signatur unabhängig mit OpenSSL
+  und zeigt, dass ein geändertes Byte sie bricht.
+- **Zustellung per E-Mail (F-46):** Feld „E-Mail für Temperaturnachweise
+  (QA)“ am Kunden; jede neue Nachweis-Version geht als eigener Job mit dem
+  gesiegelten PDF an diese Adresse – genau einmal (eindeutiger Index), mit
+  Wiederholung, nie mit veränderter Datei (Prüfsumme vor dem Versand).
+  Ergebnis (gesendet / übersprungen ohne Adresse / fehlgeschlagen) in
+  `nachweis_zustellung` (Migration `0017`), im Audit Trail und in der
+  Mietakte. SMTP über `SMTP_URL`; lokal und in der CI **Mailpit**.
+- **Kundenportal-Teil von F-46:** Die API für den Download steht; die
+  Portal-Oberfläche selbst kommt mit dem Kundenportal (Phase 3) und braucht
+  vorher F-41 (Kundenrollen auf den eigenen Kunden beschränken).
+
+Beim Testen gefunden und behoben:
+- Die Signatur-Bibliothek (`@signpdf/signer-p12`) verbraucht ihr Zertifikat
+  beim ersten Signieren – jedes weitere Siegeln scheiterte („Too few bytes
+  to parse DER“). Jetzt je Vorgang ein frischer Signierer; Test siegelt
+  zweimal mit demselben Dienst.
+
+Tests: Kern 156/156 Integration (neu: Siegel mit OpenSSL-Prüfung,
+Zustellung inkl. Manipulation, Berichtsdienst bis zur Mail in Mailpit),
+alle 9 Browser-Tests grün (Ablauf: Kunde mit QA-Adresse → Nachweis →
+„gesendet“).
+
+Abkürzungen (vor Go-live ersetzen):
+- **Testsiegel** statt qualifiziertem Siegel eines Vertrauensdiensteanbieters
+  (TODO(D-015)); erst damit PAdES-Baseline-konform und rechtlich ein
+  qualifiziertes elektronisches Siegel. Ohne Zeitstempel (TSA).
+- Absender `nachweise@rent2cool.example` (Platzhalter-Domain, D-013) und
+  noch kein produktiver SMTP-Dienst.
+
+Fragen an Planung:
+- **F-49:** Welcher Vertrauensdiensteanbieter für das qualifizierte Siegel
+  (z. B. D-Trust/Bundesdruckerei, Swisscom, A-Trust)? Mit qualifiziertem
+  Zeitstempel?
+- **F-50:** Welcher E-Mail-Versanddienst (EU-Rechenzentrum, AVV) und ab wann
+  die echte Domain (D-013)?
+- **F-41** (Kundenrollen auf den eigenen Kunden beschränken) ist jetzt
+  Voraussetzung für den Portal-Teil von F-46 – als nächste Aufgabe
+  vorgeschlagen.
+- F-24, F-26 bis F-37, F-42 bis F-45 weiter offen.
+
+---
+
 ### 2026-10-17 – Temperaturnachweis automatisch nach jeder Miete
 
 **Automatischer, archivierter Temperaturnachweis – erledigt.** (Toms

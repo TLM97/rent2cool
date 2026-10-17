@@ -96,6 +96,14 @@ export interface NachweisDokument {
   readonly miete: NachweisMieteBezug | null;
   readonly nachweis: TemperaturNachweis;
   readonly kurve: readonly KurvenPunkt[];
+  /** Elektronisches Siegel des PDF (F-47); `null` = ungesiegelt. */
+  readonly siegel: NachweisSiegel | null;
+}
+
+export interface NachweisSiegel {
+  /** `testsiegel` = Platzhalter ohne Rechtswirkung (D-015). */
+  readonly art: 'testsiegel' | 'zertifikat' | 'qualifiziert';
+  readonly aussteller: string;
 }
 
 export type NachweisAusloeser = 'automatisch' | 'manuell';

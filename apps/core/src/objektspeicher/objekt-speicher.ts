@@ -39,6 +39,8 @@ export interface ObjektSpeicher {
   info(schluessel: string): Promise<ObjektInfo | null>;
   /** SHA-256 (hex) des gespeicherten Inhalts. */
   sha256(schluessel: string): Promise<string>;
+  /** Inhalt lesen (kleine Dateien, z. B. Nachweis-PDF als Mailanhang). */
+  lade(schluessel: string): Promise<Buffer>;
   /** Direkt ablegen (Server-seitig, z. B. Demo-Daten). */
   ablegen(schluessel: string, contentType: string, daten: Buffer): Promise<void>;
 }
@@ -116,6 +118,13 @@ export class S3ObjektSpeicher implements ObjektSpeicher {
     return hash.digest('hex');
   }
 
+  async lade(schluessel: string): Promise<Buffer> {
+    const r = await this.intern.send(
+      new GetObjectCommand({ Bucket: this.e.bucket, Key: schluessel }),
+    );
+    return Buffer.from(await r.Body!.transformToByteArray());
+  }
+
   async ablegen(schluessel: string, contentType: string, daten: Buffer): Promise<void> {
     await this.intern.send(
       new PutObjectCommand({
@@ -149,6 +158,9 @@ export class InMemoryObjektSpeicher implements ObjektSpeicher {
   }
   async sha256(schluessel: string): Promise<string> {
     return createHash('sha256').update(this.objekte.get(schluessel)!.daten).digest('hex');
+  }
+  async lade(schluessel: string): Promise<Buffer> {
+    return this.objekte.get(schluessel)!.daten;
   }
   async ablegen(schluessel: string, contentType: string, daten: Buffer): Promise<void> {
     this.objekte.set(schluessel, { contentType, daten });

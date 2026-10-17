@@ -30,6 +30,7 @@ import { BerichtService } from '../../bericht/bericht.service';
 import { KonfigProfilQuelle } from '../../bericht/profil';
 import { BERICHTSDIENST, NachweisArchiv } from '../../bericht/archiv.service';
 import { standardRenderer } from '../../bericht/renderer';
+import { siegelAusUmgebung } from '../../bericht/siegel';
 import { HmacSignierer } from '../../bericht/signierer';
 import { InMemoryBerichtSpeicher } from '../../bericht/speicher';
 import type { Env } from '../../config/env';
@@ -218,6 +219,7 @@ export async function ladeDemoDaten(
       plz: k.plz,
       ort: k.ort,
       land: 'DE',
+      nachweisEmail: k.nachweisEmail,
     });
     await kunden.aendereKundeStatus(akteur, id, 'in_pruefung');
     if (k.status === 'freigegeben') await kunden.aendereKundeStatus(akteur, id, 'freigegeben');
@@ -475,7 +477,7 @@ export async function ladeDemoDaten(
 
   // --- Temperaturnachweise der beendeten Mieten (wie der Berichtsdienst) ---
   if (o.speicher) {
-    const archiv = new NachweisArchiv(db, berichte, o.speicher);
+    const archiv = new NachweisArchiv(db, berichte, o.speicher, siegelAusUmgebung(process.env));
     for (const m of DEMO_MIETEN.filter((x) => x.status === 'beendet')) {
       await archiv.erstelle(mieteIds.get(m.schluessel)!, {
         ausloeser: 'automatisch',

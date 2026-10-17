@@ -98,6 +98,14 @@ services:
       echo 'Bucket bereit'"
     restart: 'no'
 
+  # --- E-Mail lokal: Mailpit fängt alle Mails ab (SMTP 1025, Ansicht 8025) ---
+  # Keine echte Zustellung aus der Entwicklung (F-46).
+  mail:
+    image: axllent/mailpit:v1.21.8
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+
   # --- Anmeldung und Rollen: Keycloak (OpenID Connect) ---
   keycloak:
     # Offizielles Keycloak-Image über Docker Hub (identisch mit quay.io;

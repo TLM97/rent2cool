@@ -101,6 +101,7 @@ export class BerichtService {
       miete: null,
       nachweis,
       kurve,
+      siegel: null,
     };
     const pfad = `temperaturnachweis/${p.fahrzeugId}/${nachweis.erzeugtAm}.${r.dateiendung}`;
     const gespeichert = await this.speicher.ablegen(pfad, r.contentType, await r.render(dokument));

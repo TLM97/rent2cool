@@ -219,6 +219,21 @@ export class PdfNachweisRenderer implements NachweisRenderer {
     pdf.text(`Datenhash:   ${n.integritaet.datenHash}`);
     pdf.text(`Signatur:    ${n.integritaet.signatur}`);
     if (d.miete) pdf.text(`Miete:       ${d.miete.mieteId}`);
+    if (d.siegel) {
+      pdf
+        .font('Helvetica')
+        .fontSize(8)
+        .fillColor(d.siegel.art === 'testsiegel' ? FARBE.unvollstaendig : FARBE.text)
+        .text(
+          d.siegel.art === 'testsiegel'
+            ? `Elektronisch gesiegelt mit einem TESTSIEGEL ohne Rechtswirkung (Platzhalter bis zur Wahl des Vertrauensdiensteanbieters): ${d.siegel.aussteller}`
+            : `Elektronisch gesiegelt (${d.siegel.art === 'qualifiziert' ? 'qualifiziertes elektronisches Siegel' : 'Zertifikat'}): ${d.siegel.aussteller}. Prüfbar in jedem PDF-Programm.`,
+          { width: breite },
+        )
+        .font('Courier')
+        .fontSize(7.5)
+        .fillColor(FARBE.text);
+    }
     pdf.text(`Fahrzeug:    ${n.fahrzeugId}`);
     pdf.font('Helvetica');
 

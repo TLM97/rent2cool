@@ -101,6 +101,8 @@ const FELDER: Record<string, string> = {
   schaeden: 'Schäden',
   version: 'Version',
   ausloeser: 'Auslöser',
+  nachweisEmail: 'E-Mail für Nachweise',
+  empfaenger: 'Empfänger',
 };
 
 const ISO_ZEIT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
@@ -179,6 +181,7 @@ export function vorgang(e: AuditEintrag): string {
   if (e.entitaetTyp === 'sensor_tausch') return 'Sensor getauscht';
   if (e.entitaetTyp === 'schluessel') return 'Schlüssel ausgestellt';
   if (e.entitaetTyp === 'temperaturnachweis') return 'Temperaturnachweis erzeugt';
+  if (e.entitaetTyp === 'nachweis_zustellung') return 'Nachweis an den Kunden';
   if (e.entitaetTyp === 'protokoll' && e.aktion === 'PATCH') return 'Protokoll ergänzt';
   if (e.aktion === 'PATCH') return 'Stammdaten geändert';
   if (e.entitaetTyp.endsWith('_status')) {
@@ -205,7 +208,8 @@ export function beschreibe(e: AuditEintrag): {
     v === 'angelegt' ||
     v === 'Kalibrierung erfasst' ||
     v === 'Schlüssel ausgestellt' ||
-    v === 'Temperaturnachweis erzeugt';
+    v === 'Temperaturnachweis erzeugt' ||
+    v === 'Nachweis an den Kunden';
   return {
     vorgang: v,
     wer: akteur(e),

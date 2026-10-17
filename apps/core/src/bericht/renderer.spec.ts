@@ -38,6 +38,7 @@ const dokument: NachweisDokument = {
     endeIst: '2026-10-16T09:00:00.000Z',
   },
   nachweis,
+  siegel: { art: 'testsiegel', aussteller: 'Rent2Cool Testsiegel (PLACEHOLDER)' },
   kurve: [
     { zeit: '2026-10-16T08:00:00.000Z', wert: 5 },
     { zeit: '2026-10-16T08:30:00.000Z', wert: 9.1 },

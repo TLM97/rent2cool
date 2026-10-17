@@ -97,6 +97,8 @@ const TON: Record<string, Ton> = {
   abgeschlossen: 'ok',
   angefordert: 'neutral',
   hochgeladen: 'ok',
+  // Zustellung des Nachweises (gesendet: wie Befehle)
+  uebersprungen: 'warn',
 };
 
 export function statusTon(status: string): Ton {
@@ -146,6 +148,7 @@ const LABEL: Record<string, string> = {
   abgeschlossen: 'abgeschlossen',
   angefordert: 'nicht hochgeladen',
   hochgeladen: 'hochgeladen',
+  uebersprungen: 'übersprungen',
   // Alarmtypen
   temperatur_ueber: 'Temperatur zu hoch',
   temperatur_unter: 'Temperatur zu niedrig',

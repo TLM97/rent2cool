@@ -16,10 +16,11 @@ import { protokolliereAnlage } from '../audit/audit.service';
 import type { Database } from '../db/client';
 import { DB } from '../db/db.module';
 import { istPgFehler, PG_FEHLER } from '../db/fehler';
-import { fahrzeug, kunde, miete, temperaturnachweisArchiv } from '../db/schema';
+import { fahrzeug, kunde, miete, nachweisZustellung, temperaturnachweisArchiv } from '../db/schema';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 import { OBJEKT_SPEICHER, type ObjektSpeicher } from '../objektspeicher/objekt-speicher';
 import { BerichtService } from './bericht.service';
+import { SIEGELDIENST, type Siegeldienst } from './siegel';
 
 /** Akteur des automatischen Nachweises im Audit Trail. */
 export const BERICHTSDIENST: Principal = {
@@ -42,6 +43,13 @@ export interface ArchivAnsicht extends Omit<
 > {
   jsonUrl: string;
   pdfUrl: string;
+  /** E-Mail an den Kunden (F-46); `null` = noch nicht versucht. */
+  zustellung: {
+    status: string;
+    empfaenger: string | null;
+    grund: string | null;
+    zeit: Date;
+  } | null;
 }
 
 export interface Echtheitspruefung {
@@ -65,6 +73,7 @@ export class NachweisArchiv {
     @Inject(DB) private readonly db: Database,
     private readonly berichte: BerichtService,
     @Inject(OBJEKT_SPEICHER) private readonly speicher: ObjektSpeicher,
+    @Inject(SIEGELDIENST) private readonly siegel: Siegeldienst,
   ) {}
 
   /**
@@ -138,7 +147,30 @@ export class NachweisArchiv {
       .where(eq(temperaturnachweisArchiv.mieteId, mieteId))
       .orderBy(desc(temperaturnachweisArchiv.version))
       .limit(50);
-    return Promise.all(zeilen.map((z) => this.ansicht(z)));
+    const zustellungen =
+      zeilen.length === 0
+        ? []
+        : await this.db
+            .select()
+            .from(nachweisZustellung)
+            .where(
+              inArray(
+                nachweisZustellung.archivId,
+                zeilen.map((z) => z.id),
+              ),
+            );
+    const je = new Map(zustellungen.map((z) => [z.archivId, z]));
+    return Promise.all(
+      zeilen.map(async (z) => {
+        const zu = je.get(z.id);
+        return {
+          ...(await this.ansicht(z)),
+          zustellung: zu
+            ? { status: zu.status, empfaenger: zu.empfaenger, grund: zu.grund, zeit: zu.zeit }
+            : null,
+        };
+      }),
+    );
   }
 
   /** Echtheitsprüfung: Dateien, Signaturen und Messdaten gegen das Archiv. */
@@ -268,11 +300,17 @@ export class NachweisArchiv {
       },
       nachweis,
       kurve,
+      siegel: this.siegel.info,
     };
-    const [json, pdf] = await Promise.all([
+    const [json, pdfRoh] = await Promise.all([
       this.berichte.renderer('json').render(dokument),
       this.berichte.renderer('pdf').render(dokument),
     ]);
+    // Elektronisches Siegel (F-47): prüfbar in jedem PDF-Programm, ohne unser System.
+    const pdf = await this.siegel.siegele(pdfRoh, {
+      grund: `Temperaturnachweis Miete ${m.id}, Version ${version}`,
+      zeitpunkt: new Date(nachweis.erzeugtAm),
+    });
     // Dateien zuerst ablegen; ohne Archiveintrag bleiben sie unbeachtet liegen.
     const id = randomUUID();
     const monat = new Date().toISOString().slice(0, 7).replace('-', '/');
@@ -312,6 +350,8 @@ export class NachweisArchiv {
           pdfSha256,
           pdfGroesse: pdf.length,
           dokumentSignatur: s.signiere(`${jsonSha256}:${pdfSha256}`),
+          siegelArt: this.siegel.info.art,
+          siegelAussteller: this.siegel.info.aussteller,
         })
         .returning();
       await protokolliereAnlage(
@@ -333,7 +373,7 @@ export class NachweisArchiv {
     });
   }
 
-  private async ansicht(z: ArchivZeile): Promise<ArchivAnsicht> {
+  private async ansicht(z: ArchivZeile): Promise<Omit<ArchivAnsicht, 'zustellung'>> {
     const { jsonSchluessel, pdfSchluessel, datenSignatur: _s, ...rest } = z;
     const [jsonUrl, pdfUrl] = await Promise.all([
       this.speicher.ladeLink(jsonSchluessel, LINK_GUELTIG_SEK),

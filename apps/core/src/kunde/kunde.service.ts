@@ -46,6 +46,7 @@ export class KundeService {
           plz: p.plz ?? null,
           ort: p.ort ?? null,
           land: p.land,
+          nachweisEmail: p.nachweisEmail ?? null,
         })
         .returning();
       await protokolliereAnlage(tx, principal, 'kunde', row!.id, row);

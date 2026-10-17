@@ -17,6 +17,7 @@ import { StandortModule } from './standort/standort.module';
 import { SchluesselModule } from './schluessel/schluessel.module';
 import { ObjektspeicherModule } from './objektspeicher/objektspeicher.module';
 import { ProtokollModule } from './protokoll/protokoll.module';
+import { MailModule } from './mail/mail.module';
 
 /**
  * Wurzelmodul des Kerns. Als modularer Monolith (D-002) kommen fachliche
@@ -58,6 +59,7 @@ import { ProtokollModule } from './protokoll/protokoll.module';
     MieteModule,
     SchluesselModule,
     ObjektspeicherModule,
+    MailModule,
     ProtokollModule,
     RechnungModule,
     AlarmModule,

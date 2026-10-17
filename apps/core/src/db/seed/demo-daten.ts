@@ -163,6 +163,8 @@ export interface DemoKunde {
   plz: string;
   ort: string;
   status: 'freigegeben' | 'in_pruefung';
+  /** QA-Kontakt für Temperaturnachweise (erfunden, Domain .example). */
+  nachweisEmail?: string;
   fahrer: readonly DemoFahrer[];
 }
 
@@ -176,6 +178,7 @@ export const DEMO_KUNDEN: readonly DemoKunde[] = [
     plz: '12345',
     ort: 'Musterstadt',
     status: 'freigegeben',
+    nachweisEmail: 'qa@nordlicht-demo.example',
     fahrer: [
       { name: 'Erika Mustermann', klasse: 'B', gueltigTage: 2000, konto: 'demo-konto-erika' },
       { name: 'Max Mustermann', klasse: 'C1', gueltigTage: 20, konto: 'demo-konto-max' },

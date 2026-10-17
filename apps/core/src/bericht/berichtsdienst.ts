@@ -21,8 +21,13 @@ import { Queue, Worker, type ConnectionOptions, type Job } from 'bullmq';
 import type { NachweisAusloeser, Principal } from '@rent2cool/shared';
 import type { Env } from '../config/env';
 import { BERICHTSDIENST, NachweisArchiv } from './archiv.service';
+import { NachweisZustellung } from './zustellung';
 
 export const BERICHT_QUEUE = 'berichte';
+
+export interface ZustellJob {
+  archivId: string;
+}
 
 export interface NachweisJob {
   mieteId: string;
@@ -47,12 +52,13 @@ export function verbindung(url: string): ConnectionOptions {
 @Injectable()
 export class Berichtsdienst implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger(Berichtsdienst.name);
-  private queue?: Queue<NachweisJob | Record<string, never>>;
+  private queue?: Queue<NachweisJob | ZustellJob | Record<string, never>>;
   private worker?: Worker;
 
   constructor(
     @Inject(ConfigService) private readonly config: ConfigService<Env, true>,
     private readonly archiv: NachweisArchiv,
+    private readonly zustellung: NachweisZustellung,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -77,9 +83,15 @@ export class Berichtsdienst implements OnModuleInit, OnModuleDestroy {
       connection,
       concurrency: 2,
     });
-    this.worker.on('failed', (job, err) =>
-      this.log.error({ jobId: job?.id, err }, 'Berichtsjob fehlgeschlagen'),
-    );
+    this.worker.on('failed', (job, err) => {
+      this.log.error({ jobId: job?.id, err }, 'Berichtsjob fehlgeschlagen');
+      // Zustellung endgültig gescheitert: festhalten (sichtbar in der Mietakte).
+      if (job?.name === 'zustellen' && job.attemptsMade >= (job.opts.attempts ?? 1)) {
+        void this.zustellung
+          .vermerkeFehler((job.data as ZustellJob).archivId, err.message)
+          .catch((e: unknown) => this.log.error({ err: e }, 'Fehlschlag nicht vermerkt'));
+      }
+    });
     await this.queue.upsertJobScheduler(
       'faellige-nachweise',
       { every: suchlaufSek * 1000 },
@@ -95,8 +107,11 @@ export class Berichtsdienst implements OnModuleInit, OnModuleDestroy {
   /** Neuen Nachweis anfordern (neue Version), z. B. nach Nachlieferung von Messwerten. */
   async fordereAn(mieteId: string, akteur: Principal): Promise<{ jobId: string }> {
     if (!this.queue) {
-      // Ohne Warteschlange (lokal ohne Valkey) direkt erzeugen.
+      // Ohne Warteschlange (lokal ohne Valkey) direkt erzeugen und zustellen.
       const r = await this.archiv.erstelle(mieteId, { ausloeser: 'manuell', akteur });
+      await this.zustellung
+        .zustelle(r.id)
+        .catch((e: Error) => this.zustellung.vermerkeFehler(r.id, e.message));
       return { jobId: `direkt-${r.id}` };
     }
     const job = await this.queue.add(
@@ -112,10 +127,22 @@ export class Berichtsdienst implements OnModuleInit, OnModuleDestroy {
     if (job.name === 'faellige-suchen') return this.sucheFaellige();
     if (job.name === 'nachweis') {
       const d = job.data as NachweisJob;
-      return this.archiv.erstelle(d.mieteId, {
+      const r = await this.archiv.erstelle(d.mieteId, {
         ausloeser: d.ausloeser,
         akteur: d.akteur ?? BERICHTSDIENST,
       });
+      // Jede neue Version geht an den Kunden (F-46) – als eigener Job mit Wiederholung.
+      if (!r.idempotent) {
+        await this.queue?.add(
+          'zustellen',
+          { archivId: r.id },
+          { ...JOB_OPTIONEN, jobId: `zustellen-${r.id}` },
+        );
+      }
+      return r;
+    }
+    if (job.name === 'zustellen') {
+      return this.zustellung.zustelle((job.data as ZustellJob).archivId);
     }
     throw new Error(`Unbekannter Berichtsjob: ${job.name}`);
   }
