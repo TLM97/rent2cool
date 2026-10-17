@@ -90,8 +90,14 @@ jobs:
       # mit Platzhalter-Zugangsdaten, Bucket per Setup-Container.
       - name: Objektspeicher starten
         run: |
-          docker compose up -d --wait objektspeicher
-          docker compose run --rm objektspeicher-setup
+          melde() {
+            # Bei Fehler: Container-Logs als Annotation (in der Run-Übersicht lesbar).
+            log=$(docker compose ps -a 2>&1; docker compose logs --tail 40 objektspeicher 2>&1)
+            echo "::error title=Objektspeicher::${log//$'\n'/%0A}"
+            exit 1
+          }
+          docker compose up -d --wait --wait-timeout 180 objektspeicher || melde
+          docker compose run --rm objektspeicher-setup || melde
 
       - name: Integrationstests Kern
         run: >-
