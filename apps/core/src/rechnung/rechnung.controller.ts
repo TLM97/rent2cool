@@ -11,7 +11,7 @@ import {
 import { z } from 'zod';
 import { istRechnungStatus, type Principal } from '@rent2cool/shared';
 import { CurrentUser, Roles } from '../auth/decorators';
-import { Audited } from '../audit/audited.decorator';
+import { AuditImService, Audited } from '../audit/audited.decorator';
 import { listeAbfrageSchema, rechnungErstellenSchema, rechnungStatusSchema } from './dto';
 import { RechnungService } from './rechnung.service';
 
@@ -51,13 +51,13 @@ export class RechnungController {
 
   @Post(':id/status')
   @Roles('ops', 'admin')
-  @Audited('rechnung_status')
+  @AuditImService('rechnung_status')
   @HttpCode(200)
-  status(@Param('id') id: string, @Body() body: unknown) {
+  status(@CurrentUser() user: Principal, @Param('id') id: string, @Body() body: unknown) {
     const { status } = parse(rechnungStatusSchema, body);
     if (!istRechnungStatus(status)) {
       throw new BadRequestException('Unbekannter Status');
     }
-    return this.service.aendereStatus(id, status);
+    return this.service.aendereStatus(user, id, status);
   }
 }

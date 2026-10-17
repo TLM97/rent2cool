@@ -88,11 +88,11 @@ export class FahrzeugController {
 
   @Post(':id/status')
   @Roles('ops', 'admin')
-  @Audited('fahrzeug_status')
+  @AuditImService('fahrzeug_status')
   @HttpCode(200)
-  aendereStatus(@Param('id') id: string, @Body() body: unknown) {
+  aendereStatus(@CurrentUser() user: Principal, @Param('id') id: string, @Body() body: unknown) {
     const { status } = parse(statusAendernSchema, body);
-    return this.service.aendereStatus(id, status);
+    return this.service.aendereStatus(user, id, status);
   }
 }
 

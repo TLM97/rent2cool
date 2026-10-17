@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { erlaubteUebergaenge, istFahrzeugStatus } from '@rent2cool/shared';
 import { Leer, Meldungen, Plakette, Seitenkopf } from '../../../../components/bausteine';
+import { Verlauf } from '../../../../components/verlauf';
 import { Auswahl, FormularRahmen } from '../../../../components/formular';
 import { KalibrierungFelder } from '../../../../components/stammdaten';
 import { apiGet, apiGetOderNull } from '../../../../lib/api';
@@ -230,6 +231,7 @@ export default async function FahrzeugDetail({
           </FormularRahmen>
         </section>
       ) : null}
+      <Verlauf entitaetId={f.id} typen={['fahrzeug', 'fahrzeug_status']} />
     </>
   );
 }

@@ -39,6 +39,10 @@ test('Kunde, Fahrer und Fahrzeug bearbeiten', async ({ page, context }) => {
   await page.getByRole('button', { name: 'Änderungen speichern' }).click();
   await expect(page.getByRole('status')).toContainText('Änderungen gespeichert');
   await expect(page.getByText('Testweg 1, 14467 Potsdam, DE')).toBeVisible();
+  const verlauf = page.getByRole('region', { name: 'Verlauf' });
+  await expect(verlauf).toContainText('Stammdaten geändert');
+  await expect(verlauf).toContainText('Ort: Berlin → Potsdam');
+  await expect(verlauf).toContainText('ops.dev');
 
   // Ohne Änderung speichern → nichts gespeichert.
   await page.getByRole('link', { name: 'Stammdaten bearbeiten' }).click();

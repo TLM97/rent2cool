@@ -4,12 +4,15 @@
  */
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { Principal } from '@rent2cool/shared';
 import { createDbClient } from '../db/client';
 import { mandant } from '../db/schema';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 import { FahrzeugService } from './fahrzeug.service';
 import type { FahrzeugErstellen } from './dto';
 
+/** Ausführender für Statuswechsel (Audit-Pflicht). */
+const AKTEUR: Principal = { akteurId: 'test-integration', rollen: ['admin'] };
 const RUN = process.env.RUN_INTEGRATION === '1';
 const url =
   process.env.DATABASE_URL ?? 'postgres://rent2cool:rent2cool_local_dev@localhost:5432/rent2cool';
@@ -54,7 +57,7 @@ describe.skipIf(!RUN)('Fahrzeugakte (Integration, braucht DB)', () => {
     // Noch nicht buchbar: Status 'angelegt' und keine Kalibrierung.
     expect((await service.buchbarkeit(id, new Date())).buchbar).toBe(false);
 
-    await service.aendereStatus(id, 'verfuegbar');
+    await service.aendereStatus(AKTEUR, id, 'verfuegbar');
     // Immer noch nicht buchbar: keine gültige Kalibrierung.
     expect((await service.buchbarkeit(id, new Date())).buchbar).toBe(false);
 
@@ -68,8 +71,8 @@ describe.skipIf(!RUN)('Fahrzeugakte (Integration, braucht DB)', () => {
 
   it('verweigert einen unerlaubten Statusübergang', async () => {
     const { id } = await service.erstelle(undefined, neuesFahrzeug(`T-${randomUUID().slice(0, 8)}`));
-    await service.aendereStatus(id, 'verfuegbar');
-    await expect(service.aendereStatus(id, 'stillgelegt')).rejects.toThrow();
+    await service.aendereStatus(AKTEUR, id, 'verfuegbar');
+    await expect(service.aendereStatus(AKTEUR, id, 'stillgelegt')).rejects.toThrow();
   });
 
   it('listet fällige Kalibrierungen (Sensor ohne Kalibrierung)', async () => {

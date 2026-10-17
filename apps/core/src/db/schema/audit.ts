@@ -11,6 +11,9 @@ export const auditEvent = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     zeit: timestamp('zeit', { withTimezone: true }).notNull().defaultNow(),
     akteurId: text('akteur_id').notNull(),
+    /** Anmeldename zum Zeitpunkt der Aktion (lesbar); maßgeblich bleibt `akteurId`. */
+    akteurName: text('akteur_name'),
+    /** Alle Rollen des Akteurs, kommagetrennt (bis 0009: nur die erste). */
     akteurRolle: text('akteur_rolle'),
     aktion: text('aktion').notNull(),
     entitaetTyp: text('entitaet_typ').notNull(),

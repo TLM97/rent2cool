@@ -13,6 +13,61 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Protokollierung der Statuswechsel
+
+**Statuswechsel mit vollständigem Audit – erledigt.** (Auf Toms Auftrag;
+Planung möge die Aufgabe in `TASKS.md` nachziehen.)
+
+Erledigt:
+- **Alle Statuswechsel** (Fahrzeug, Kunde, Fahrer, Miete, Rechnung, Alarm
+  quittieren/schließen, Abweichung) laufen über einen gemeinsamen Ablauf:
+  Zeile sperren → Übergang prüfen → speichern → Audit mit altem und neuem
+  Wert, alles in einer Transaktion. Mitprotokolliert werden auch die
+  Folgefelder (z. B. `startIst`, `gestelltAm`, `geschlossenAm`,
+  `letztePruefungAm`).
+- **Behobener Fehler (Gleichzeitigkeit):** Bisher wurde ohne Sperre gelesen
+  und geschrieben – zwei gleichzeitige Wechsel vom selben Stand (z. B. Miete
+  „aktiv“ und „storniert“) konnten beide gelingen, der zweite überschrieb den
+  ersten unbemerkt. Jetzt gewinnt genau einer; getestet.
+- **Rechnung gestellt → Miete abgerechnet** jetzt in derselben Transaktion
+  und mit eigenem Audit-Eintrag (vorher zwei getrennte Schritte).
+- **Mandantentrennung** auch bei Statuswechseln (vorher nicht geprüft).
+- Gleicher Status ohne Änderung → kein Update, kein Audit-Eintrag.
+  Abweichungen: Bewertung/Maßnahmen ergänzen ohne Statuswechsel wird
+  protokolliert.
+- **Audit-Eintrag erweitert** (Migration `0009_audit_akteur_name`):
+  Anmeldename (`preferred_username`) zusätzlich zur Konto-ID; `akteur_rolle`
+  enthält jetzt **alle** Rollen (vorher nur die erste). Alte Einträge bleiben
+  unverändert (append-only).
+- **Verlauf lesbar:** `GET /v1/audit` (nur interne Rollen, mit Blättern) und
+  Abschnitt „Verlauf“ auf den Seiten von Kunde, Fahrer, Fahrzeug, Miete,
+  Rechnung und Abweichung: wer, wann, Vorgang, Feld alt → neu.
+- **Tests:** shared 41, admin 42, Kern 38 Unit + 39 Integration (77/77 gegen
+  den lokalen Stack); neue Tests für den Ablauf (Unit), Audit-Inhalte,
+  Gleichzeitigkeit, Folgeschritt in derselben Transaktion, Mandant. Alle 8
+  Browser-Tests grün, inkl. Verlauf auf Miete, Rechnung, Abweichung, Kunde.
+
+Offen / Abkürzungen:
+- **Anlegen** protokolliert weiter nur die Antwort (meist nur die ID) über die
+  Rückfallebene. Vollständig wäre: angelegter Datensatz als neuer Wert →
+  nächster Schritt nach demselben Muster.
+- Der Verlauf-Endpunkt filtert nicht nach Mandant (nur interne Rollen haben
+  Zugriff; ein Kundenportal braucht vor dem Go-live eine Mandantenprüfung).
+- Der Verlauf zeigt die letzten 50 Einträge je Datensatz; Blättern in der
+  Oberfläche fehlt noch (die API kann es).
+- Die Testdateien des Kerns werden nicht typgeprüft (`tsconfig` schließt
+  `*.spec.ts` aus); falsche Aufrufe fallen erst beim Testlauf auf. Empfehlung:
+  eigene `tsconfig` für Tests in der CI.
+
+Fragen an Planung:
+- **F-31:** Wer darf den Audit-Verlauf sehen? Heute: `admin`, `ops`,
+  `qa_approver`, `dpo`. Soll `dpo` (Datenschutz) wegen personenbezogener
+  Inhalte gesondert behandelt werden, und sollen Kunden (`kunde_qa`) den
+  Verlauf ihrer eigenen Mieten sehen?
+- F-24, F-26 bis F-30 weiter offen (siehe unten).
+
+---
+
 ### 2026-10-17 – Sensortausch
 
 **Sensortausch – erledigt.** (Auf Toms Auftrag; Planung möge die Aufgabe in

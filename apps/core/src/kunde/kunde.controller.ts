@@ -68,14 +68,14 @@ export class KundeController {
 
   @Post(':id/status')
   @Roles('ops', 'admin')
-  @Audited('kunde_status')
+  @AuditImService('kunde_status')
   @HttpCode(200)
-  status(@Param('id') id: string, @Body() body: unknown) {
+  status(@CurrentUser() user: Principal, @Param('id') id: string, @Body() body: unknown) {
     const { status } = parse(kundeStatusSchema, body);
     if (!istKundeStatus(status)) {
       throw new BadRequestException('Unbekannter Status');
     }
-    return this.service.aendereKundeStatus(id, status);
+    return this.service.aendereKundeStatus(user, id, status);
   }
 
   @Post(':kundeId/fahrer')
@@ -124,14 +124,14 @@ export class FahrerController {
 
   @Post(':id/status')
   @Roles('ops', 'admin')
-  @Audited('fahrer_status')
+  @AuditImService('fahrer_status')
   @HttpCode(200)
-  status(@Param('id') id: string, @Body() body: unknown) {
+  status(@CurrentUser() user: Principal, @Param('id') id: string, @Body() body: unknown) {
     const { status } = parse(fahrerStatusSchema, body);
     if (!istFahrerStatus(status)) {
       throw new BadRequestException('Unbekannter Status');
     }
-    return this.service.aendereFahrerStatus(id, status);
+    return this.service.aendereFahrerStatus(user, id, status);
   }
 
   @Get(':id/einsatzbereit')

@@ -10,9 +10,11 @@ import {
   istMieteStatus,
   istMieteUebergangErlaubt,
   type MieteStatus,
+  type Principal,
   type TemperaturNachweis,
 } from '@rent2cool/shared';
-import type { Database } from '../db/client';
+import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
+import type { Database, Transaktion } from '../db/client';
 import { DB } from '../db/db.module';
 import { fahrzeug, kunde, miete } from '../db/schema';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
@@ -197,24 +199,43 @@ export class MieteService {
     return row;
   }
 
-  async aendereStatus(id: string, nach: MieteStatus): Promise<{ id: string; status: MieteStatus }> {
-    const aktuell = await this.holeMiete(id);
-    const von = aktuell.status;
-    if (!istMieteStatus(von)) {
-      throw new BadRequestException(`Unbekannter aktueller Status: ${von}`);
-    }
-    if (von !== nach && !istMieteUebergangErlaubt(von, nach)) {
-      throw new BadRequestException(`Statusübergang "${von}" -> "${nach}" ist nicht erlaubt`);
-    }
-    const satz: Partial<typeof miete.$inferInsert> = { status: nach, aktualisiertAm: new Date() };
-    if (nach === 'aktiv' && !aktuell.startIst) {
-      satz.startIst = new Date();
-    }
-    if (nach === 'beendet' && !aktuell.endeIst) {
-      satz.endeIst = new Date();
-    }
-    await this.db.update(miete).set(satz).where(eq(miete.id, id));
-    return { id, status: nach };
+  /**
+   * Status ändern; `ausfuehrer` erlaubt den Aufruf innerhalb einer laufenden
+   * Transaktion (z. B. Rechnung stellen → Miete abgerechnet).
+   */
+  async aendereStatus(
+    principal: Principal,
+    id: string,
+    nach: MieteStatus,
+    ausfuehrer: Database | Transaktion = this.db,
+  ): Promise<StatusErgebnis<MieteStatus>> {
+    const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
+    return wechsleStatus(ausfuehrer, principal, {
+      entitaetTyp: 'miete_status',
+      id,
+      nach,
+      nichtGefunden: 'Miete nicht gefunden',
+      lade: async (tx) =>
+        (
+          await tx
+            .select({ status: miete.status, startIst: miete.startIst, endeIst: miete.endeIst })
+            .from(miete)
+            .where(and(eq(miete.id, id), eq(miete.mandantId, mandant)))
+            .for('update')
+        )[0],
+      istStatus: istMieteStatus,
+      erlaubt: istMieteUebergangErlaubt,
+      zusatz: (m) => ({
+        ...(nach === 'aktiv' && !m.startIst ? { startIst: new Date() } : {}),
+        ...(nach === 'beendet' && !m.endeIst ? { endeIst: new Date() } : {}),
+      }),
+      speichere: async (tx, werte) => {
+        await tx
+          .update(miete)
+          .set({ ...werte, aktualisiertAm: new Date() })
+          .where(eq(miete.id, id));
+      },
+    });
   }
 
   /** Temperaturnachweis zu dieser Miete (bindet Fahrzeug + Zeitfenster der Miete). */

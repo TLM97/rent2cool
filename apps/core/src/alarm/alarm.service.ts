@@ -1,15 +1,19 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import {
   findeAlarmKandidaten,
+  istAlarmStatus,
   istAlarmUebergangErlaubt,
   type AlarmStatus,
+  type Principal,
   type TelemetrieNachricht,
   type Temperaturprofil,
 } from '@rent2cool/shared';
+import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Database } from '../db/client';
 import { DB } from '../db/db.module';
 import { alarm } from '../db/schema';
+import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 
 @Injectable()
 export class AlarmService {
@@ -73,21 +77,41 @@ export class AlarmService {
     return row;
   }
 
-  private async setze(id: string, nach: AlarmStatus, extra: Partial<typeof alarm.$inferInsert>) {
-    const a = await this.hole(id);
-    const von = a.status as AlarmStatus;
-    if (von !== nach && !istAlarmUebergangErlaubt(von, nach)) {
-      throw new BadRequestException(`Statusübergang "${von}" -> "${nach}" ist nicht erlaubt`);
-    }
-    await this.db.update(alarm).set({ status: nach, ...extra }).where(eq(alarm.id, id));
-    return { id, status: nach };
+  private setze(
+    principal: Principal,
+    id: string,
+    nach: AlarmStatus,
+    extra: Partial<typeof alarm.$inferInsert>,
+  ): Promise<StatusErgebnis<AlarmStatus>> {
+    const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
+    return wechsleStatus(this.db, principal, {
+      entitaetTyp: nach === 'quittiert' ? 'alarm_quittieren' : 'alarm_schliessen',
+      id,
+      nach,
+      nichtGefunden: 'Alarm nicht gefunden',
+      lade: async (tx) =>
+        (
+          await tx
+            .select({ status: alarm.status, quittiertVon: alarm.quittiertVon, quittiertAm: alarm.quittiertAm })
+            .from(alarm)
+            .where(and(eq(alarm.id, id), eq(alarm.mandantId, mandant)))
+            .for('update')
+        )[0],
+      istStatus: istAlarmStatus,
+      erlaubt: istAlarmUebergangErlaubt,
+      // Erneutes Quittieren überschreibt nicht, wer zuerst quittiert hat.
+      zusatz: (a) => (a.status === nach ? {} : extra),
+      speichere: async (tx, werte) => {
+        await tx.update(alarm).set(werte).where(eq(alarm.id, id));
+      },
+    });
   }
 
-  quittiere(id: string, von: string): Promise<{ id: string; status: AlarmStatus }> {
-    return this.setze(id, 'quittiert', { quittiertVon: von, quittiertAm: new Date() });
+  quittiere(principal: Principal, id: string): Promise<StatusErgebnis<AlarmStatus>> {
+    return this.setze(principal, id, 'quittiert', { quittiertVon: principal.akteurId, quittiertAm: new Date() });
   }
 
-  schliesse(id: string): Promise<{ id: string; status: AlarmStatus }> {
-    return this.setze(id, 'geschlossen', {});
+  schliesse(principal: Principal, id: string): Promise<StatusErgebnis<AlarmStatus>> {
+    return this.setze(principal, id, 'geschlossen', {});
   }
 }

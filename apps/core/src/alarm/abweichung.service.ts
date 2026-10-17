@@ -1,9 +1,12 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import {
+  istAbweichungStatus,
   istAbweichungUebergangErlaubt,
   type AbweichungStatus,
+  type Principal,
 } from '@rent2cool/shared';
+import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Database } from '../db/client';
 import { DB } from '../db/db.module';
 import { abweichung } from '../db/schema';
@@ -58,22 +61,45 @@ export class AbweichungService {
     return row;
   }
 
+  /** Status und Bewertungsfelder ändern (auch ohne Statuswechsel, z. B. Maßnahmen ergänzen). */
   async aendereStatus(
+    principal: Principal,
     id: string,
     nach: AbweichungStatus,
     felder: { bewertung?: string; massnahmen?: string; verantwortlich?: string },
-  ): Promise<{ id: string; status: AbweichungStatus }> {
-    const a = await this.hole(id);
-    const von = a.status as AbweichungStatus;
-    if (von !== nach && !istAbweichungUebergangErlaubt(von, nach)) {
-      throw new BadRequestException(`Statusübergang "${von}" -> "${nach}" ist nicht erlaubt`);
-    }
-    const satz: Partial<typeof abweichung.$inferInsert> = { status: nach, aktualisiertAm: new Date() };
-    if (felder.bewertung !== undefined) satz.bewertung = felder.bewertung;
-    if (felder.massnahmen !== undefined) satz.massnahmen = felder.massnahmen;
-    if (felder.verantwortlich !== undefined) satz.verantwortlich = felder.verantwortlich;
-    if (nach === 'geschlossen') satz.geschlossenAm = new Date();
-    await this.db.update(abweichung).set(satz).where(eq(abweichung.id, id));
-    return { id, status: nach };
+  ): Promise<StatusErgebnis<AbweichungStatus>> {
+    const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
+    return wechsleStatus(this.db, principal, {
+      entitaetTyp: 'abweichung_status',
+      id,
+      nach,
+      nichtGefunden: 'Abweichung nicht gefunden',
+      lade: async (tx) =>
+        (
+          await tx
+            .select({
+              status: abweichung.status,
+              bewertung: abweichung.bewertung,
+              massnahmen: abweichung.massnahmen,
+              verantwortlich: abweichung.verantwortlich,
+              geschlossenAm: abweichung.geschlossenAm,
+            })
+            .from(abweichung)
+            .where(and(eq(abweichung.id, id), eq(abweichung.mandantId, mandant)))
+            .for('update')
+        )[0],
+      istStatus: istAbweichungStatus,
+      erlaubt: istAbweichungUebergangErlaubt,
+      zusatz: (a) => ({
+        ...felder,
+        ...(nach === 'geschlossen' && !a.geschlossenAm ? { geschlossenAm: new Date() } : {}),
+      }),
+      speichere: async (tx, werte) => {
+        await tx
+          .update(abweichung)
+          .set({ ...werte, aktualisiertAm: new Date() })
+          .where(eq(abweichung.id, id));
+      },
+    });
   }
 }

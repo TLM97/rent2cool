@@ -15,7 +15,7 @@ describe('AuditService', () => {
     } as unknown as Database;
 
     const service = new AuditService(db);
-    const principal: Principal = { akteurId: 'user-9', rollen: ['admin'], mandantId: 'm-1' };
+    const principal: Principal = { akteurId: 'user-9', rollen: ['admin', 'ops'], mandantId: 'm-1', name: 'admin.dev' };
     await service.protokolliere(principal, {
       aktion: 'POST',
       entitaetTyp: 'demo',
@@ -27,7 +27,8 @@ describe('AuditService', () => {
     expect(eingefuegt).toHaveLength(1);
     expect(eingefuegt[0]).toMatchObject({
       akteurId: 'user-9',
-      akteurRolle: 'admin',
+      akteurName: 'admin.dev',
+      akteurRolle: 'admin,ops',
       aktion: 'POST',
       entitaetTyp: 'demo',
       entitaetId: 'x1',

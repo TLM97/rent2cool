@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { istMieteUebergangErlaubt, MIETE_STATUS, type TemperaturNachweis } from '@rent2cool/shared';
 import { Leer, Meldungen, Plakette, Seitenkopf, StatusFormular } from '../../../../components/bausteine';
+import { Verlauf } from '../../../../components/verlauf';
 import { Feld, FormularRahmen } from '../../../../components/formular';
 import { apiGet, apiGetOderNull } from '../../../../lib/api';
 import { formatDatumZeit, formatEuro, formatTemperatur, kurzeId, statusLabel } from '../../../../lib/format';
@@ -187,6 +188,7 @@ export default async function MieteDetail({
           </div>
         </section>
       ) : null}
+      <Verlauf entitaetId={miete.id} typen={['miete', 'miete_status']} />
     </>
   );
 }

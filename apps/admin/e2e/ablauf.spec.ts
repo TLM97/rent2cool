@@ -110,11 +110,18 @@ test('kompletter Ablauf von Fahrzeug bis Abweichung', async ({ page }) => {
   // --- Miete durchlaufen, Rechnung erstellen ---
   await statusWechseln(page, 'Mietstatus ändern', 'aktiv', 'Status');
   await statusWechseln(page, 'Mietstatus ändern', 'beendet', 'Status');
+  // Verlauf: jeder Statuswechsel mit Person, altem und neuem Wert.
+  const mietVerlauf = page.getByRole('region', { name: 'Verlauf' });
+  await expect(mietVerlauf).toContainText('admin.dev');
+  await expect(mietVerlauf).toContainText('Status: bestätigt → aktiv');
+  await expect(mietVerlauf).toContainText('Status: aktiv → beendet');
+  await mietVerlauf.screenshot({ path: `${SCREENS}/22-miete-verlauf.png` });
   await page.getByLabel('Nettobetrag (EUR)').fill('250.00');
   await page.getByRole('button', { name: 'Rechnung erstellen' }).click();
   await expect(page.getByRole('status')).toContainText('Rechnung als Entwurf angelegt');
   await statusWechseln(page, 'Rechnungsstatus ändern', 'gestellt', 'Status');
   await statusWechseln(page, 'Rechnungsstatus ändern', 'bezahlt', 'Status');
+  await expect(page.getByRole('region', { name: 'Verlauf' })).toContainText('Status: gestellt → bezahlt');
   await expect(page.getByText('297,50')).toBeVisible();
   await page.screenshot({ path: `${SCREENS}/15-rechnung.png`, fullPage: true });
 
@@ -137,7 +144,10 @@ test('kompletter Ablauf von Fahrzeug bis Abweichung', async ({ page }) => {
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByRole('status')).toContainText('Abweichung aktualisiert');
   }
-  await expect(page.getByText('Fahrer nachgeschult.')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Erfassung' })).toContainText('Fahrer nachgeschult.');
+  const abwVerlauf = page.getByRole('region', { name: 'Verlauf' });
+  await expect(abwVerlauf).toContainText('Maßnahmen: – → Fahrer nachgeschult.');
+  await expect(abwVerlauf).toContainText('Status: bewertet → geschlossen');
   await expect(page.getByRole('heading', { name: 'Bewerten und weiterführen' })).toHaveCount(0);
   await page.screenshot({ path: `${SCREENS}/16-abweichung.png`, fullPage: true });
 

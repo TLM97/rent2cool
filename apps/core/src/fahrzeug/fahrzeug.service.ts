@@ -1,14 +1,14 @@
 import {
-  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { and, desc, eq, inArray, max, sql } from 'drizzle-orm';
-import { istUebergangErlaubt, type FahrzeugStatus, type Principal } from '@rent2cool/shared';
+import { istFahrzeugStatus, istUebergangErlaubt, type FahrzeugStatus, type Principal } from '@rent2cool/shared';
 import { ermittleAenderungen, neueWerte, pruefeVersion, versionVon, type StammdatenErgebnis } from '../audit/aenderung';
 import { schreibeAudit } from '../audit/audit.service';
+import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Database } from '../db/client';
 import { DB } from '../db/db.module';
 import { aggregat, fahrzeug, kalibrierung, sensor } from '../db/schema';
@@ -295,26 +295,30 @@ export class FahrzeugService {
     });
   }
 
-  async aendereStatus(id: string, nach: FahrzeugStatus): Promise<{ id: string; status: FahrzeugStatus }> {
-    const [fz] = await this.db
-      .select({ status: fahrzeug.status })
-      .from(fahrzeug)
-      .where(eq(fahrzeug.id, id));
-    if (!fz) {
-      throw new NotFoundException('Fahrzeug nicht gefunden');
-    }
-    const von = fz.status as FahrzeugStatus;
-    if (von === nach) {
-      return { id, status: nach };
-    }
-    if (!istUebergangErlaubt(von, nach)) {
-      throw new BadRequestException(`Statusübergang "${von}" -> "${nach}" ist nicht erlaubt`);
-    }
-    await this.db
-      .update(fahrzeug)
-      .set({ status: nach, aktualisiertAm: new Date() })
-      .where(eq(fahrzeug.id, id));
-    return { id, status: nach };
+  async aendereStatus(principal: Principal, id: string, nach: FahrzeugStatus): Promise<StatusErgebnis<FahrzeugStatus>> {
+    const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
+    return wechsleStatus(this.db, principal, {
+      entitaetTyp: 'fahrzeug_status',
+      id,
+      nach,
+      nichtGefunden: 'Fahrzeug nicht gefunden',
+      lade: async (tx) =>
+        (
+          await tx
+            .select({ status: fahrzeug.status })
+            .from(fahrzeug)
+            .where(and(eq(fahrzeug.id, id), eq(fahrzeug.mandantId, mandant)))
+            .for('update')
+        )[0],
+      istStatus: istFahrzeugStatus,
+      erlaubt: istUebergangErlaubt,
+      speichere: async (tx, werte) => {
+        await tx
+          .update(fahrzeug)
+          .set({ ...werte, aktualisiertAm: new Date() })
+          .where(eq(fahrzeug.id, id));
+      },
+    });
   }
 
   async fuegeKalibrierungHinzu(

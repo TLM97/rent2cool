@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Leer, Plakette, Seitenkopf } from '../../../../../../components/bausteine';
+import { Verlauf } from '../../../../../../components/verlauf';
 import { FormularRahmen } from '../../../../../../components/formular';
 import { FahrerFelder } from '../../../../../../components/stammdaten';
 import { apiGetOderNull } from '../../../../../../lib/api';
@@ -56,6 +57,7 @@ export default async function FahrerBearbeiten({ params }: { params: Promise<{ i
           </>
         )}
       </section>
+      <Verlauf entitaetId={fahrer.id} typen={['fahrer', 'fahrer_status']} />
     </>
   );
 }

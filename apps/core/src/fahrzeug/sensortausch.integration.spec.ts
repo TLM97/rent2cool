@@ -46,7 +46,7 @@ describe.skipIf(!RUN)('Sensortausch (Integration, braucht DB)', () => {
     });
     const sensorId = (await service.holeAkte(fahrzeugId)).aggregate[0]!.sensoren[0]!.id;
     await service.fuegeKalibrierungHinzu(sensorId, 'test', kalibrierung());
-    await service.aendereStatus(fahrzeugId, 'verfuegbar');
+    await service.aendereStatus(ops, fahrzeugId, 'verfuegbar');
     return { fahrzeugId, sensorId, sn };
   }
 

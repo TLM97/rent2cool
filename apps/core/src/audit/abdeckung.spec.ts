@@ -14,12 +14,14 @@ import { HealthController } from '../health/health.controller';
 import { FahrerController, KundeController } from '../kunde/kunde.controller';
 import { MieteController } from '../miete/miete.controller';
 import { RechnungController } from '../rechnung/rechnung.controller';
+import { AuditController } from './audit.controller';
 import { AUDITED_KEY } from './audited.decorator';
 
 const CONTROLLER = [
   AdminController,
   AlarmController,
   AbweichungController,
+  AuditController,
   BerichtController,
   FahrzeugController,
   SensorController,

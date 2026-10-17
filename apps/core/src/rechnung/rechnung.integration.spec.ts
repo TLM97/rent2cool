@@ -3,6 +3,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { Principal } from '@rent2cool/shared';
 import type { ConfigService } from '@nestjs/config';
 import type { Env } from '../config/env';
 import { createDbClient } from '../db/client';
@@ -18,6 +19,8 @@ import { InMemoryBerichtSpeicher } from '../bericht/speicher';
 import { MieteService } from '../miete/miete.service';
 import { RechnungService } from './rechnung.service';
 
+/** Ausführender für Statuswechsel (Audit-Pflicht). */
+const AKTEUR: Principal = { akteurId: 'test-integration', rollen: ['admin'] };
 const RUN = process.env.RUN_INTEGRATION === '1';
 const url =
   process.env.DATABASE_URL ?? 'postgres://rent2cool:rent2cool_local_dev@localhost:5432/rent2cool';
@@ -41,15 +44,15 @@ describe.skipIf(!RUN)('Rechnung (Integration, braucht DB)', () => {
       hatFahrtenschreiber: false,
       aggregat: { sensoren: [{ messgroesse: 'temperatur_laderaum', einheit: 'C' }] },
     });
-    await fahrzeuge.aendereStatus(fahrzeugId, 'verfuegbar');
+    await fahrzeuge.aendereStatus(AKTEUR, fahrzeugId, 'verfuegbar');
     const akte = await fahrzeuge.holeAkte(fahrzeugId);
     await fahrzeuge.fuegeKalibrierungHinzu(akte.aggregate[0]!.sensoren[0]!.id, 'tester', {
       durchgefuehrtAm: new Date().toISOString(),
       gueltigBis: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
     });
     const { id: kundeId } = await kunden.erstelleKunde(undefined, { firmenname: 'RK', land: 'DE' });
-    await kunden.aendereKundeStatus(kundeId, 'in_pruefung');
-    await kunden.aendereKundeStatus(kundeId, 'freigegeben');
+    await kunden.aendereKundeStatus(AKTEUR, kundeId, 'in_pruefung');
+    await kunden.aendereKundeStatus(AKTEUR, kundeId, 'freigegeben');
     const r = await mieten.erstelle(undefined, {
       kundeId,
       fahrzeugId,
@@ -57,8 +60,8 @@ describe.skipIf(!RUN)('Rechnung (Integration, braucht DB)', () => {
       startGeplant: new Date(Date.now() + 3600_000).toISOString(),
       endeGeplant: new Date(Date.now() + 7200_000).toISOString(),
     });
-    await mieten.aendereStatus(r.id, 'aktiv');
-    await mieten.aendereStatus(r.id, 'beendet');
+    await mieten.aendereStatus(AKTEUR, r.id, 'aktiv');
+    await mieten.aendereStatus(AKTEUR, r.id, 'beendet');
     return r.id;
   }
 
@@ -100,9 +103,9 @@ describe.skipIf(!RUN)('Rechnung (Integration, braucht DB)', () => {
     expect(zurMiete.eintraege[0]!.id).toBe(r.id);
 
     // Stellen -> Miete wird abgerechnet; dann bezahlt.
-    await rechnungen.aendereStatus(r.id, 'gestellt');
+    await rechnungen.aendereStatus(AKTEUR, r.id, 'gestellt');
     expect((await mieten.holeMiete(mieteId)).status).toBe('abgerechnet');
-    await rechnungen.aendereStatus(r.id, 'bezahlt');
+    await rechnungen.aendereStatus(AKTEUR, r.id, 'bezahlt');
     expect((await rechnungen.holeRechnung(r.id)).status).toBe('bezahlt');
   });
 
@@ -114,15 +117,15 @@ describe.skipIf(!RUN)('Rechnung (Integration, braucht DB)', () => {
       hatFahrtenschreiber: false,
       aggregat: { sensoren: [{ messgroesse: 'temperatur_laderaum', einheit: 'C' }] },
     });
-    await fahrzeuge.aendereStatus(fahrzeugId, 'verfuegbar');
+    await fahrzeuge.aendereStatus(AKTEUR, fahrzeugId, 'verfuegbar');
     const akte = await fahrzeuge.holeAkte(fahrzeugId);
     await fahrzeuge.fuegeKalibrierungHinzu(akte.aggregate[0]!.sensoren[0]!.id, 'tester', {
       durchgefuehrtAm: new Date().toISOString(),
       gueltigBis: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
     });
     const { id: kundeId } = await kunden.erstelleKunde(undefined, { firmenname: 'RK2', land: 'DE' });
-    await kunden.aendereKundeStatus(kundeId, 'in_pruefung');
-    await kunden.aendereKundeStatus(kundeId, 'freigegeben');
+    await kunden.aendereKundeStatus(AKTEUR, kundeId, 'in_pruefung');
+    await kunden.aendereKundeStatus(AKTEUR, kundeId, 'freigegeben');
     const r = await mieten.erstelle(undefined, {
       kundeId,
       fahrzeugId,

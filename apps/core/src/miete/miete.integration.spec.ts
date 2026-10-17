@@ -5,6 +5,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { Principal } from '@rent2cool/shared';
 import { createDbClient } from '../db/client';
 import { mandant } from '../db/schema';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
@@ -17,6 +18,8 @@ import { HmacSignierer } from '../bericht/signierer';
 import { InMemoryBerichtSpeicher } from '../bericht/speicher';
 import { MieteService } from './miete.service';
 
+/** Ausführender für Statuswechsel (Audit-Pflicht). */
+const AKTEUR: Principal = { akteurId: 'test-integration', rollen: ['admin'] };
 const RUN = process.env.RUN_INTEGRATION === '1';
 const url =
   process.env.DATABASE_URL ?? 'postgres://rent2cool:rent2cool_local_dev@localhost:5432/rent2cool';
@@ -35,7 +38,7 @@ describe.skipIf(!RUN)('Buchung/Miete (Integration, braucht DB)', () => {
       hatFahrtenschreiber: tacho,
       aggregat: { typ: 'Kuehlaufbau', sensoren: [{ messgroesse: 'temperatur_laderaum', einheit: 'C' }] },
     });
-    await fahrzeuge.aendereStatus(id, 'verfuegbar');
+    await fahrzeuge.aendereStatus(AKTEUR, id, 'verfuegbar');
     const akte = await fahrzeuge.holeAkte(id);
     const sensorId = akte.aggregate[0]!.sensoren[0]!.id;
     await fahrzeuge.fuegeKalibrierungHinzu(sensorId, 'tester', {
@@ -47,8 +50,8 @@ describe.skipIf(!RUN)('Buchung/Miete (Integration, braucht DB)', () => {
 
   async function freigegebenerKunde(): Promise<string> {
     const { id } = await kunden.erstelleKunde(undefined, { firmenname: `K ${randomUUID().slice(0, 6)}`, land: 'DE' });
-    await kunden.aendereKundeStatus(id, 'in_pruefung');
-    await kunden.aendereKundeStatus(id, 'freigegeben');
+    await kunden.aendereKundeStatus(AKTEUR, id, 'in_pruefung');
+    await kunden.aendereKundeStatus(AKTEUR, id, 'freigegeben');
     return id;
   }
 
@@ -58,8 +61,8 @@ describe.skipIf(!RUN)('Buchung/Miete (Integration, braucht DB)', () => {
       fuehrerscheinKlasse: 'B',
       fuehrerscheinGueltigBis: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
     });
-    await kunden.aendereFahrerStatus(id, 'identitaet_pruefung');
-    await kunden.aendereFahrerStatus(id, 'freigegeben');
+    await kunden.aendereFahrerStatus(AKTEUR, id, 'identitaet_pruefung');
+    await kunden.aendereFahrerStatus(AKTEUR, id, 'freigegeben');
     return id;
   }
 
@@ -136,14 +139,14 @@ describe.skipIf(!RUN)('Buchung/Miete (Integration, braucht DB)', () => {
     const fahrzeugId = await bereitesFahrzeug(false);
     const kundeId = await freigegebenerKunde();
     const r = await mieten.erstelle(undefined, { kundeId, fahrzeugId, auslandsfahrtGeplant: false, ...fenster() });
-    await mieten.aendereStatus(r.id, 'aktiv');
-    await mieten.aendereStatus(r.id, 'beendet');
-    await mieten.aendereStatus(r.id, 'abgerechnet');
+    await mieten.aendereStatus(AKTEUR, r.id, 'aktiv');
+    await mieten.aendereStatus(AKTEUR, r.id, 'beendet');
+    await mieten.aendereStatus(AKTEUR, r.id, 'abgerechnet');
     const m = await mieten.holeMiete(r.id);
     expect(m.status).toBe('abgerechnet');
     expect(m.startIst).not.toBeNull();
     expect(m.endeIst).not.toBeNull();
-    await expect(mieten.aendereStatus(r.id, 'aktiv')).rejects.toThrow(); // abgerechnet ist Endzustand
+    await expect(mieten.aendereStatus(AKTEUR, r.id, 'aktiv')).rejects.toThrow(); // abgerechnet ist Endzustand
   });
 
   it('liefert den Temperaturnachweis gebunden an die Miete', async () => {

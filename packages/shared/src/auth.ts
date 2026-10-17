@@ -32,6 +32,8 @@ export interface Principal {
   readonly rollen: readonly Rolle[];
   /** Mandant (Firmenkunde) aus dem Token, falls vorhanden. */
   readonly mandantId?: string;
+  /** Anmeldename (`preferred_username`) – lesbar im Audit Trail, `akteurId` bleibt maßgeblich. */
+  readonly name?: string;
 }
 
 export function hatRolle(principal: Principal, ...erlaubte: Rolle[]): boolean {

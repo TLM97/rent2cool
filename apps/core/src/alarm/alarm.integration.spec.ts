@@ -4,6 +4,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { Principal } from '@rent2cool/shared';
 import type { TelemetrieNachricht } from '@rent2cool/shared';
 import { createDbClient } from '../db/client';
 import { mandant } from '../db/schema';
@@ -12,6 +13,8 @@ import { FahrzeugService } from '../fahrzeug/fahrzeug.service';
 import { AbweichungService } from './abweichung.service';
 import { AlarmService } from './alarm.service';
 
+/** Ausführender für Statuswechsel (Audit-Pflicht). */
+const AKTEUR: Principal = { akteurId: 'test-integration', rollen: ['admin'] };
 const RUN = process.env.RUN_INTEGRATION === '1';
 const url =
   process.env.DATABASE_URL ?? 'postgres://rent2cool:rent2cool_local_dev@localhost:5432/rent2cool';
@@ -72,8 +75,8 @@ describe.skipIf(!RUN)('Alarme & Abweichungen (Integration, braucht DB)', () => {
     expect(liste.gesamt).toBe(2);
 
     const alarmId = liste.eintraege[0]!.id;
-    expect((await alarme.quittiere(alarmId, 'ops-user')).status).toBe('quittiert');
-    expect((await alarme.schliesse(alarmId)).status).toBe('geschlossen');
+    expect((await alarme.quittiere(AKTEUR, alarmId)).status).toBe('quittiert');
+    expect((await alarme.schliesse(AKTEUR, alarmId)).status).toBe('geschlossen');
   });
 
   it('führt eine Abweichung durch das CAPA-Verfahren', async () => {
@@ -87,9 +90,9 @@ describe.skipIf(!RUN)('Alarme & Abweichungen (Integration, braucht DB)', () => {
       beschreibung: 'Temperatur über Grenze während Transport',
       schweregrad: 'hoch',
     });
-    await abweichungen.aendereStatus(id, 'in_bewertung', {});
-    await abweichungen.aendereStatus(id, 'bewertet', { bewertung: 'Kühlkette kurz unterbrochen' });
-    await abweichungen.aendereStatus(id, 'geschlossen', { massnahmen: 'Ware geprüft, freigegeben', verantwortlich: 'qa-user' });
+    await abweichungen.aendereStatus(AKTEUR, id, 'in_bewertung', {});
+    await abweichungen.aendereStatus(AKTEUR, id, 'bewertet', { bewertung: 'Kühlkette kurz unterbrochen' });
+    await abweichungen.aendereStatus(AKTEUR, id, 'geschlossen', { massnahmen: 'Ware geprüft, freigegeben', verantwortlich: 'qa-user' });
     const a = await abweichungen.hole(id);
     expect(a.status).toBe('geschlossen');
     expect(a.geschlossenAm).not.toBeNull();
@@ -101,6 +104,6 @@ describe.skipIf(!RUN)('Alarme & Abweichungen (Integration, braucht DB)', () => {
       bezugId: randomUUID(),
       beschreibung: 'Test',
     });
-    await expect(abweichungen.aendereStatus(id, 'geschlossen', {})).rejects.toThrow();
+    await expect(abweichungen.aendereStatus(AKTEUR, id, 'geschlossen', {})).rejects.toThrow();
   });
 });

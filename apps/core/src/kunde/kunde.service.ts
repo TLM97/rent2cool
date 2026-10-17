@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Inject,
   Injectable,
   NotFoundException,
@@ -18,6 +17,7 @@ import {
 } from '@rent2cool/shared';
 import { ermittleAenderungen, neueWerte, pruefeVersion, versionVon, type StammdatenErgebnis } from '../audit/aenderung';
 import { schreibeAudit } from '../audit/audit.service';
+import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Database } from '../db/client';
 import { DB } from '../db/db.module';
 import { fahrer, fahrzeug, kunde } from '../db/schema';
@@ -107,20 +107,30 @@ export class KundeService {
     });
   }
 
-  async aendereKundeStatus(id: string, nach: KundeStatus): Promise<{ id: string; status: KundeStatus }> {
-    const aktuell = await this.holeKunde(id);
-    const von = aktuell.status;
-    if (!istKundeStatus(von)) {
-      throw new BadRequestException(`Unbekannter aktueller Status: ${von}`);
-    }
-    if (von === nach) {
-      return { id, status: nach };
-    }
-    if (!istKundeUebergangErlaubt(von, nach)) {
-      throw new BadRequestException(`Statusübergang "${von}" -> "${nach}" ist nicht erlaubt`);
-    }
-    await this.db.update(kunde).set({ status: nach, aktualisiertAm: new Date() }).where(eq(kunde.id, id));
-    return { id, status: nach };
+  async aendereKundeStatus(principal: Principal, id: string, nach: KundeStatus): Promise<StatusErgebnis<KundeStatus>> {
+    const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
+    return wechsleStatus(this.db, principal, {
+      entitaetTyp: 'kunde_status',
+      id,
+      nach,
+      nichtGefunden: 'Kunde nicht gefunden',
+      lade: async (tx) =>
+        (
+          await tx
+            .select({ status: kunde.status })
+            .from(kunde)
+            .where(and(eq(kunde.id, id), eq(kunde.mandantId, mandant)))
+            .for('update')
+        )[0],
+      istStatus: istKundeStatus,
+      erlaubt: istKundeUebergangErlaubt,
+      speichere: async (tx, werte) => {
+        await tx
+          .update(kunde)
+          .set({ ...werte, aktualisiertAm: new Date() })
+          .where(eq(kunde.id, id));
+      },
+    });
   }
 
   // --- Fahrer ---
@@ -192,26 +202,33 @@ export class KundeService {
     return this.db.select().from(fahrer).where(eq(fahrer.kundeId, kundeId)).orderBy(desc(fahrer.erstelltAm));
   }
 
-  async aendereFahrerStatus(id: string, nach: FahrerStatus): Promise<{ id: string; status: FahrerStatus }> {
-    const [row] = await this.db.select({ status: fahrer.status }).from(fahrer).where(eq(fahrer.id, id));
-    if (!row) {
-      throw new NotFoundException('Fahrer nicht gefunden');
-    }
-    const von = row.status;
-    if (!istFahrerStatus(von)) {
-      throw new BadRequestException(`Unbekannter aktueller Status: ${von}`);
-    }
-    if (von === nach) {
-      return { id, status: nach };
-    }
-    if (!istFahrerUebergangErlaubt(von, nach)) {
-      throw new BadRequestException(`Statusübergang "${von}" -> "${nach}" ist nicht erlaubt`);
-    }
-    await this.db
-      .update(fahrer)
-      .set({ status: nach, aktualisiertAm: new Date(), letztePruefungAm: new Date() })
-      .where(eq(fahrer.id, id));
-    return { id, status: nach };
+  async aendereFahrerStatus(principal: Principal, id: string, nach: FahrerStatus): Promise<StatusErgebnis<FahrerStatus>> {
+    const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
+    return wechsleStatus(this.db, principal, {
+      entitaetTyp: 'fahrer_status',
+      id,
+      nach,
+      nichtGefunden: 'Fahrer nicht gefunden',
+      lade: async (tx) =>
+        (
+          await tx
+            .select({ status: fahrer.status })
+            .from(fahrer)
+            .innerJoin(kunde, eq(fahrer.kundeId, kunde.id))
+            .where(and(eq(fahrer.id, id), eq(kunde.mandantId, mandant)))
+            .for('update', { of: fahrer })
+        )[0],
+      istStatus: istFahrerStatus,
+      erlaubt: istFahrerUebergangErlaubt,
+      // Jede Prüfentscheidung (Freigabe, Sperre, Ablehnung) ist eine Prüfung (R-22).
+      zusatz: (v) => (v.status !== nach ? { letztePruefungAm: new Date() } : {}),
+      speichere: async (tx, werte) => {
+        await tx
+          .update(fahrer)
+          .set({ ...werte, aktualisiertAm: new Date() })
+          .where(eq(fahrer.id, id));
+      },
+    });
   }
 
   /** Darf der Fahrer das Fahrzeug fahren? (R-22) */

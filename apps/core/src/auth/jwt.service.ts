@@ -72,5 +72,6 @@ export function zuPrincipal(p: JwtPayload): Principal {
     .filter((r): r is string => typeof r === 'string')
     .filter(istRolle);
   const mandantId = typeof p.mandant_id === 'string' ? p.mandant_id : undefined;
-  return { akteurId: p.sub, rollen, mandantId };
+  const name = typeof p.preferred_username === 'string' ? p.preferred_username : undefined;
+  return { akteurId: p.sub, rollen, mandantId, name };
 }

@@ -15,7 +15,7 @@ import {
   type Principal,
 } from '@rent2cool/shared';
 import { CurrentUser, Roles } from '../auth/decorators';
-import { Audited } from '../audit/audited.decorator';
+import { AuditImService, Audited } from '../audit/audited.decorator';
 import { AlarmService } from './alarm.service';
 import { AbweichungService } from './abweichung.service';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
@@ -56,18 +56,18 @@ export class AlarmController {
 
   @Post(':id/quittieren')
   @Roles('ops', 'admin')
-  @Audited('alarm_quittieren')
+  @AuditImService('alarm_quittieren')
   @HttpCode(200)
   quittieren(@CurrentUser() user: Principal, @Param('id') id: string) {
-    return this.service.quittiere(id, user.akteurId);
+    return this.service.quittiere(user, id);
   }
 
   @Post(':id/schliessen')
   @Roles('ops', 'admin', 'qa_approver')
-  @Audited('alarm_schliessen')
+  @AuditImService('alarm_schliessen')
   @HttpCode(200)
-  schliessen(@Param('id') id: string) {
-    return this.service.schliesse(id);
+  schliessen(@CurrentUser() user: Principal, @Param('id') id: string) {
+    return this.service.schliesse(user, id);
   }
 }
 
@@ -106,11 +106,11 @@ export class AbweichungController {
   /** Bewertung/Abschluss durch die qualitätsverantwortliche Person (qa_approver). */
   @Post(':id/status')
   @Roles('qa_approver', 'admin')
-  @Audited('abweichung_status')
+  @AuditImService('abweichung_status')
   @HttpCode(200)
-  status(@Param('id') id: string, @Body() body: unknown) {
+  status(@CurrentUser() user: Principal, @Param('id') id: string, @Body() body: unknown) {
     const b = parse(abweichungStatusSchema, body);
-    return this.service.aendereStatus(id, b.status, {
+    return this.service.aendereStatus(user, id, b.status, {
       bewertung: b.bewertung,
       massnahmen: b.massnahmen,
       verantwortlich: b.verantwortlich,

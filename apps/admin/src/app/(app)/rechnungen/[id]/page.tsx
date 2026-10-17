@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { istRechnungUebergangErlaubt, RECHNUNG_STATUS } from '@rent2cool/shared';
 import { Meldungen, Plakette, Seitenkopf, StatusFormular } from '../../../../components/bausteine';
+import { Verlauf } from '../../../../components/verlauf';
 import { apiGetOderNull } from '../../../../lib/api';
 import { formatDatum, formatDatumZeit, formatEuro, kurzeId } from '../../../../lib/format';
 import { naechsteStatus } from '../../../../lib/formular';
@@ -84,6 +85,7 @@ export default async function RechnungDetail({
           ) : null}
         </dl>
       </section>
+      <Verlauf entitaetId={r.id} typen={['rechnung', 'rechnung_status']} />
     </>
   );
 }

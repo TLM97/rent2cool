@@ -64,6 +64,13 @@
       "when": 1760626800000,
       "tag": "0008_sensor_tausch",
       "breakpoints": false
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1760630400000,
+      "tag": "0009_audit_akteur_name",
+      "breakpoints": false
     }
   ]
 }

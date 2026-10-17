@@ -11,7 +11,7 @@ import {
 import { z } from 'zod';
 import { istMieteStatus, type Principal, type TemperaturNachweis } from '@rent2cool/shared';
 import { CurrentUser, Roles } from '../auth/decorators';
-import { Audited } from '../audit/audited.decorator';
+import { AuditImService, Audited } from '../audit/audited.decorator';
 import { listeAbfrageSchema, mieteErstellenSchema, mieteStatusSchema } from './dto';
 import { MieteService } from './miete.service';
 
@@ -53,14 +53,14 @@ export class MieteController {
 
   @Post(':id/status')
   @Roles('ops', 'admin', 'kunde_dispo')
-  @Audited('miete_status')
+  @AuditImService('miete_status')
   @HttpCode(200)
-  status(@Param('id') id: string, @Body() body: unknown) {
+  status(@CurrentUser() user: Principal, @Param('id') id: string, @Body() body: unknown) {
     const { status } = parse(mieteStatusSchema, body);
     if (!istMieteStatus(status)) {
       throw new BadRequestException('Unbekannter Status');
     }
-    return this.service.aendereStatus(id, status);
+    return this.service.aendereStatus(user, id, status);
   }
 
   /** Temperaturnachweis zu dieser Miete (Fahrzeug + Zeitfenster der Miete). */

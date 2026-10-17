@@ -8,6 +8,7 @@ import {
   KUNDE_STATUS,
 } from '@rent2cool/shared';
 import { Leer, Meldungen, Plakette, Seitenkopf, StatusFormular } from '../../../../components/bausteine';
+import { Verlauf } from '../../../../components/verlauf';
 import { FormularRahmen } from '../../../../components/formular';
 import { FahrerFelder } from '../../../../components/stammdaten';
 import { apiGet, apiGetOderNull } from '../../../../lib/api';
@@ -152,6 +153,7 @@ export default async function KundeDetail({
           </FormularRahmen>
         </section>
       ) : null}
+      <Verlauf entitaetId={kunde.id} typen={['kunde', 'kunde_status']} />
     </>
   );
 }

@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
@@ -12,12 +11,14 @@ import {
   istRechnungStatus,
   istRechnungUebergangErlaubt,
   rechneBetraege,
+  type Principal,
   type RechnungStatus,
 } from '@rent2cool/shared';
+import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Env } from '../config/env';
 import type { Database } from '../db/client';
 import { DB } from '../db/db.module';
-import { rechnung, rechnungSequenz } from '../db/schema';
+import { miete, rechnung, rechnungSequenz } from '../db/schema';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 import { MieteService } from '../miete/miete.service';
 import type { RechnungErstellen } from './dto';
@@ -126,31 +127,48 @@ export class RechnungService {
     return row;
   }
 
-  async aendereStatus(id: string, nach: RechnungStatus): Promise<{ id: string; status: RechnungStatus }> {
-    const r = await this.holeRechnung(id);
-    const von = r.status;
-    if (!istRechnungStatus(von)) {
-      throw new BadRequestException(`Unbekannter aktueller Status: ${von}`);
-    }
-    if (von !== nach && !istRechnungUebergangErlaubt(von, nach)) {
-      throw new BadRequestException(`Statusübergang "${von}" -> "${nach}" ist nicht erlaubt`);
-    }
-    const satz: Partial<typeof rechnung.$inferInsert> = { status: nach, aktualisiertAm: new Date() };
-    if (nach === 'gestellt' && !r.gestelltAm) {
-      satz.gestelltAm = new Date();
-    }
-    if (nach === 'bezahlt' && !r.bezahltAm) {
-      satz.bezahltAm = new Date();
-    }
-    await this.db.update(rechnung).set(satz).where(eq(rechnung.id, id));
-
-    // Beim Stellen die Miete als abgerechnet markieren (falls noch beendet).
-    if (nach === 'gestellt') {
-      const m = await this.mieten.holeMiete(r.mieteId);
-      if (m.status === 'beendet') {
-        await this.mieten.aendereStatus(r.mieteId, 'abgerechnet');
-      }
-    }
-    return { id, status: nach };
+  /** Status ändern; beim Stellen wird die Miete in derselben Transaktion abgerechnet. */
+  async aendereStatus(principal: Principal, id: string, nach: RechnungStatus): Promise<StatusErgebnis<RechnungStatus>> {
+    const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
+    let mieteId = '';
+    return wechsleStatus(this.db, principal, {
+      entitaetTyp: 'rechnung_status',
+      id,
+      nach,
+      nichtGefunden: 'Rechnung nicht gefunden',
+      lade: async (tx) => {
+        const [r] = await tx
+          .select({
+            status: rechnung.status,
+            gestelltAm: rechnung.gestelltAm,
+            bezahltAm: rechnung.bezahltAm,
+            mieteId: rechnung.mieteId,
+          })
+          .from(rechnung)
+          .where(and(eq(rechnung.id, id), eq(rechnung.mandantId, mandant)))
+          .for('update');
+        mieteId = r?.mieteId ?? '';
+        return r;
+      },
+      istStatus: istRechnungStatus,
+      erlaubt: istRechnungUebergangErlaubt,
+      zusatz: (r) => ({
+        ...(nach === 'gestellt' && !r.gestelltAm ? { gestelltAm: new Date() } : {}),
+        ...(nach === 'bezahlt' && !r.bezahltAm ? { bezahltAm: new Date() } : {}),
+      }),
+      speichere: async (tx, werte) => {
+        await tx
+          .update(rechnung)
+          .set({ ...werte, aktualisiertAm: new Date() })
+          .where(eq(rechnung.id, id));
+      },
+      danach: async (tx) => {
+        if (nach !== 'gestellt') return;
+        const [m] = await tx.select({ status: miete.status }).from(miete).where(eq(miete.id, mieteId));
+        if (m?.status === 'beendet') {
+          await this.mieten.aendereStatus(principal, mieteId, 'abgerechnet', tx);
+        }
+      },
+    });
   }
 }

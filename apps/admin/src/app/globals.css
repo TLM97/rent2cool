@@ -662,3 +662,12 @@ label {
 tr.ausgebaut td {
   color: var(--text-leise);
 }
+
+ul.aenderungen {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+ul.aenderungen li + li {
+  margin-top: 2px;
+}

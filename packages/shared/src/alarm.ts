@@ -26,6 +26,9 @@ const ALARM_UEBERGAENGE: Record<AlarmStatus, readonly AlarmStatus[]> = {
   quittiert: ['geschlossen'],
   geschlossen: [],
 };
+export function istAlarmStatus(wert: string): wert is AlarmStatus {
+  return (ALARM_STATUS as readonly string[]).includes(wert);
+}
 export function istAlarmUebergangErlaubt(von: AlarmStatus, nach: AlarmStatus): boolean {
   return ALARM_UEBERGAENGE[von].includes(nach);
 }

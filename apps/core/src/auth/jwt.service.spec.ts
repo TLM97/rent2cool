@@ -58,4 +58,8 @@ describe('zuPrincipal', () => {
   it('ergibt leere Rollen, wenn realm_access fehlt', () => {
     expect(zuPrincipal({ sub: 'u' }).rollen).toEqual([]);
   });
+  it('übernimmt den Anmeldenamen für den Audit Trail', () => {
+    expect(zuPrincipal({ sub: 'u', preferred_username: 'ops.dev' }).name).toBe('ops.dev');
+    expect(zuPrincipal({ sub: 'u' }).name).toBeUndefined();
+  });
 });
