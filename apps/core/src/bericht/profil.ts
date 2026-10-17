@@ -4,17 +4,14 @@
  * (F-4). Die Quelle ist ein Interface; sobald T-002 freigegeben ist, kann eine
  * DB-basierte Quelle ohne Änderung an den Konsumenten eingesetzt werden.
  */
-import type { Temperaturprofil } from '@rent2cool/shared';
+import { STANDARD_TEMPERATURPROFILE, type Temperaturprofil } from '@rent2cool/shared';
 
 export interface ProfilQuelle {
   hole(name: string): Temperaturprofil | undefined;
   alle(): Temperaturprofil[];
 }
 
-export const STANDARD_PROFILE: Temperaturprofil[] = [
-  { name: '2-8', minC: 2, maxC: 8 },
-  { name: '15-25', minC: 15, maxC: 25 },
-];
+export const STANDARD_PROFILE: Temperaturprofil[] = [...STANDARD_TEMPERATURPROFILE];
 
 export class KonfigProfilQuelle implements ProfilQuelle {
   constructor(private readonly profile: Temperaturprofil[] = STANDARD_PROFILE) {}

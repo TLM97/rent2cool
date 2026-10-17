@@ -138,3 +138,43 @@ export function StatusFilter({
     </form>
   );
 }
+
+/**
+ * Kleines Formular für einen Statuswechsel. Bietet nur die laut Statusmodell
+ * erlaubten Folgestatus an; der Kern prüft trotzdem erneut.
+ */
+export function StatusFormular({
+  aktion,
+  id,
+  naechste,
+  zurueck,
+  label = 'Status ändern',
+}: {
+  aktion: (fd: FormData) => Promise<void>;
+  id: string;
+  naechste: readonly string[];
+  zurueck?: string;
+  label?: string;
+}) {
+  if (naechste.length === 0) return null;
+  const feldId = `status-${id}`;
+  return (
+    <form action={aktion} className="inline-form">
+      <input type="hidden" name="id" value={id} />
+      {zurueck ? <input type="hidden" name="zurueck" value={zurueck} /> : null}
+      <label htmlFor={feldId} className="sr-nur">
+        {label}
+      </label>
+      <select id={feldId} name="status" defaultValue={naechste[0]}>
+        {naechste.map((s) => (
+          <option key={s} value={s}>
+            {statusLabel(s)}
+          </option>
+        ))}
+      </select>
+      <button className="knopf klein" type="submit">
+        Übernehmen
+      </button>
+    </form>
+  );
+}

@@ -88,12 +88,16 @@ export interface Rechnung {
   rechnungsnummer: string;
   kundeId: string;
   mieteId: string;
+  zeitraumVon: string;
+  zeitraumBis: string;
   nettoCent: number;
+  steuerSatz: number;
   steuerCent: number;
   bruttoCent: number;
   waehrung: string;
   status: string;
   gestelltAm: string | null;
+  bezahltAm: string | null;
   erstelltAm: string;
 }
 
@@ -116,7 +120,11 @@ export interface Abweichung {
   beschreibung: string;
   schweregrad: string | null;
   status: string;
+  bewertung: string | null;
+  massnahmen: string | null;
+  verantwortlich: string | null;
   erfasstAm: string;
+  geschlossenAm: string | null;
 }
 
 export interface FaelligeKalibrierung {

@@ -3,6 +3,8 @@ import type { Metadata } from 'next';
 import { MIETE_STATUS } from '@rent2cool/shared';
 import { Blaettern, Leer, Plakette, Seitenkopf, StatusFilter } from '../../../components/bausteine';
 import { apiGet } from '../../../lib/api';
+import { holeSitzung } from '../../../lib/sitzung';
+import { hatRolle } from '../../../lib/token';
 import { formatDatumZeit, kurzeId } from '../../../lib/format';
 import { blattAus, erster, type SuchParameter } from '../../../lib/seiten';
 import type { Liste, Miete } from '../../../lib/typen';
@@ -13,11 +15,25 @@ export default async function Mieten({ searchParams }: { searchParams: Promise<S
   const params = await searchParams;
   const status = erster(params.status);
   const blatt = blattAus(params);
-  const daten = await apiGet<Liste<Miete>>('/v1/mieten', { status, limit: blatt.limit, offset: blatt.offset });
+  const [daten, sitzung] = await Promise.all([
+    apiGet<Liste<Miete>>('/v1/mieten', { status, limit: blatt.limit, offset: blatt.offset }),
+    holeSitzung(),
+  ]);
+  const darfBuchen = hatRolle(sitzung?.rollen ?? [], 'ops', 'admin');
 
   return (
     <>
-      <Seitenkopf titel="Mieten" untertitel="Buchungen mit Zeitraum, Status und Temperaturnachweis." />
+      <Seitenkopf
+        titel="Mieten"
+        untertitel="Buchungen mit Zeitraum, Status und Temperaturnachweis."
+        aktionen={
+          darfBuchen ? (
+            <Link className="knopf" href="/mieten/neu">
+              Buchung anlegen
+            </Link>
+          ) : null
+        }
+      />
       <section className="karte">
         <StatusFilter pfad="/mieten" aktuell={status} optionen={MIETE_STATUS} />
         {daten.eintraege.length === 0 ? (

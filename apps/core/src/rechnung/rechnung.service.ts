@@ -102,13 +102,14 @@ export class RechnungService {
 
   async liste(
     mandantId: string | undefined,
-    opts: { status?: string; kundeId?: string; limit: number; offset: number },
+    opts: { status?: string; kundeId?: string; mieteId?: string; limit: number; offset: number },
   ): Promise<{ eintraege: (typeof rechnung.$inferSelect)[]; gesamt: number }> {
     const mandant = mandantId ?? PLACEHOLDER_MANDANT_ID;
     const filter = and(
       eq(rechnung.mandantId, mandant),
       opts.status ? eq(rechnung.status, opts.status) : undefined,
       opts.kundeId ? eq(rechnung.kundeId, opts.kundeId) : undefined,
+      opts.mieteId ? eq(rechnung.mieteId, opts.mieteId) : undefined,
     );
     const [eintraege, [zaehler]] = await Promise.all([
       this.db.select().from(rechnung).where(filter).orderBy(desc(rechnung.erstelltAm)).limit(opts.limit).offset(opts.offset),

@@ -23,6 +23,7 @@ export default async function Alarme({ searchParams }: { searchParams: Promise<S
   const rollen = sitzung?.rollen ?? [];
   const darfQuittieren = hatRolle(rollen, 'ops', 'admin');
   const darfSchliessen = hatRolle(rollen, 'ops', 'admin', 'qa_approver');
+  const darfAbweichung = darfSchliessen;
   const zurueck = seitenLink('/alarme', params, blatt.seite);
 
   return (
@@ -93,6 +94,14 @@ export default async function Alarme({ searchParams }: { searchParams: Promise<S
                                 Schließen
                               </button>
                             </form>
+                          ) : null}
+                          {darfAbweichung ? (
+                            <Link
+                              className="knopf zweitrangig klein"
+                              href={`/abweichungen/neu?bezugTyp=alarm&bezugId=${a.id}`}
+                            >
+                              Abweichung
+                            </Link>
                           ) : null}
                         </div>
                       </td>

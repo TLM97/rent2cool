@@ -73,6 +73,9 @@ const DECKT: Record<string, readonly string[]> = {
   CE: ['B', 'C1', 'C', 'CE'],
 };
 
+/** Auswählbare Führerscheinklassen (Reihenfolge für Formulare). */
+export const FUEHRERSCHEINKLASSEN = Object.keys(DECKT);
+
 export function klasseDeckt(gehalten: string, benoetigt: string): boolean {
   return (DECKT[gehalten] ?? [gehalten]).includes(benoetigt);
 }

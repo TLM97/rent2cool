@@ -267,7 +267,7 @@ Kern durch.
 Bereiche: Übersicht (Kennzahlen, offene Alarme, fällige Kalibrierungen),
 Fahrzeuge inkl. Akte/Buchbarkeit/Statuswechsel, Kunden & Fahrer inkl.
 Führerschein-Fristen, Mieten inkl. Temperaturnachweis, Rechnungen, Alarme
-(quittieren/schließen), Abweichungen.
+(quittieren/schließen), Abweichungen – jeweils mit Formularen (siehe unten).
 
 ```bash
 pnpm stack:up                                   # u. a. Keycloak mit Realm-Import
@@ -281,6 +281,30 @@ Lokale Testnutzer (nur erfundene Konten, D-015): `admin.dev`, `ops.dev`,
 
 Browser-Test gegen den laufenden Stack (nicht Teil der CI):
 `pnpm --filter @rent2cool/admin test:e2e`
+
+### Formulare
+
+Anlegen und Bearbeiten für den ganzen Ablauf: Fahrzeug anlegen → Kalibrierung
+erfassen → Kunde anlegen und freigeben → Fahrer anlegen und freigeben →
+Buchung anlegen → Mietstatus → Rechnung erstellen, stellen, bezahlt →
+Abweichung erfassen und bewerten.
+
+Aufbau (bewusst austauschbar):
+
+- **Eingaberegeln** liegen einmal in `packages/shared/src/eingaben.ts` (Zod).
+  Kern und Oberfläche prüfen mit denselben Schemas – eine Regel ändern heißt,
+  sie an einer Stelle ändern.
+- **Feldbausteine** in `apps/admin/src/components/formular.tsx` (`Feld`,
+  `Auswahl`, `Haken`, `Textfeld`, `Gruppe`, `FormularRahmen`). Fehler stehen am
+  Feld, Eingaben bleiben bei Fehlern erhalten, Doppelabsenden ist gesperrt.
+- **Server Actions** in `apps/admin/src/app/(app)/formulare.ts` (Anlegen) und
+  `aktionen.ts` (Statuswechsel). Statuswechsel bieten nur die laut
+  Statusmodell erlaubten Folgestatus an.
+- **Formate** in `apps/admin/src/lib/formular.ts`: Eingabe in deutscher
+  Ortszeit, Speicherung in UTC (Sommer-/Winterzeit getestet); Beträge mit
+  Komma oder Punkt.
+- Buchungen tragen je geöffnetem Formular einen Idempotency-Key – doppeltes
+  Absenden legt keine zweite Miete an (D-003).
 
 ## Betrieb und Cloud
 

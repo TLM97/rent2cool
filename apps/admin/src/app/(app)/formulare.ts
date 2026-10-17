@@ -1,0 +1,265 @@
+'use server';
+
+/**
+ * Server Actions der Anlege-/Bearbeiten-Formulare (useActionState).
+ * Ablauf je Aktion: Formular lesen → mit dem geteilten Schema prüfen
+ * (@rent2cool/shared, dieselben Regeln wie der Kern) → Kern-API aufrufen →
+ * bei Erfolg zur Detailseite. Rechte und Audit Trail setzt der Kern durch.
+ */
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
+import {
+  abweichungErstellenSchema,
+  abweichungStatusSchema,
+  fahrerErstellenSchema,
+  fahrzeugErstellenSchema,
+  kalibrierungSchema,
+  kundeErstellenSchema,
+  mieteErstellenSchema,
+  rechnungErstellenSchema,
+} from '@rent2cool/shared';
+import { apiPost } from '../../lib/api';
+import { ApiFehler } from '../../lib/api-client';
+import {
+  berlinLokalZuIso,
+  berlinTagesendeZuIso,
+  betrag,
+  feldFehlerAus,
+  haken,
+  text,
+  werteAus,
+  type FormularZustand,
+} from '../../lib/formular';
+import { istUuid } from '../../lib/seiten';
+
+const PRUEFEN = 'Bitte die markierten Felder prüfen.';
+
+interface Schema<T> {
+  safeParse(
+    wert: unknown,
+  ): { success: true; data: T } | { success: false; error: { issues: { path: (string | number)[]; message: string }[] } };
+}
+
+type Ergebnis<T> = { ok: true; daten: T } | { ok: false; zustand: FormularZustand };
+
+function pruefe<T>(schema: Schema<T>, roh: unknown, werte: Record<string, string>): Ergebnis<T> {
+  const r = schema.safeParse(roh);
+  return r.success
+    ? { ok: true, daten: r.data }
+    : { ok: false, zustand: { fehler: PRUEFEN, feldFehler: feldFehlerAus(r.error), werte } };
+}
+
+/** Kern-Fehler (z. B. abgelehnte Buchung mit Gründen) in einen Formularzustand übersetzen. */
+function kernFehler(e: unknown, werte: Record<string, string>): FormularZustand {
+  if (!(e instanceof ApiFehler)) throw e; // u. a. Redirect zur Anmeldung weiterreichen
+  const details = (e.details as { message?: { fehler?: unknown; gruende?: unknown } } | undefined)?.message;
+  if (details && typeof details === 'object' && Array.isArray(details.gruende)) {
+    return {
+      fehler: typeof details.fehler === 'string' ? details.fehler : e.message,
+      liste: details.gruende.map(String),
+      werte,
+    };
+  }
+  if (e.status === 403) {
+    return { fehler: 'Für diese Aktion fehlt Ihnen die Berechtigung.', werte };
+  }
+  return { fehler: e.message, werte };
+}
+
+function weiter(pfad: string, erfolg: string): never {
+  revalidatePath('/', 'layout');
+  redirect(`${pfad}?erfolg=${encodeURIComponent(erfolg)}`);
+}
+
+// --- Fahrzeug ---
+export async function erstelleFahrzeug(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const roh = {
+    kennzeichen: text(fd, 'kennzeichen') ?? '',
+    vin: text(fd, 'vin'),
+    zulGesamtmasseKg: text(fd, 'zulGesamtmasseKg') ?? '',
+    benoetigteFuehrerscheinklasse: text(fd, 'benoetigteFuehrerscheinklasse') ?? 'B',
+    hatFahrtenschreiber: haken(fd, 'hatFahrtenschreiber'),
+    standardTemperaturprofil: text(fd, 'standardTemperaturprofil'),
+    aggregat: haken(fd, 'mitAufbau')
+      ? {
+          typ: text(fd, 'aggregatTyp'),
+          hersteller: text(fd, 'aggregatHersteller'),
+          seriennummer: text(fd, 'aggregatSeriennummer'),
+          sensoren: [
+            {
+              messgroesse: 'temperatur_laderaum',
+              einheit: 'C',
+              modell: text(fd, 'sensorModell'),
+              seriennummer: text(fd, 'sensorSeriennummer'),
+            },
+          ],
+        }
+      : undefined,
+  };
+  const p = pruefe(fahrzeugErstellenSchema, roh, werte);
+  if (!p.ok) return p.zustand;
+  let id: string;
+  try {
+    ({ id } = await apiPost<{ id: string }>('/v1/fahrzeuge', p.daten));
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(`/fahrzeuge/${id}`, 'Fahrzeug angelegt.');
+}
+
+export async function erfasseKalibrierung(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const fahrzeugId = text(fd, 'fahrzeugId') ?? '';
+  const sensorId = text(fd, 'sensorId') ?? '';
+  if (!istUuid(sensorId)) {
+    return { fehler: PRUEFEN, feldFehler: { sensorId: 'Sensor auswählen' }, werte };
+  }
+  const roh = {
+    durchgefuehrtAm: berlinLokalZuIso(text(fd, 'durchgefuehrtAm')) ?? '',
+    gueltigBis: berlinTagesendeZuIso(text(fd, 'gueltigBis')) ?? '',
+    pruefstelle: text(fd, 'pruefstelle'),
+    zertifikatRef: text(fd, 'zertifikatRef'),
+    ergebnis: text(fd, 'ergebnis'),
+  };
+  const p = pruefe(kalibrierungSchema, roh, werte);
+  if (!p.ok) return p.zustand;
+  try {
+    await apiPost(`/v1/sensoren/${sensorId}/kalibrierungen`, p.daten);
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(istUuid(fahrzeugId) ? `/fahrzeuge/${fahrzeugId}` : '/fahrzeuge', 'Kalibrierung erfasst.');
+}
+
+// --- Kunde & Fahrer ---
+export async function erstelleKunde(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const roh = {
+    firmenname: text(fd, 'firmenname') ?? '',
+    handelsregisternummer: text(fd, 'handelsregisternummer'),
+    ustId: text(fd, 'ustId'),
+    strasse: text(fd, 'strasse'),
+    plz: text(fd, 'plz'),
+    ort: text(fd, 'ort'),
+    land: text(fd, 'land') ?? 'DE',
+  };
+  const p = pruefe(kundeErstellenSchema, roh, werte);
+  if (!p.ok) return p.zustand;
+  let id: string;
+  try {
+    ({ id } = await apiPost<{ id: string }>('/v1/kunden', p.daten));
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(`/kunden/${id}`, 'Kunde angelegt. Nächster Schritt: Prüfung (Handelsregister/USt-ID).');
+}
+
+export async function erstelleFahrer(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const kundeId = text(fd, 'kundeId') ?? '';
+  if (!istUuid(kundeId)) return { fehler: 'Kunde fehlt.', werte };
+  const roh = {
+    name: text(fd, 'name') ?? '',
+    fuehrerscheinKlasse: text(fd, 'fuehrerscheinKlasse') ?? '',
+    fuehrerscheinNummer: text(fd, 'fuehrerscheinNummer'),
+    fuehrerscheinGueltigBis: berlinTagesendeZuIso(text(fd, 'fuehrerscheinGueltigBis')),
+  };
+  if (text(fd, 'fuehrerscheinGueltigBis') && !roh.fuehrerscheinGueltigBis) {
+    return { fehler: PRUEFEN, feldFehler: { fuehrerscheinGueltigBis: 'Ungültiges Datum' }, werte };
+  }
+  const p = pruefe(fahrerErstellenSchema, roh, werte);
+  if (!p.ok) return p.zustand;
+  try {
+    await apiPost(`/v1/kunden/${kundeId}/fahrer`, p.daten);
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(`/kunden/${kundeId}`, 'Fahrer angelegt. Nächster Schritt: Identitäts- und Führerscheinprüfung.');
+}
+
+// --- Buchung ---
+export async function erstelleMiete(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const roh = {
+    kundeId: text(fd, 'kundeId') ?? '',
+    fahrzeugId: text(fd, 'fahrzeugId') ?? '',
+    fahrerId: text(fd, 'fahrerId'),
+    startGeplant: berlinLokalZuIso(text(fd, 'startGeplant')) ?? '',
+    endeGeplant: berlinLokalZuIso(text(fd, 'endeGeplant')) ?? '',
+    auslandsfahrtGeplant: haken(fd, 'auslandsfahrtGeplant'),
+    temperaturprofil: text(fd, 'temperaturprofil'),
+    idempotencyKey: text(fd, 'idempotencyKey'),
+  };
+  const p = pruefe(mieteErstellenSchema, roh, werte);
+  if (!p.ok) return p.zustand;
+  let ergebnis: { id: string; idempotent: boolean };
+  try {
+    ergebnis = await apiPost<{ id: string; idempotent: boolean }>('/v1/mieten', p.daten);
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(
+    `/mieten/${ergebnis.id}`,
+    ergebnis.idempotent ? 'Diese Buchung war bereits angelegt.' : 'Buchung bestätigt.',
+  );
+}
+
+// --- Rechnung ---
+export async function erstelleRechnung(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const roh = {
+    mieteId: text(fd, 'mieteId') ?? '',
+    netto: betrag(fd, 'netto') ?? '',
+    steuerSatz: text(fd, 'steuerSatz'),
+  };
+  const p = pruefe(rechnungErstellenSchema, roh, werte);
+  if (!p.ok) return p.zustand;
+  let id: string;
+  try {
+    ({ id } = await apiPost<{ id: string }>('/v1/rechnungen', p.daten));
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(`/rechnungen/${id}`, 'Rechnung als Entwurf angelegt.');
+}
+
+// --- Abweichung ---
+export async function erstelleAbweichung(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const roh = {
+    bezugTyp: text(fd, 'bezugTyp') ?? '',
+    bezugId: text(fd, 'bezugId') ?? '',
+    beschreibung: text(fd, 'beschreibung') ?? '',
+    schweregrad: text(fd, 'schweregrad'),
+  };
+  const p = pruefe(abweichungErstellenSchema, roh, werte);
+  if (!p.ok) return p.zustand;
+  let id: string;
+  try {
+    ({ id } = await apiPost<{ id: string }>('/v1/abweichungen', p.daten));
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(`/abweichungen/${id}`, 'Abweichung erfasst.');
+}
+
+export async function bewerteAbweichung(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const id = text(fd, 'id') ?? '';
+  if (!istUuid(id)) return { fehler: 'Abweichung fehlt.', werte };
+  const roh = {
+    status: text(fd, 'status') ?? '',
+    bewertung: text(fd, 'bewertung'),
+    massnahmen: text(fd, 'massnahmen'),
+    verantwortlich: text(fd, 'verantwortlich'),
+  };
+  const p = pruefe(abweichungStatusSchema, roh, werte);
+  if (!p.ok) return p.zustand;
+  try {
+    await apiPost(`/v1/abweichungen/${id}/status`, p.daten);
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(`/abweichungen/${id}`, 'Abweichung aktualisiert.');
+}

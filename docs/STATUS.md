@@ -13,6 +13,70 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Formulare zum Anlegen und Bearbeiten
+
+**Formulare für den ganzen Ablauf – erledigt.** (Auf Toms Auftrag; Planung möge
+die Aufgabe in `TASKS.md` nachziehen. Beantwortet damit auch F-25 vorläufig:
+alle Workflows aus F-25 sind umgesetzt.)
+
+Erledigt:
+- **Fahrzeug anlegen** (mit Kühlaufbau und Laderaum-Sensor), **Kalibrierung
+  erfassen** in der Fahrzeugakte; danach ist das Fahrzeug buchbar.
+- **Kunde anlegen**, Prüfstatus wechseln; **Fahrer anlegen** auf der
+  Kundenseite und Identitäts-/Führerscheinprüfung je Fahrer.
+- **Buchung anlegen** in zwei Schritten (freigegebener Kunde → verfügbares
+  Fahrzeug, freigegebener Fahrer, Zeitraum, Profil, Auslandsfahrt). Lehnt der
+  Kern ab, stehen die Gründe über dem Formular, die Eingaben bleiben erhalten.
+  Idempotency-Key je Formular (D-003).
+- **Mietakte:** Statuswechsel, Rechnung erstellen (erst nach Mietende) bzw.
+  Verweis auf die vorhandene, „Abweichung erfassen“.
+- **Rechnungsseite** (neu) mit Leistungszeitraum, USt, gestellt/bezahlt und
+  Statuswechsel. Der Kern kann Rechnungen jetzt nach `mieteId` filtern.
+- **Abweichung erfassen** (aus Miete, Fahrzeug oder Alarm vorbelegt) und
+  **Abweichungsseite** (neu) mit Bewertung, Maßnahmen, Verantwortlichem und
+  Statuswechsel – nur `qa_approver`/`admin`, wie im Kern.
+- Statuswechsel bieten nur die laut Statusmodell erlaubten Folgestatus an.
+- **Geteilte Eingabeschemas (D-001):** Die Zod-Schemas wandern aus dem Kern
+  nach `packages/shared/src/eingaben.ts`; Kern und Oberfläche prüfen mit
+  denselben Regeln und deutschen Fehlermeldungen. Verhalten des Kerns
+  unverändert (alle Integrationstests grün).
+- Eingabe in deutscher Ortszeit, Speicherung in UTC (inkl.
+  Sommer-/Winterzeit-Tests); Beträge mit Komma oder Punkt.
+- **Fehler behoben, den nur der Browser-Test fand:** Nach einer abgelehnten
+  Buchung sprangen Auswahlfelder auf den Anfangswert zurück (React 19 setzt
+  Formulare nach dem Absenden zurück, übernimmt bei `<select>` aber den neuen
+  Vorgabewert nicht). Behoben und im Test abgesichert.
+- **Tests:** Unit-Tests shared 38, admin 36, Kern 28 (+25 Integration, mit
+  `RUN_INTEGRATION=1` gegen den lokalen Stack grün: 53/53). **Neuer
+  Browser-Test spielt den ganzen Ablauf einmal durch** – inkl. Pflichtfeldfehler,
+  abgelehnter Buchung (Ausland ohne Fahrtenschreiber) und QA-Abschluss einer
+  Abweichung; alle 6 Browser-Tests grün. Jeder Schritt erzeugt einen Eintrag
+  im Audit Trail (in der DB geprüft).
+
+Abkürzungen, die vor Go-live ersetzt werden müssen:
+- **Auswahllisten auf 200 Einträge begrenzt** (Kunden, Fahrzeuge in der
+  Buchung). Bei ~4.000 Fahrzeugen (D-003) braucht es eine Suche (Kennzeichen,
+  Standort, Zeitraum-Verfügbarkeit) statt eines Auswahlfelds.
+- **Standort ist nicht wählbar** (weder beim Fahrzeug noch bei der Buchung),
+  weil es noch keine Standortverwaltung gibt.
+- Bearbeiten von Stammdaten (z. B. Kundenanschrift ändern) fehlt; der Kern
+  bietet dafür noch keine Änderungs-Endpunkte. Bisher nur Anlegen und
+  Statuswechsel.
+- Bewertung/Verantwortlicher bei Abweichungen sind Freitext; ob „bewertet“ eine
+  Bewertung zwingend verlangt (und Vier-Augen bei „geschlossen“), entscheidet
+  bisher niemand → F-26.
+
+Fragen an Planung:
+- **F-24** (offen, siehe unten): Sitzungsdauer/Token-Laufzeit.
+- **F-25** (vorläufig erledigt): alle genannten Workflows sind jetzt da.
+  Bitte Reihenfolge für Stammdaten-Bearbeitung festlegen.
+- **F-26:** Pflichtfelder im CAPA-Ablauf: Muss beim Übergang auf „bewertet“
+  eine Bewertung und bei „geschlossen“ Maßnahmen + eine zweite Person
+  (Vier-Augen, nicht die erfassende) vorliegen? Heute erzwingt der Kern das
+  nicht.
+
+---
+
 ### 2026-10-17 – Admin-Oberfläche
 
 **Admin-Oberfläche v1 – erledigt.** (Auf Toms Auftrag; Planung möge die

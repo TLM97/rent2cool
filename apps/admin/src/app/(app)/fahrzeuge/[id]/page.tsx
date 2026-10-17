@@ -1,14 +1,18 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { erlaubteUebergaenge, istFahrzeugStatus } from '@rent2cool/shared';
 import { Leer, Meldungen, Plakette, Seitenkopf } from '../../../../components/bausteine';
+import { Auswahl, Feld, FormularRahmen } from '../../../../components/formular';
 import { apiGet, apiGetOderNull } from '../../../../lib/api';
 import { formatDatum, kurzeId, statusLabel } from '../../../../lib/format';
+import { isoZuBerlinLokal } from '../../../../lib/formular';
 import { istUuid, type SuchParameter } from '../../../../lib/seiten';
 import { holeSitzung } from '../../../../lib/sitzung';
 import { hatRolle } from '../../../../lib/token';
 import type { FahrzeugAkte, Pruefergebnis } from '../../../../lib/typen';
 import { aendereFahrzeugStatus } from '../../aktionen';
+import { erfasseKalibrierung } from '../../formulare';
 
 export const metadata: Metadata = { title: 'Fahrzeugakte' };
 
@@ -30,8 +34,13 @@ export default async function FahrzeugDetail({
     holeSitzung(),
   ]);
   const f = akte.fahrzeug;
-  const darfAendern = hatRolle(sitzung?.rollen ?? [], 'ops', 'admin');
+  const rollen = sitzung?.rollen ?? [];
+  const darfAendern = hatRolle(rollen, 'ops', 'admin');
+  const darfAbweichung = hatRolle(rollen, 'ops', 'admin', 'qa_approver');
   const naechste = istFahrzeugStatus(f.status) ? erlaubteUebergaenge(f.status) : [];
+  const sensoren = akte.aggregate.flatMap((a) => a.sensoren.filter((s) => s.aktiv));
+  const heute = new Date();
+  const inEinemJahr = new Date(heute.getTime() + 365 * 86_400_000);
 
   return (
     <>
@@ -39,6 +48,13 @@ export default async function FahrzeugDetail({
         titel={f.kennzeichen}
         untertitel={<Plakette status={f.status} />}
         brotkrume={{ href: '/fahrzeuge', text: 'Fahrzeuge' }}
+        aktionen={
+          darfAbweichung ? (
+            <Link className="knopf zweitrangig" href={`/abweichungen/neu?bezugTyp=fahrzeug&bezugId=${f.id}`}>
+              Abweichung erfassen
+            </Link>
+          ) : null
+        }
       />
       <Meldungen params={suche} />
 
@@ -135,6 +151,48 @@ export default async function FahrzeugDetail({
           ))
         )}
       </section>
+
+      {darfAendern && sensoren.length > 0 ? (
+        <section className="karte" aria-labelledby="kalib-titel">
+          <h2 id="kalib-titel">Kalibrierung erfassen</h2>
+          <p className="leise">
+            Nachweis nach EN 12830. Ohne gültige Kalibrierung ist das Fahrzeug nicht buchbar (R-08/R-09).
+          </p>
+          <FormularRahmen
+            aktion={erfasseKalibrierung}
+            sendenText="Kalibrierung speichern"
+            versteckt={{ fahrzeugId: f.id }}
+          >
+            <Auswahl
+              name="sensorId"
+              label="Sensor"
+              pflicht
+              standard={sensoren[0]?.id}
+              optionen={sensoren.map((s) => ({
+                wert: s.id,
+                text: `${s.messgroesse} · ${kurzeId(s.id)}${s.seriennummer ? ` · SN ${s.seriennummer}` : ''}`,
+              }))}
+            />
+            <Feld name="pruefstelle" label="Prüfstelle" />
+            <Feld
+              name="durchgefuehrtAm"
+              label="Geprüft am"
+              typ="date"
+              pflicht
+              standard={isoZuBerlinLokal(heute, true)}
+            />
+            <Feld
+              name="gueltigBis"
+              label="Gültig bis (einschließlich)"
+              typ="date"
+              pflicht
+              standard={isoZuBerlinLokal(inEinemJahr, true)}
+            />
+            <Feld name="zertifikatRef" label="Zertifikat-Nr. / Referenz" />
+            <Feld name="ergebnis" label="Ergebnis" standard="bestanden" />
+          </FormularRahmen>
+        </section>
+      ) : null}
     </>
   );
 }

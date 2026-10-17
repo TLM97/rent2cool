@@ -3,6 +3,8 @@ import type { Metadata } from 'next';
 import { KUNDE_STATUS } from '@rent2cool/shared';
 import { Blaettern, Leer, Plakette, Seitenkopf, StatusFilter } from '../../../components/bausteine';
 import { apiGet } from '../../../lib/api';
+import { holeSitzung } from '../../../lib/sitzung';
+import { hatRolle } from '../../../lib/token';
 import { formatDatum } from '../../../lib/format';
 import { blattAus, erster, type SuchParameter } from '../../../lib/seiten';
 import type { Kunde, Liste } from '../../../lib/typen';
@@ -13,11 +15,25 @@ export default async function Kunden({ searchParams }: { searchParams: Promise<S
   const params = await searchParams;
   const status = erster(params.status);
   const blatt = blattAus(params);
-  const daten = await apiGet<Liste<Kunde>>('/v1/kunden', { status, limit: blatt.limit, offset: blatt.offset });
+  const [daten, sitzung] = await Promise.all([
+    apiGet<Liste<Kunde>>('/v1/kunden', { status, limit: blatt.limit, offset: blatt.offset }),
+    holeSitzung(),
+  ]);
+  const darfAnlegen = hatRolle(sitzung?.rollen ?? [], 'ops', 'admin');
 
   return (
     <>
-      <Seitenkopf titel="Kunden & Fahrer" untertitel="Firmenkunden (D-010) mit Prüfstatus; Fahrer gehören zum Kunden (D-004)." />
+      <Seitenkopf
+        titel="Kunden & Fahrer"
+        untertitel="Firmenkunden (D-010) mit Prüfstatus; Fahrer gehören zum Kunden (D-004)."
+        aktionen={
+          darfAnlegen ? (
+            <Link className="knopf" href="/kunden/neu">
+              Kunde anlegen
+            </Link>
+          ) : null
+        }
+      />
       <section className="karte">
         <StatusFilter pfad="/kunden" aktuell={status} optionen={KUNDE_STATUS} />
         {daten.eintraege.length === 0 ? (

@@ -94,6 +94,11 @@ describe.skipIf(!RUN)('Rechnung (Integration, braucht DB)', () => {
     // Zweite Rechnung zur selben Miete -> Konflikt.
     await expect(rechnungen.erstelle(undefined, { mieteId, netto: 50 })).rejects.toThrow();
 
+    // Liste lässt sich nach Miete filtern (für die Mietseite der Oberfläche).
+    const zurMiete = await rechnungen.liste(undefined, { mieteId, limit: 10, offset: 0 });
+    expect(zurMiete.gesamt).toBe(1);
+    expect(zurMiete.eintraege[0]!.id).toBe(r.id);
+
     // Stellen -> Miete wird abgerechnet; dann bezahlt.
     await rechnungen.aendereStatus(r.id, 'gestellt');
     expect((await mieten.holeMiete(mieteId)).status).toBe('abgerechnet');

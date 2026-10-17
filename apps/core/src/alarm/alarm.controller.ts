@@ -9,7 +9,11 @@ import {
   Query,
 } from '@nestjs/common';
 import { z } from 'zod';
-import { istAbweichungStatus, type Principal } from '@rent2cool/shared';
+import {
+  abweichungErstellenSchema,
+  abweichungStatusSchema,
+  type Principal,
+} from '@rent2cool/shared';
 import { CurrentUser, Roles } from '../auth/decorators';
 import { Audited } from '../audit/audited.decorator';
 import { AlarmService } from './alarm.service';
@@ -67,18 +71,6 @@ export class AlarmController {
   }
 }
 
-const abwErstellenSchema = z.object({
-  bezugTyp: z.enum(['alarm', 'miete', 'fahrzeug']),
-  bezugId: z.string().uuid(),
-  beschreibung: z.string().min(1),
-  schweregrad: z.string().optional(),
-});
-const abwStatusSchema = z.object({
-  status: z.string(),
-  bewertung: z.string().optional(),
-  massnahmen: z.string().optional(),
-  verantwortlich: z.string().optional(),
-});
 const abwListeSchema = z.object({
   status: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
@@ -94,7 +86,7 @@ export class AbweichungController {
   @Audited('abweichung')
   @HttpCode(201)
   erstelle(@CurrentUser() user: Principal, @Body() body: unknown) {
-    return this.service.erstelle(user.mandantId, parse(abwErstellenSchema, body));
+    return this.service.erstelle(user.mandantId, parse(abweichungErstellenSchema, body));
   }
 
   @Get()
@@ -117,10 +109,7 @@ export class AbweichungController {
   @Audited('abweichung_status')
   @HttpCode(200)
   status(@Param('id') id: string, @Body() body: unknown) {
-    const b = parse(abwStatusSchema, body);
-    if (!istAbweichungStatus(b.status)) {
-      throw new BadRequestException('Unbekannter Status');
-    }
+    const b = parse(abweichungStatusSchema, body);
     return this.service.aendereStatus(id, b.status, {
       bewertung: b.bewertung,
       massnahmen: b.massnahmen,

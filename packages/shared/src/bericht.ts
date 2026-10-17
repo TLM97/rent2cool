@@ -16,6 +16,12 @@ export interface Temperaturprofil {
   readonly maxC: number;
 }
 
+/** Standard-Temperaturprofile (D-008), solange Profile aus der Konfiguration kommen (F-4). */
+export const STANDARD_TEMPERATURPROFILE: readonly Temperaturprofil[] = [
+  { name: '2-8', minC: 2, maxC: 8 },
+  { name: '15-25', minC: 15, maxC: 25 },
+];
+
 export interface NachweisKennzahlen {
   readonly anzahl: number;
   readonly minC: number | null;

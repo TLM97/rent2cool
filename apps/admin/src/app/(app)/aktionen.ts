@@ -60,3 +60,29 @@ export async function aendereFahrzeugStatus(formData: FormData): Promise<void> {
   if (!istUuid(id) || !status) redirect(mitMeldung('/fahrzeuge', 'fehler', 'Ungültige Eingabe'));
   await ausfuehren(`/v1/fahrzeuge/${id}/status`, { status }, zurueck, `Status auf „${statusLabel(status)}“ gesetzt.`);
 }
+
+/** Gemeinsamer Statuswechsel: `<basis>/<id>/status` im Kern, zurück zur Detailseite. */
+async function statusWechsel(formData: FormData, kernBasis: string, seitenBasis: string): Promise<void> {
+  const id = String(formData.get('id') ?? '');
+  const status = String(formData.get('status') ?? '');
+  const zurueck = zurueckPfad(formData, istUuid(id) ? `${seitenBasis}/${id}` : seitenBasis);
+  if (!istUuid(id) || !status) redirect(mitMeldung(zurueck, 'fehler', 'Ungültige Eingabe'));
+  await ausfuehren(`${kernBasis}/${id}/status`, { status }, zurueck, `Status auf „${statusLabel(status)}“ gesetzt.`);
+}
+
+export async function aendereKundeStatus(formData: FormData): Promise<void> {
+  await statusWechsel(formData, '/v1/kunden', '/kunden');
+}
+
+export async function aendereFahrerStatus(formData: FormData): Promise<void> {
+  // Fahrer haben keine eigene Seite; Rückweg über das Feld „zurueck“ (Kundenseite).
+  await statusWechsel(formData, '/v1/fahrer', '/kunden');
+}
+
+export async function aendereMieteStatus(formData: FormData): Promise<void> {
+  await statusWechsel(formData, '/v1/mieten', '/mieten');
+}
+
+export async function aendereRechnungStatus(formData: FormData): Promise<void> {
+  await statusWechsel(formData, '/v1/rechnungen', '/rechnungen');
+}

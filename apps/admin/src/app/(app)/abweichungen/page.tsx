@@ -1,30 +1,39 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ABWEICHUNG_STATUS } from '@rent2cool/shared';
 import { Blaettern, Leer, Plakette, Seitenkopf, StatusFilter } from '../../../components/bausteine';
 import { apiGet } from '../../../lib/api';
 import { formatDatumZeit, kurzeId } from '../../../lib/format';
 import { blattAus, erster, type SuchParameter } from '../../../lib/seiten';
+import { holeSitzung } from '../../../lib/sitzung';
+import { hatRolle } from '../../../lib/token';
 import type { Abweichung, Liste } from '../../../lib/typen';
+import { BEZUG } from './bezug';
 
 export const metadata: Metadata = { title: 'Abweichungen' };
-
-const BEZUG: Record<string, string> = { alarm: 'Alarm', miete: 'Miete', fahrzeug: 'Fahrzeug' };
 
 export default async function Abweichungen({ searchParams }: { searchParams: Promise<SuchParameter> }) {
   const params = await searchParams;
   const status = erster(params.status);
   const blatt = blattAus(params);
-  const daten = await apiGet<Liste<Abweichung>>('/v1/abweichungen', {
-    status,
-    limit: blatt.limit,
-    offset: blatt.offset,
-  });
+  const [daten, sitzung] = await Promise.all([
+    apiGet<Liste<Abweichung>>('/v1/abweichungen', { status, limit: blatt.limit, offset: blatt.offset }),
+    holeSitzung(),
+  ]);
+  const darfErfassen = hatRolle(sitzung?.rollen ?? [], 'ops', 'admin', 'qa_approver');
 
   return (
     <>
       <Seitenkopf
         titel="Abweichungen"
         untertitel="GDP-Abweichungen und CAPA – Bewertung und Abschluss durch die qualitätsverantwortliche Person."
+        aktionen={
+          darfErfassen ? (
+            <Link className="knopf" href="/abweichungen/neu">
+              Abweichung erfassen
+            </Link>
+          ) : null
+        }
       />
       <section className="karte">
         <StatusFilter pfad="/abweichungen" aktuell={status} optionen={ABWEICHUNG_STATUS} />
@@ -47,7 +56,9 @@ export default async function Abweichungen({ searchParams }: { searchParams: Pro
                 {daten.eintraege.map((a) => (
                   <tr key={a.id}>
                     <td>{formatDatumZeit(a.erfasstAm)}</td>
-                    <td>{a.beschreibung}</td>
+                    <td>
+                      <Link href={`/abweichungen/${a.id}`}>{a.beschreibung}</Link>
+                    </td>
                     <td>
                       {BEZUG[a.bezugTyp] ?? a.bezugTyp} <span className="mono leise">{kurzeId(a.bezugId)}</span>
                     </td>

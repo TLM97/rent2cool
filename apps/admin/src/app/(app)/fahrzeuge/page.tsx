@@ -3,6 +3,8 @@ import type { Metadata } from 'next';
 import { FAHRZEUG_STATUS } from '@rent2cool/shared';
 import { Blaettern, Leer, Plakette, Seitenkopf, StatusFilter } from '../../../components/bausteine';
 import { apiGet } from '../../../lib/api';
+import { holeSitzung } from '../../../lib/sitzung';
+import { hatRolle } from '../../../lib/token';
 import { formatDatum } from '../../../lib/format';
 import { blattAus, erster, type SuchParameter } from '../../../lib/seiten';
 import type { Fahrzeug, Liste } from '../../../lib/typen';
@@ -13,11 +15,25 @@ export default async function Fahrzeuge({ searchParams }: { searchParams: Promis
   const params = await searchParams;
   const status = erster(params.status);
   const blatt = blattAus(params);
-  const daten = await apiGet<Liste<Fahrzeug>>('/v1/fahrzeuge', { status, limit: blatt.limit, offset: blatt.offset });
+  const [daten, sitzung] = await Promise.all([
+    apiGet<Liste<Fahrzeug>>('/v1/fahrzeuge', { status, limit: blatt.limit, offset: blatt.offset }),
+    holeSitzung(),
+  ]);
+  const darfAnlegen = hatRolle(sitzung?.rollen ?? [], 'ops', 'admin');
 
   return (
     <>
-      <Seitenkopf titel="Fahrzeuge" untertitel="Fahrzeugakte: Status, Klasse, Fahrtenschreiber und Kühlaufbau." />
+      <Seitenkopf
+        titel="Fahrzeuge"
+        untertitel="Fahrzeugakte: Status, Klasse, Fahrtenschreiber und Kühlaufbau."
+        aktionen={
+          darfAnlegen ? (
+            <Link className="knopf" href="/fahrzeuge/neu">
+              Fahrzeug anlegen
+            </Link>
+          ) : null
+        }
+      />
       <section className="karte">
         <StatusFilter pfad="/fahrzeuge" aktuell={status} optionen={FAHRZEUG_STATUS} />
         {daten.eintraege.length === 0 ? (

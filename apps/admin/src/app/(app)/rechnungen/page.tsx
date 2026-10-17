@@ -46,8 +46,10 @@ export default async function Rechnungen({ searchParams }: { searchParams: Promi
               <tbody>
                 {daten.eintraege.map((r) => (
                   <tr key={r.id}>
-                    <td className="mono">
-                      <strong>{r.rechnungsnummer}</strong>
+                    <td>
+                      <Link className="mono" href={`/rechnungen/${r.id}`}>
+                        <strong>{r.rechnungsnummer}</strong>
+                      </Link>
                     </td>
                     <td>
                       <Plakette status={r.status} />

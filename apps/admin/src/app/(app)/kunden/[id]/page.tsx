@@ -1,20 +1,42 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { Leer, Plakette, Seitenkopf } from '../../../../components/bausteine';
+import {
+  FAHRER_STATUS,
+  FUEHRERSCHEINKLASSEN,
+  istFahrerUebergangErlaubt,
+  istKundeUebergangErlaubt,
+  KUNDE_STATUS,
+} from '@rent2cool/shared';
+import { Leer, Meldungen, Plakette, Seitenkopf, StatusFormular } from '../../../../components/bausteine';
+import { Auswahl, Feld, FormularRahmen } from '../../../../components/formular';
 import { apiGet, apiGetOderNull } from '../../../../lib/api';
 import { formatDatum } from '../../../../lib/format';
+import { naechsteStatus } from '../../../../lib/formular';
 import { fuehrerscheinFrist } from '../../../../lib/fristen';
-import { istUuid } from '../../../../lib/seiten';
+import { istUuid, type SuchParameter } from '../../../../lib/seiten';
+import { holeSitzung } from '../../../../lib/sitzung';
+import { hatRolle } from '../../../../lib/token';
 import type { Fahrer, Kunde } from '../../../../lib/typen';
+import { aendereFahrerStatus, aendereKundeStatus } from '../../aktionen';
+import { erstelleFahrer } from '../../formulare';
 
 export const metadata: Metadata = { title: 'Kunde' };
 
-export default async function KundeDetail({ params }: { params: Promise<{ id: string }> }) {
+export default async function KundeDetail({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<SuchParameter>;
+}) {
   const { id } = await params;
   if (!istUuid(id)) notFound();
+  const suche = await searchParams;
   const kunde = await apiGetOderNull<Kunde>(`/v1/kunden/${id}`);
   if (!kunde) notFound();
-  const fahrer = await apiGet<Fahrer[]>(`/v1/kunden/${id}/fahrer`);
+  const [fahrer, sitzung] = await Promise.all([apiGet<Fahrer[]>(`/v1/kunden/${id}/fahrer`), holeSitzung()]);
+  const darfAendern = hatRolle(sitzung?.rollen ?? [], 'ops', 'admin');
+  const pfad = `/kunden/${id}`;
 
   return (
     <>
@@ -23,6 +45,8 @@ export default async function KundeDetail({ params }: { params: Promise<{ id: st
         untertitel={<Plakette status={kunde.status} />}
         brotkrume={{ href: '/kunden', text: 'Kunden & Fahrer' }}
       />
+      <Meldungen params={suche} />
+
       <section className="karte" aria-labelledby="stamm-titel">
         <h2 id="stamm-titel">Firmendaten</h2>
         <dl className="eigenschaften">
@@ -34,6 +58,19 @@ export default async function KundeDetail({ params }: { params: Promise<{ id: st
           <dd>{kunde.ort ?? '–'}</dd>
           <dt>angelegt</dt>
           <dd>{formatDatum(kunde.erstelltAm)}</dd>
+          {darfAendern ? (
+            <>
+              <dt>Prüfung/Freigabe</dt>
+              <dd>
+                <StatusFormular
+                  aktion={aendereKundeStatus}
+                  id={kunde.id}
+                  naechste={naechsteStatus(KUNDE_STATUS, kunde.status, istKundeUebergangErlaubt)}
+                  label="Kundenstatus ändern"
+                />
+              </dd>
+            </>
+          ) : null}
         </dl>
       </section>
 
@@ -52,6 +89,7 @@ export default async function KundeDetail({ params }: { params: Promise<{ id: st
                   <th scope="col">Klasse</th>
                   <th scope="col">Führerschein gültig bis</th>
                   <th scope="col">Frist</th>
+                  {darfAendern ? <th scope="col">Prüfung</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -68,6 +106,17 @@ export default async function KundeDetail({ params }: { params: Promise<{ id: st
                       <td>
                         <span className={`plakette ${frist.ton}`}>{frist.text}</span>
                       </td>
+                      {darfAendern ? (
+                        <td>
+                          <StatusFormular
+                            aktion={aendereFahrerStatus}
+                            id={f.id}
+                            zurueck={pfad}
+                            naechste={naechsteStatus(FAHRER_STATUS, f.status, istFahrerUebergangErlaubt)}
+                            label={`Status von ${f.name} ändern`}
+                          />
+                        </td>
+                      ) : null}
                     </tr>
                   );
                 })}
@@ -76,6 +125,28 @@ export default async function KundeDetail({ params }: { params: Promise<{ id: st
           </div>
         )}
       </section>
+
+      {darfAendern ? (
+        <section className="karte" aria-labelledby="fahrer-neu-titel">
+          <h2 id="fahrer-neu-titel">Fahrer anlegen</h2>
+          <p className="leise">
+            Fahrer gehören zum Kunden (D-004). Nur erfundene Testdaten, solange kein Datenschutzbeauftragter
+            benannt ist (D-015).
+          </p>
+          <FormularRahmen aktion={erstelleFahrer} sendenText="Fahrer anlegen" versteckt={{ kundeId: kunde.id }}>
+            <Feld name="name" label="Name" pflicht />
+            <Auswahl
+              name="fuehrerscheinKlasse"
+              label="Führerscheinklasse"
+              pflicht
+              standard="B"
+              optionen={FUEHRERSCHEINKLASSEN.map((k) => ({ wert: k, text: k }))}
+            />
+            <Feld name="fuehrerscheinNummer" label="Führerscheinnummer" />
+            <Feld name="fuehrerscheinGueltigBis" label="Führerschein gültig bis" typ="date" />
+          </FormularRahmen>
+        </section>
+      ) : null}
     </>
   );
 }
