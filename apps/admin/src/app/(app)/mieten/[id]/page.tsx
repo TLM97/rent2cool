@@ -8,6 +8,7 @@ import {
   Plakette,
   Seitenkopf,
   StatusFormular,
+  UebergabePlakette,
 } from '../../../../components/bausteine';
 import { Verlauf } from '../../../../components/verlauf';
 import { Feld, FormularRahmen } from '../../../../components/formular';
@@ -24,7 +25,15 @@ import { naechsteStatus } from '../../../../lib/formular';
 import { istUuid, type SuchParameter } from '../../../../lib/seiten';
 import { holeSitzung } from '../../../../lib/sitzung';
 import { hatRolle } from '../../../../lib/token';
-import type { Fahrzeug, Kunde, Liste, Miete, Rechnung, Standort } from '../../../../lib/typen';
+import type {
+  Fahrzeug,
+  Kunde,
+  Liste,
+  Miete,
+  Rechnung,
+  Standort,
+  FahrzeugPosition,
+} from '../../../../lib/typen';
 import { aendereMieteStatus } from '../../aktionen';
 import { erstelleRechnung } from '../../formulare';
 
@@ -72,6 +81,13 @@ export default async function MieteDetail({
       .map((x) => [x.id, x.name]),
   );
   const standortName = (sid: string | null) => (sid ? (standorte.get(sid) ?? '–') : '–');
+  // Laufende Miete: steht das Fahrzeug gerade im Rückgabebereich? (vor dem Beenden)
+  const jetztOrt =
+    miete.status === 'aktiv'
+      ? await apiGetOderNull<FahrzeugPosition>(`/v1/fahrzeuge/${miete.fahrzeugId}/position`, {
+          standortId: miete.standortRueckgabeId ?? undefined,
+        })
+      : null;
 
   return (
     <>
@@ -112,6 +128,23 @@ export default async function MieteDetail({
             <dd>
               {standortName(miete.standortAbholId)} / {standortName(miete.standortRueckgabeId)}
             </dd>
+            <dt>Übergabe</dt>
+            <dd>
+              <UebergabePlakette pruefung={miete.uebergabePruefung} />
+            </dd>
+            <dt>Rückgabe</dt>
+            <dd>
+              <UebergabePlakette pruefung={miete.rueckgabePruefung} />
+            </dd>
+            {jetztOrt ? (
+              <>
+                <dt>Jetzt</dt>
+                <dd>
+                  <UebergabePlakette pruefung={jetztOrt.pruefung} />
+                  <div className="leise">gegen den Rückgabestandort</div>
+                </dd>
+              </>
+            ) : null}
             <dt>geplant</dt>
             <dd>
               {formatDatumZeit(miete.startGeplant)} – {formatDatumZeit(miete.endeGeplant)}
@@ -130,6 +163,12 @@ export default async function MieteDetail({
               <>
                 <dt>Status</dt>
                 <dd>
+                  {jetztOrt && jetztOrt.pruefung.ergebnis !== 'im_bereich' ? (
+                    <div className="hinweis warn">
+                      Vor dem Beenden: Das Fahrzeug steht derzeit nicht nachweislich im
+                      Rückgabebereich. Das Ergebnis wird beim Beenden festgehalten.
+                    </div>
+                  ) : null}
                   <StatusFormular
                     aktion={aendereMieteStatus}
                     id={miete.id}

@@ -13,6 +13,54 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Übergabebereich-Prüfung
+
+**Übergabebereich-Prüfung – erledigt.** (Auf Toms Auftrag; Planung möge die
+Aufgabe in `TASKS.md` nachziehen.)
+
+Erledigt:
+- **Geteilte Logik** `packages/shared/src/geo.ts`: Abstand (Haversine),
+  `pruefeUebergabebereich` mit Ergebnis „im Bereich“, „außerhalb“ (mit
+  Abstand und Radius) oder „unbekannt“ mit Grund (kein Standort, kein
+  Geofence, keine Position, Position älter als 30 Min.). Nie stillschweigend
+  „im Bereich“.
+- **Kern:** letzte Position eines Fahrzeugs aus den Messwerten
+  `position_lat`/`position_lng` derselben Nachricht – eine Zeile, Zeitfenster
+  24 h, über den vorhandenen Index (Fahrzeug, Zeit) (D-003: keine
+  unbegrenzte Abfrage). Messwerte werden nur gelesen.
+  `GET /v1/fahrzeuge/:id/position[?standortId=]` mit Mandantentrennung.
+- **Miete:** Beim Wechsel auf `aktiv` wird gegen den Abholstandort, beim
+  Wechsel auf `beendet` gegen den Rückgabestandort geprüft; das Ergebnis
+  (Position, Abstand, Zeitpunkt UTC) wird an der Miete gespeichert und steht
+  im Audit-Eintrag des Statuswechsels. Migration
+  `0012_miete_uebergabe_pruefung`.
+- **Oberfläche:** Fahrzeugakte mit Karte „Position“; Mietakte mit
+  Übergabe, Rückgabe und – bei laufender Miete – „Jetzt“ samt Hinweis vor
+  dem Beenden, wenn das Fahrzeug nicht nachweislich im Rückgabebereich
+  steht. Verlauf zeigt die Prüfergebnisse lesbar.
+- **Demo-Daten:** Positionen über den normalen Telematik-Pfad; eine
+  Rückgabe 450 m außerhalb, ein Fahrzeug unterwegs (~18 km).
+
+Tests: shared 54, Kern 125/125 Integration (neu: Übergabebereich, Demo),
+alle 9 Browser-Tests grün.
+
+Abkürzungen / Hinweise:
+- Abstand per Haversine in der Anwendung statt PostGIS – reicht für
+  Kreis-Geofences, Polygone bräuchten PostGIS (F-10).
+- Geprüft wird nur beim Statuswechsel und beim Anzeigen; keine laufende
+  Überwachung „Fahrzeug verlässt Bereich“ (wäre ein Hintergrundjob am
+  Telematik-Eingang).
+
+Fragen an Planung:
+- **F-37:** Soll Übergabe oder Rückgabe **abgelehnt** (oder automatisch
+  eine Abweichung angelegt) werden, wenn das Fahrzeug außerhalb steht? Und
+  was gilt bei „unbekannt“ (keine oder veraltete Position) – sperren,
+  Bestätigung durch Ops, oder nur festhalten wie heute? Sind 30 Minuten
+  als Höchstalter der Position richtig?
+- F-24, F-26 bis F-36 weiter offen (siehe unten).
+
+---
+
 ### 2026-10-17 – Standortverwaltung
 
 **Standortverwaltung – erledigt.** (Auf Toms Auftrag; Planung möge die

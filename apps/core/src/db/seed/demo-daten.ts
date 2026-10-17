@@ -216,6 +216,10 @@ export interface DemoMiete {
   endeStunden: number;
   status: 'beendet' | 'aktiv' | 'bestaetigt';
   ausreisser?: DemoAusreisser;
+  /** Rückgabe so weit vom Standort-Mittelpunkt (m); Standard 40 m = im Bereich. */
+  rueckgabeAbstandM?: number;
+  /** Laufende Miete: aktuelle Entfernung vom Standort (m) – unterwegs. */
+  aktuellAbstandM?: number;
   /** Rechnung (nur bei beendeten Mieten): Nettobetrag und Endstatus. */
   rechnung?: { netto: number; status: 'entwurf' | 'gestellt' | 'bezahlt' };
 }
@@ -253,6 +257,7 @@ export const DEMO_MIETEN: readonly DemoMiete[] = [
     startStunden: -3 * 24,
     endeStunden: -2 * 24,
     status: 'beendet',
+    rueckgabeAbstandM: 450,
     rechnung: { netto: 219, status: 'entwurf' },
   },
   // Läuft gerade (seit gestern früh); vor zwei Stunden kurz zu warm → offene Alarme.
@@ -264,6 +269,7 @@ export const DEMO_MIETEN: readonly DemoMiete[] = [
     startStunden: -30,
     endeStunden: 2 * 24,
     status: 'aktiv',
+    aktuellAbstandM: 18_000,
     ausreisser: { abStunde: 28, dauerMin: 14, spitzeC: 8.7 },
   },
   // Künftige Buchungen.
@@ -364,4 +370,34 @@ function baueNachricht(
 export function relativ(jetzt: Date, stunden: number): Date {
   const viertel = 15 * 60_000;
   return new Date(Math.round((jetzt.getTime() + stunden * STUNDE) / viertel) * viertel);
+}
+
+/** Punkt `meterNord`/`meterOst` vom Ausgangspunkt entfernt (für Fantasie-Positionen). */
+export function versetzt(p: { lat: number; lng: number }, meterNord: number, meterOst: number) {
+  const proGradBreite = 111_320;
+  return {
+    lat: Number((p.lat + meterNord / proGradBreite).toFixed(6)),
+    lng: Number(
+      (p.lng + meterOst / (proGradBreite * Math.cos((p.lat * Math.PI) / 180))).toFixed(6),
+    ),
+  };
+}
+
+/** Telematik-Nachricht mit einer Position (wie eine Box sie sendet). */
+export function positionsNachricht(
+  fahrzeugId: string,
+  zeit: Date,
+  p: { lat: number; lng: number },
+): TelemetrieNachricht {
+  const iso = zeit.toISOString();
+  return {
+    nachrichtId: `demo-pos-${fahrzeugId}-${iso}`,
+    fahrzeugId,
+    quelle: 'demo',
+    gesendetAm: iso,
+    messwerte: [
+      { messgroesse: 'position_lat', wert: p.lat, einheit: 'grad' },
+      { messgroesse: 'position_lng', wert: p.lng, einheit: 'grad' },
+    ],
+  };
 }

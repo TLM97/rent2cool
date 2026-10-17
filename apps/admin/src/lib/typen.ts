@@ -1,4 +1,4 @@
-import type { Oeffnungsregeln } from '@rent2cool/shared';
+import type { Oeffnungsregeln, Position, UebergabePruefung } from '@rent2cool/shared';
 
 /**
  * Antwortformen der Kern-API, wie die Oberfläche sie nutzt (JSON: Zeitpunkte
@@ -94,6 +94,9 @@ export interface Miete {
   fahrerId: string | null;
   standortAbholId: string | null;
   standortRueckgabeId: string | null;
+  /** Übergabebereich-Prüfung bei Übergabe (→ aktiv) und Rückgabe (→ beendet). */
+  uebergabePruefung?: UebergabePruefung | null;
+  rueckgabePruefung?: UebergabePruefung | null;
   startGeplant: string;
   endeGeplant: string;
   startIst: string | null;
@@ -201,4 +204,10 @@ export interface Standort {
   aktualisiertAm: string;
   /** Nur in der Liste. */
   fahrzeugAnzahl?: number;
+}
+
+/** Antwort von GET /v1/fahrzeuge/:id/position. */
+export interface FahrzeugPosition {
+  position: Position | null;
+  pruefung: UebergabePruefung;
 }

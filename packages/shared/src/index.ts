@@ -22,3 +22,4 @@ export * from './rechnung';
 export * from './alarm';
 export * from './eingaben';
 export * from './standort';
+export * from './geo';

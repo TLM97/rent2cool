@@ -89,6 +89,20 @@ export class FahrzeugController {
     return this.service.holeAkte(id);
   }
 
+  /** Letzte Position und Übergabebereich (Heimatstandort oder `?standortId=`). */
+  @Get(':id/position')
+  @Roles('ops', 'admin', 'qa_approver', 'kunde_dispo')
+  position(
+    @CurrentUser() user: Principal,
+    @Param('id') id: string,
+    @Query('standortId') standortId?: string,
+  ) {
+    if (standortId !== undefined && !/^[0-9a-f-]{36}$/i.test(standortId)) {
+      throw new BadRequestException('standortId ist keine UUID');
+    }
+    return this.service.positionUndBereich(user.mandantId, id, standortId);
+  }
+
   @Get(':id/buchbarkeit')
   @Roles('ops', 'admin', 'kunde_dispo', 'kunde_qa')
   buchbarkeit(@Param('id') id: string, @Query('stichtag') stichtag?: string) {

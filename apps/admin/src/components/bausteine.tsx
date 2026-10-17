@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { kurzeId, statusLabel, statusTon } from '../lib/format';
+import type { UebergabePruefung } from '@rent2cool/shared';
+import { formatDatumZeit, kurzeId, statusLabel, statusTon } from '../lib/format';
+import { uebergabeText } from '../lib/uebergabe';
 import { seitenLink, type SuchParameter } from '../lib/seiten';
 
 export function Marke() {
@@ -194,5 +196,23 @@ export function KundeLink({ id, firmenname }: { id: string; firmenname?: string 
     <Link className={firmenname ? undefined : 'mono'} href={`/kunden/${id}`}>
       {firmenname ?? kurzeId(id)}
     </Link>
+  );
+}
+
+/** Ergebnis der Übergabebereich-Prüfung als Plakette mit Zeitpunkt der Position. */
+export function UebergabePlakette({
+  pruefung,
+}: {
+  pruefung: UebergabePruefung | null | undefined;
+}) {
+  if (!pruefung) return <span className="leise">nicht geprüft</span>;
+  const { text, ton } = uebergabeText(pruefung);
+  return (
+    <>
+      <span className={`plakette ${ton}`}>{text}</span>
+      {pruefung.position ? (
+        <span className="leise"> · Position von {formatDatumZeit(pruefung.position.zeit)}</span>
+      ) : null}
+    </>
   );
 }

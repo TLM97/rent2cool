@@ -1,5 +1,6 @@
 /** Miete/Buchung (D-009). Arbeitsgrundlage nach T-002. */
-import { boolean, index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import type { UebergabePruefung } from '@rent2cool/shared';
+import { boolean, index, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { mandant, standort } from './stammdaten';
 import { fahrzeug } from './fahrzeugakte';
 import { fahrer, kunde } from './kunde';
@@ -30,6 +31,9 @@ export const miete = pgTable(
     temperaturprofil: text('temperaturprofil'),
     status: text('status').notNull().default('angefragt'),
     idempotencyKey: text('idempotency_key'),
+    /** Übergabebereich-Prüfung bei Mietbeginn bzw. -ende (Migration 0012). */
+    uebergabePruefung: jsonb('uebergabe_pruefung').$type<UebergabePruefung | null>(),
+    rueckgabePruefung: jsonb('rueckgabe_pruefung').$type<UebergabePruefung | null>(),
     erstelltAm: timestamp('erstellt_am', { withTimezone: true }).notNull().defaultNow(),
     aktualisiertAm: timestamp('aktualisiert_am', { withTimezone: true }).notNull().defaultNow(),
   },

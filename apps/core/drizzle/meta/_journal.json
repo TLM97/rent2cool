@@ -85,6 +85,13 @@
       "when": 1760637600000,
       "tag": "0011_standort_verwaltung",
       "breakpoints": false
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1760641200000,
+      "tag": "0012_miete_uebergabe_pruefung",
+      "breakpoints": false
     }
   ]
 }

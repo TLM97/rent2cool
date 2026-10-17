@@ -2,7 +2,13 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { erlaubteUebergaenge, istFahrzeugStatus } from '@rent2cool/shared';
-import { Leer, Meldungen, Plakette, Seitenkopf } from '../../../../components/bausteine';
+import {
+  Leer,
+  Meldungen,
+  Plakette,
+  Seitenkopf,
+  UebergabePlakette,
+} from '../../../../components/bausteine';
 import { Verlauf } from '../../../../components/verlauf';
 import { Auswahl, FormularRahmen } from '../../../../components/formular';
 import { KalibrierungFelder } from '../../../../components/stammdaten';
@@ -12,7 +18,12 @@ import { kalibrierungFrist } from '../../../../lib/fristen';
 import { istUuid, type SuchParameter } from '../../../../lib/seiten';
 import { holeSitzung } from '../../../../lib/sitzung';
 import { hatRolle } from '../../../../lib/token';
-import type { FahrzeugAkte, Pruefergebnis, Standort } from '../../../../lib/typen';
+import type {
+  FahrzeugAkte,
+  FahrzeugPosition,
+  Pruefergebnis,
+  Standort,
+} from '../../../../lib/typen';
 import { aendereFahrzeugStatus } from '../../aktionen';
 import { erfasseKalibrierung } from '../../formulare';
 
@@ -31,9 +42,10 @@ export default async function FahrzeugDetail({
 
   const akte = await apiGetOderNull<FahrzeugAkte>(`/v1/fahrzeuge/${id}`);
   if (!akte) notFound();
-  const [buchbarkeit, sitzung] = await Promise.all([
+  const [buchbarkeit, sitzung, ort] = await Promise.all([
     apiGet<Pruefergebnis>(`/v1/fahrzeuge/${id}/buchbarkeit`),
     holeSitzung(),
+    apiGetOderNull<FahrzeugPosition>(`/v1/fahrzeuge/${id}/position`),
   ]);
   const f = akte.fahrzeug;
   const standortName = f.standortId
@@ -137,6 +149,24 @@ export default async function FahrzeugDetail({
           ) : null}
         </section>
       </div>
+
+      {ort ? (
+        <section className="karte" aria-labelledby="position-titel">
+          <h2 id="position-titel">Position</h2>
+          <dl className="eigenschaften">
+            <dt>Letzte Position</dt>
+            <dd>
+              {ort.position
+                ? `${ort.position.lat.toLocaleString('de-DE')}, ${ort.position.lng.toLocaleString('de-DE')} · ${formatDatumZeit(ort.position.zeit)}`
+                : 'keine in den letzten 24 Stunden'}
+            </dd>
+            <dt>Heimatstandort</dt>
+            <dd>
+              <UebergabePlakette pruefung={ort.pruefung} />
+            </dd>
+          </dl>
+        </section>
+      ) : null}
 
       <section className="karte" aria-labelledby="aufbau-titel">
         <h2 id="aufbau-titel">Kühlaufbau & Sensoren</h2>

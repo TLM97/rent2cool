@@ -23,6 +23,7 @@ import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 import { FahrzeugService } from '../fahrzeug/fahrzeug.service';
 import { KundeService } from '../kunde/kunde.service';
 import { standortNutzbar } from '../standort/standort.service';
+import { pruefeUebergabe } from '../standort/uebergabe';
 import { BerichtService } from '../bericht/bericht.service';
 import type { MieteErstellen } from './dto';
 
@@ -286,19 +287,40 @@ export class MieteService {
       id,
       nach,
       nichtGefunden: 'Miete nicht gefunden',
-      lade: async (tx) =>
-        (
-          await tx
-            .select({ status: miete.status, startIst: miete.startIst, endeIst: miete.endeIst })
-            .from(miete)
-            .where(and(eq(miete.id, id), eq(miete.mandantId, mandant)))
-            .for('update')
-        )[0],
+      lade: async (tx) => {
+        const [m] = await tx
+          .select({
+            status: miete.status,
+            startIst: miete.startIst,
+            endeIst: miete.endeIst,
+            fahrzeugId: miete.fahrzeugId,
+            standortAbholId: miete.standortAbholId,
+            standortRueckgabeId: miete.standortRueckgabeId,
+            uebergabePruefung: miete.uebergabePruefung,
+            rueckgabePruefung: miete.rueckgabePruefung,
+          })
+          .from(miete)
+          .where(and(eq(miete.id, id), eq(miete.mandantId, mandant)))
+          .for('update');
+        if (!m) return undefined;
+        // Übergabe (→ aktiv) bzw. Rückgabe (→ beendet): Position gegen den
+        // Übergabebereich prüfen und mit dem Statuswechsel festhalten (D-014).
+        // Abgelehnt wird nicht (F-37) – das Ergebnis steht in Miete und Audit.
+        const pruefung =
+          nach === 'aktiv' && m.status !== 'aktiv' && !m.uebergabePruefung
+            ? await pruefeUebergabe(tx, mandant, m.fahrzeugId, m.standortAbholId, new Date())
+            : nach === 'beendet' && m.status !== 'beendet' && !m.rueckgabePruefung
+              ? await pruefeUebergabe(tx, mandant, m.fahrzeugId, m.standortRueckgabeId, new Date())
+              : undefined;
+        return { ...m, pruefung };
+      },
       istStatus: istMieteStatus,
       erlaubt: istMieteUebergangErlaubt,
       zusatz: (m) => ({
         ...(nach === 'aktiv' && !m.startIst ? { startIst: new Date() } : {}),
         ...(nach === 'beendet' && !m.endeIst ? { endeIst: new Date() } : {}),
+        ...(nach === 'aktiv' && m.pruefung ? { uebergabePruefung: m.pruefung } : {}),
+        ...(nach === 'beendet' && m.pruefung ? { rueckgabePruefung: m.pruefung } : {}),
       }),
       speichere: async (tx, werte) => {
         try {

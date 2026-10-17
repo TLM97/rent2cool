@@ -2,8 +2,13 @@
  * Audit-Einträge lesbar machen: was ist passiert, welche Felder haben sich wie
  * geändert. Beschriftungen und Formate liegen hier an einer Stelle.
  */
-import { oeffnungszeitenText, type Oeffnungsregeln } from '@rent2cool/shared';
+import {
+  oeffnungszeitenText,
+  type Oeffnungsregeln,
+  type UebergabePruefung,
+} from '@rent2cool/shared';
 import { formatDatumZeit, formatEuro, statusLabel } from './format';
+import { uebergabeText } from './uebergabe';
 
 export interface AuditEintrag {
   id: string;
@@ -81,6 +86,8 @@ const FELDER: Record<string, string> = {
   oeffnungsregeln: 'Öffnungszeiten',
   standortId: 'Heimatstandort (ID)',
   region: 'Region',
+  uebergabePruefung: 'Übergabebereich (Übergabe)',
+  rueckgabePruefung: 'Übergabebereich (Rückgabe)',
 };
 
 const ISO_ZEIT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
@@ -97,6 +104,13 @@ export function formatWert(feld: string, wert: unknown): string {
         .filter((z) => !z.endsWith('geschlossen'))
         .join('; ') || 'überall geschlossen'
     );
+  }
+  if (
+    (feld === 'uebergabePruefung' || feld === 'rueckgabePruefung') &&
+    wert &&
+    typeof wert === 'object'
+  ) {
+    return uebergabeText(wert as UebergabePruefung).text;
   }
   if (wert === null || wert === undefined || wert === '') return '–';
   if (feld === 'status' && typeof wert === 'string') return statusLabel(wert);

@@ -10,7 +10,9 @@ import {
   istFahrzeugStatus,
   istUebergangErlaubt,
   type FahrzeugStatus,
+  type Position,
   type Principal,
+  type UebergabePruefung,
 } from '@rent2cool/shared';
 import {
   ermittleAenderungen,
@@ -27,6 +29,7 @@ import { aggregat, fahrzeug, kalibrierung, sensor, standort } from '../db/schema
 import { istPgFehler, PG_FEHLER } from '../db/fehler';
 import { enthaeltMuster } from '../db/suche';
 import { standortNutzbar } from '../standort/standort.service';
+import { letztePosition, pruefeUebergabe } from '../standort/uebergabe';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 import { bewerteBuchbarkeit, type BuchbarkeitErgebnis, type SensorFrist } from './fristen';
 import type { FahrzeugAendern, FahrzeugErstellen, KalibrierungEingabe, SensorTausch } from './dto';
@@ -447,6 +450,34 @@ export class FahrzeugService {
   }
 
   /** Sensoren, deren jüngste Kalibrierung vor `bis` abläuft oder fehlt. */
+  /**
+   * Letzte Position und Prüfung gegen den Übergabebereich – des angegebenen
+   * Standorts oder des Heimatstandorts.
+   */
+  async positionUndBereich(
+    mandantId: string | undefined,
+    id: string,
+    standortId?: string,
+  ): Promise<{ position: Position | null; pruefung: UebergabePruefung }> {
+    const mandant = mandantId ?? PLACEHOLDER_MANDANT_ID;
+    const [fz] = await this.db
+      .select({ standortId: fahrzeug.standortId })
+      .from(fahrzeug)
+      .where(and(eq(fahrzeug.id, id), eq(fahrzeug.mandantId, mandant)));
+    if (!fz) {
+      throw new NotFoundException('Fahrzeug nicht gefunden');
+    }
+    const jetzt = new Date();
+    const pruefung = await pruefeUebergabe(
+      this.db,
+      mandant,
+      id,
+      standortId ?? fz.standortId,
+      jetzt,
+    );
+    return { position: pruefung.position ?? (await letztePosition(this.db, id, jetzt)), pruefung };
+  }
+
   /**
    * Buchbare Fahrzeuge für einen Zeitraum – dieselben Regeln wie die Buchung
    * (MieteService.pruefeBuchung): Status „verfügbar“, jeder aktive Sensor zum

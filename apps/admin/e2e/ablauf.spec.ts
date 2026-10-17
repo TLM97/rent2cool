@@ -131,6 +131,8 @@ test('kompletter Ablauf von Fahrzeug bis Abweichung', async ({ page, context }) 
 
   // --- Miete durchlaufen, Rechnung erstellen ---
   await statusWechseln(page, 'Mietstatus ändern', 'aktiv', 'Status');
+  // Ohne Standort und Position: Übergabebereich ehrlich „unbekannt“, nie „im Bereich“.
+  await expect(page.getByText('unbekannt – Kein Standort festgelegt').first()).toBeVisible();
   await statusWechseln(page, 'Mietstatus ändern', 'beendet', 'Status');
   // Verlauf: jeder Statuswechsel mit Person, altem und neuem Wert.
   const mietVerlauf = page.getByRole('region', { name: 'Verlauf' });

@@ -358,6 +358,23 @@ Fahrzeuge haben einen Heimatstandort; in der Buchung wählt man den Abhol- und
 Rückgabestandort, die Suche zeigt dann nur dessen Fahrzeuge und weist auf
 Abholung oder Rückgabe außerhalb der Öffnungszeiten hin.
 
+### Übergabebereich (D-011, D-014)
+
+Steht das Fahrzeug bei Übergabe und Rückgabe im Geofence des Standorts? Der
+Kern nimmt die letzte Telematik-Position (Breite und Länge aus derselben
+Nachricht, höchstens 24 h zurück, über den Index je Fahrzeug) und vergleicht
+sie mit Mittelpunkt und Radius (`packages/shared/src/geo.ts`). Ergebnis:
+„im Bereich“, „außerhalb“ (mit Abstand) oder „unbekannt“ mit Grund – kein
+Standort, kein Geofence, keine oder eine über 30 Minuten alte Position. Beim
+Wechsel auf `aktiv` wird gegen den Abholstandort, beim Wechsel auf `beendet`
+gegen den Rückgabestandort geprüft und das Ergebnis an der Miete festgehalten
+(im Audit Trail). Heute ist das ein Nachweis und Hinweis, keine Sperre (F-37).
+
+- `GET /v1/fahrzeuge/:id/position[?standortId=]` — letzte Position und
+  Prüfung gegen den angegebenen oder den Heimatstandort.
+- Fahrzeugakte: Karte „Position“. Mietakte: Übergabe, Rückgabe und bei
+  laufender Miete „Jetzt“ mit Hinweis vor dem Beenden.
+
 ### Stammdaten bearbeiten
 
 Kunde, Fahrer und Fahrzeug lassen sich ändern (`PATCH` im Kern). Anlegen und

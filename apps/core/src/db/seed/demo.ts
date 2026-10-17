@@ -29,6 +29,7 @@ import { KundeService } from '../../kunde/kunde.service';
 import { MieteService } from '../../miete/miete.service';
 import { RechnungService } from '../../rechnung/rechnung.service';
 import { StandortService } from '../../standort/standort.service';
+import { pruefeUebergabe } from '../../standort/uebergabe';
 import { verarbeiteNachricht } from '../../telemetry/processor';
 import { createDbClient, type Database } from '../client';
 import { alarm, kunde, mandant, miete } from '../schema';
@@ -39,8 +40,10 @@ import {
   DEMO_MARKER_KUNDE,
   DEMO_MIETEN,
   DEMO_STANDORTE,
+  positionsNachricht,
   relativ,
   temperaturVerlauf,
+  versetzt,
 } from './demo-daten';
 import { PLACEHOLDER_MANDANT_ID } from './placeholder-data';
 
@@ -229,6 +232,28 @@ export async function ladeDemoDaten(
       continue;
     }
 
+    // Positionen bei Übergabe, Rückgabe bzw. jetzt (unterwegs) – durch die
+    // Telematik-Verarbeitung; die Prüfungen rechnet derselbe Code wie im Betrieb.
+    const geo = DEMO_STANDORTE.find((st) => st.schluessel === demoFahrzeug.standort)!.geofence;
+    await verarbeiteNachricht(db, positionsNachricht(fahrzeugId, start, versetzt(geo, 30, 10)));
+    if (m.status === 'beendet') {
+      await verarbeiteNachricht(
+        db,
+        positionsNachricht(fahrzeugId, ende, versetzt(geo, m.rueckgabeAbstandM ?? 40, 0)),
+      );
+    } else {
+      const vorKurzem = new Date(jetzt.getTime() - 2 * 60_000);
+      await verarbeiteNachricht(
+        db,
+        positionsNachricht(fahrzeugId, vorKurzem, versetzt(geo, m.aktuellAbstandM ?? 0, 0)),
+      );
+    }
+    const uebergabePruefung = await pruefeUebergabe(db, mandantId, fahrzeugId, standortId, start);
+    const rueckgabePruefung =
+      m.status === 'beendet'
+        ? await pruefeUebergabe(db, mandantId, fahrzeugId, standortId, ende)
+        : null;
+
     // Vergangene/laufende Miete mit ihren historischen Zeiten.
     const mieteId = await db.transaction(async (tx) => {
       const [row] = await tx
@@ -247,6 +272,8 @@ export async function ladeDemoDaten(
           auslandsfahrtGeplant: false,
           temperaturprofil: profilName,
           status: m.status,
+          uebergabePruefung,
+          rueckgabePruefung,
         })
         .returning();
       await protokolliereAnlage(tx, akteur, 'miete', row!.id, row);
@@ -309,6 +336,21 @@ export async function ladeDemoDaten(
       if (m.rechnung.status === 'bezahlt') await rechnungen.aendereStatus(akteur, r.id, 'bezahlt');
       ergebnis.rechnungen++;
     }
+  }
+
+  // Fahrzeuge, die nicht unterwegs sind, stehen jetzt an ihrem Standort.
+  const unterwegs = new Set(DEMO_MIETEN.filter((m) => m.status === 'aktiv').map((m) => m.fahrzeug));
+  for (const f of DEMO_FAHRZEUGE) {
+    if (unterwegs.has(f.schluessel)) continue;
+    const geo = DEMO_STANDORTE.find((st) => st.schluessel === f.standort)!.geofence;
+    await verarbeiteNachricht(
+      db,
+      positionsNachricht(
+        fahrzeugIds.get(f.schluessel)!,
+        new Date(jetzt.getTime() - 3 * 60_000),
+        versetzt(geo, -25, 15),
+      ),
+    );
   }
 
   // Endstatus der Fahrzeuge (z. B. Wartung) erst zum Schluss – Buchungen brauchen „verfügbar“.

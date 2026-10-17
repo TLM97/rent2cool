@@ -223,6 +223,30 @@ describe.skipIf(!RUN)('Demo-Daten (Integration, braucht DB)', () => {
     );
   });
 
+  it('Übergabebereich: Prüfungen der Mieten und aktuelle Positionen', async () => {
+    const alle = await client.db.select().from(miete).where(eq(miete.mandantId, mandantId));
+    const abgeschlossen = alle.filter((m) => m.rueckgabePruefung);
+    expect(abgeschlossen.map((m) => m.rueckgabePruefung!.ergebnis).sort()).toEqual([
+      'ausserhalb',
+      'im_bereich',
+      'im_bereich',
+    ]);
+    expect(
+      alle
+        .filter((m) => m.status !== 'bestaetigt')
+        .every((m) => m.uebergabePruefung?.ergebnis === 'im_bereich'),
+    ).toBe(true);
+    const fz = await client.db.select().from(fahrzeug).where(eq(fahrzeug.mandantId, mandantId));
+    const unterwegs = fz.find((f) => f.kennzeichen === 'DEMO-104')!;
+    const zuHause = fz.find((f) => f.kennzeichen === 'DEMO-101')!;
+    const p1 = await fahrzeuge.positionUndBereich(mandantId, unterwegs.id);
+    expect(p1.pruefung.ergebnis).toBe('ausserhalb');
+    expect(p1.pruefung.abstandM).toBeGreaterThan(17_000);
+    expect((await fahrzeuge.positionUndBereich(mandantId, zuHause.id)).pruefung.ergebnis).toBe(
+      'im_bereich',
+    );
+  });
+
   it('ein zweiter Lauf ändert nichts', async () => {
     const vorher = await client.db
       .select({ id: miete.id })
