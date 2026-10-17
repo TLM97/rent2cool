@@ -3,4 +3,7 @@
 **/node_modules/**
 **/coverage/**
 pnpm-lock.yaml
+**/next-env.d.ts
+**/test-results/**
+**/playwright-report/**
 apps/core/drizzle/**

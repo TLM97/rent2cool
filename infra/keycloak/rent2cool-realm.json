@@ -4,19 +4,38 @@
   "displayName": "Rent2Cool (lokal)",
   "sslRequired": "none",
   "registrationAllowed": false,
-  "comment": "Platzhalter-Realm fuer die lokale Entwicklung (D-005/D-015). Keine echten Nutzer, keine echten Secrets. Rollen und Rechte werden im Kern feiner modelliert (D-001); hier nur die groben Realm-Rollen, damit OIDC-Login lokal funktioniert.",
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 3600,
   "roles": {
     "realm": [
-      { "name": "admin", "description": "Gruender/Ops-Administration" },
-      { "name": "ops", "description": "Operatives Team: Flotte, Buchungen, Alarme" },
-      { "name": "dpo", "description": "Datenschutzbeauftragter (PLACEHOLDER_DPO bis extern beauftragt, D-015)" },
+      {
+        "name": "admin",
+        "description": "Gruender/Ops-Administration"
+      },
+      {
+        "name": "ops",
+        "description": "Operatives Team: Flotte, Buchungen, Alarme"
+      },
+      {
+        "name": "dpo",
+        "description": "Datenschutzbeauftragter (PLACEHOLDER_DPO bis extern beauftragt, D-015)"
+      },
       {
         "name": "qa_approver",
         "description": "Qualitaetsverantwortliche Person; Freigaben nach Vier-Augen-Prinzip (D-015)"
       },
-      { "name": "kunde_dispo", "description": "Disposition beim Firmenkunden" },
-      { "name": "kunde_qa", "description": "QA beim Firmenkunden" },
-      { "name": "fahrer", "description": "Fahrer eines Firmenkunden (D-004)" }
+      {
+        "name": "kunde_dispo",
+        "description": "Disposition beim Firmenkunden"
+      },
+      {
+        "name": "kunde_qa",
+        "description": "QA beim Firmenkunden"
+      },
+      {
+        "name": "fahrer",
+        "description": "Fahrer eines Firmenkunden (D-004)"
+      }
     ]
   },
   "clients": [
@@ -28,9 +47,110 @@
       "serviceAccountsEnabled": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
-      "redirectUris": ["http://localhost:3000/*"],
-      "webOrigins": ["http://localhost:3000"],
+      "redirectUris": [
+        "http://localhost:3000/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3000"
+      ],
       "secret": "PLACEHOLDER_OIDC_CLIENT_SECRET"
+    },
+    {
+      "clientId": "rent2cool-admin",
+      "name": "Rent2Cool Admin-Oberflaeche",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:3002/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3002"
+      ],
+      "secret": "PLACEHOLDER_ADMIN_OIDC_CLIENT_SECRET",
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3002/*",
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "admin.dev",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "Testnutzer",
+      "email": "admin.dev@rent2cool.example",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "PLACEHOLDER_dev_passwort",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "admin",
+        "ops",
+        "qa_approver"
+      ]
+    },
+    {
+      "username": "ops.dev",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Ops",
+      "lastName": "Testnutzer",
+      "email": "ops.dev@rent2cool.example",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "PLACEHOLDER_dev_passwort",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ops"
+      ]
+    },
+    {
+      "username": "qa.dev",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "QA",
+      "lastName": "Testnutzer",
+      "email": "qa.dev@rent2cool.example",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "PLACEHOLDER_dev_passwort",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "qa_approver"
+      ]
+    },
+    {
+      "username": "kunde.dev",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Kunde",
+      "lastName": "Testnutzer",
+      "email": "kunde.dev@rent2cool.example",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "PLACEHOLDER_dev_passwort",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "kunde_dispo"
+      ]
     }
   ]
 }

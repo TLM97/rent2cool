@@ -13,6 +13,69 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Admin-Oberfläche
+
+**Admin-Oberfläche v1 – erledigt.** (Auf Toms Auftrag; Planung möge die
+Aufgabe in `TASKS.md` nachziehen.)
+
+**Fehlerkorrektur aus T-001 (wichtig):** Der Keycloak-Realm-Import enthielt ein
+Feld `comment`, das Keycloak nicht kennt – Keycloak brach beim Start ab. Damit
+lief Keycloak über `pnpm stack:up` seit T-001 nie wirklich. Unbemerkt, weil ich
+damals nur die Compose-Syntax geprüft und Keycloak nicht gestartet hatte.
+Behoben (Feld entfernt, Erläuterung nach `infra/keycloak/README.md`); jetzt
+end-to-end mit echtem Login getestet. Außerdem Keycloak-Image auf Docker Hub
+(`keycloak/keycloak`, identisch) umgestellt – quay.io ist aus der Cloud-Session
+nicht erreichbar.
+
+Erledigt:
+- `apps/admin`: **Next.js 15.5** (App Router) mit **next-auth v4** (stabil; v5
+  ist noch Beta) und **Keycloak-Login (Authorization Code + PKCE)**.
+  Zugriffstoken bleibt im verschlüsselten Sitzungs-Cookie auf dem Server, an
+  den Browser gehen nur Anzeigedaten. Daten kommen ausschließlich über die
+  Kern-API; Rechte und Audit Trail setzt weiterhin der Kern durch.
+- **Zugangsschutz** per Middleware: nur interne Rollen (`admin`, `ops`,
+  `qa_approver`, `dpo`); Kundenrollen landen auf „Kein Zugriff". Abmelden
+  beendet auch die Keycloak-Sitzung (nur per POST).
+- **Bereiche:** Übersicht (Kennzahlen, offene Alarme, fällige Kalibrierungen und
+  Führerscheine), Fahrzeuge + Akte (Buchbarkeit, Statuswechsel nach erlaubten
+  Übergängen), Kunden + Fahrer (Führerschein-Fristen), Mieten + gebundener
+  Temperaturnachweis, Rechnungen, Alarme (quittieren/schließen), Abweichungen.
+  Listen mit Statusfilter und Blättern; deutschsprachig, barrierearm
+  (Sprunglink, Beschriftungen, sichtbarer Fokus), schmale Bildschirme berücksichtigt.
+- **Keycloak-Realm** um Client `rent2cool-admin` (PKCE) und erfundene
+  Testnutzer erweitert (D-015: Testnutzer im Testsystem): `admin.dev`, `ops.dev`,
+  `qa.dev`, `kunde.dev`, Passwort `PLACEHOLDER_dev_passwort`. Token-Laufzeit
+  15 Min.
+- **Tests:** 24 Unit-Tests in der CI (Formatierung inkl. Zeitzone, API-Client,
+  Token-/Rollenauswertung, Seiten-/Fristenhelfer). **Browser-Test (Playwright)
+  lokal gegen den echten Stack grün (5):** Umleitung ohne Anmeldung; Login als
+  admin über Keycloak und alle Bereiche inkl. Detailseiten; Alarm quittieren
+  (Eintrag im Audit Trail geprüft); Kundenrolle ohne Zugang; Abmelden beendet
+  die Keycloak-Sitzung. Der Build läuft ohne `.env` (wie in der CI).
+
+Bewusste Entscheidungen/Abkürzungen:
+- **Keine Token-Erneuerung**: Läuft das Zugriffstoken ab (15 Min.), geht es
+  über die Keycloak-Sitzung (SSO) zur erneuten Anmeldung. Spart Refresh-Logik
+  und Cookie-Größe; für den Alltag ggf. zu häufig → F-24.
+- **v1 ist überwiegend lesend**: Aktionen nur für Alarm quittieren/schließen und
+  Fahrzeugstatus. Formulare zum Anlegen (Fahrzeug, Kunde, Buchung, Rechnung,
+  Abweichung bewerten) fehlen noch – die API dafür existiert.
+- Listen zeigen bei Mieten Kurz-IDs statt Namen (vermeidet N+1-Abfragen);
+  ein Listen-Endpunkt mit Namen im Kern wäre die saubere Lösung.
+- Browser-Test läuft **nicht in der CI** (braucht Keycloak + Kern + DB).
+- Der lokale Datenbestand stammt aus den Integrationstests (Fantasie-Kennzeichen
+  wie „T-a81f7791"). Für Vorführungen wäre ein Demo-Seed mit realistischen
+  Fantasiedaten sinnvoll.
+
+Fragen an Planung:
+- **F-24:** Sitzungsdauer/Token-Laufzeit für interne Nutzer (15 Min. + SSO,
+  oder längere Sitzung mit Token-Erneuerung)?
+- **F-25:** Welche Bearbeitungs-Workflows in der Oberfläche zuerst (z. B.
+  Fahrzeug anlegen + Kalibrierung erfassen, Buchung anlegen, Abweichung
+  bewerten)?
+
+---
+
 ### 2026-10-16 – Alarme & Abweichungen
 
 **Alarme & Abweichungen – erledigt.** (Letzter Punkt der Phase-1-Reihenfolge

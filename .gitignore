@@ -11,6 +11,11 @@ out/
 
 # Test / coverage
 coverage/
+test-results/
+playwright-report/
+
+# Next.js (wird bei dev/build erzeugt)
+next-env.d.ts
 
 # Turbo
 .turbo/

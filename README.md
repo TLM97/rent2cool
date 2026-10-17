@@ -15,7 +15,7 @@ Entscheidungen in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 |---|---|
 | `apps/core` | Kern: Backend + Datenbank (NestJS + Fastify, Drizzle/PostgreSQL+TimescaleDB). Gesundheits-Endpunkte, Config aus Env, Logs, OpenTelemetry, **Telematik-Verarbeiter** (T-003). |
 | `apps/ingest` | Telematik-Eingang (eigener Prozess, prüft Format + Signatur, schreibt nur in die Warteschlange). |
-| `apps/admin` | Interne Admin-Oberfläche (Next.js). *Gerüst.* |
+| `apps/admin` | Interne Admin-Oberfläche (Next.js, Keycloak-Login) für Ops und QA – siehe „Admin-Oberfläche". |
 | `apps/web` | Öffentliche Website + Kundenportal (Next.js), ohne Schreibzugriff auf GDP-Daten. *Gerüst.* |
 | `apps/mobile` | App für Fahrer (React Native/Expo). *Gerüst.* |
 | `packages/shared` | Geteilte Typen für alle Pakete (inkl. neutrales Telematik-Format). |
@@ -255,6 +255,32 @@ API im Kern (rollengeschützt, Schreibzugriffe auditiert):
 - `POST /v1/abweichungen`, `GET /v1/abweichungen`, `GET /v1/abweichungen/:id`,
   `POST /v1/abweichungen/:id/status` (inkl. Bewertung/Maßnahmen, Rolle
   `qa_approver`).
+
+## Admin-Oberfläche
+
+Interne Oberfläche für Gründer, Ops und QA (`apps/admin`, Next.js, Port 3002).
+Anmeldung über **Keycloak** (Authorization Code + PKCE); Zugang nur mit interner
+Rolle (`admin`, `ops`, `qa_approver`, `dpo`). Die Oberfläche spricht
+ausschließlich serverseitig mit der Kern-API – Rechte und Audit Trail setzt der
+Kern durch.
+
+Bereiche: Übersicht (Kennzahlen, offene Alarme, fällige Kalibrierungen),
+Fahrzeuge inkl. Akte/Buchbarkeit/Statuswechsel, Kunden & Fahrer inkl.
+Führerschein-Fristen, Mieten inkl. Temperaturnachweis, Rechnungen, Alarme
+(quittieren/schließen), Abweichungen.
+
+```bash
+pnpm stack:up                                   # u. a. Keycloak mit Realm-Import
+pnpm --filter @rent2cool/core db:migrate
+pnpm --filter @rent2cool/core dev               # Kern auf :3000
+pnpm --filter @rent2cool/admin dev              # Oberfläche auf http://localhost:3002
+```
+
+Lokale Testnutzer (nur erfundene Konten, D-015): `admin.dev`, `ops.dev`,
+`qa.dev`, `kunde.dev` (kein Zugang), Passwort `PLACEHOLDER_dev_passwort`.
+
+Browser-Test gegen den laufenden Stack (nicht Teil der CI):
+`pnpm --filter @rent2cool/admin test:e2e`
 
 ## Betrieb und Cloud
 

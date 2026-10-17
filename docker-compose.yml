@@ -97,7 +97,9 @@ services:
 
   # --- Anmeldung und Rollen: Keycloak (OpenID Connect) ---
   keycloak:
-    image: quay.io/keycloak/keycloak:26.0.5
+    # Offizielles Keycloak-Image über Docker Hub (identisch mit quay.io;
+    # quay.io ist nicht aus jeder Umgebung erreichbar).
+    image: keycloak/keycloak:26.0.5
     command: ["start-dev", "--import-realm"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
