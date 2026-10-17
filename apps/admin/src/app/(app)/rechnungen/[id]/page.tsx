@@ -32,6 +32,8 @@ export default async function RechnungDetail({
     holeSitzung(),
   ]);
   const darfAendern = hatRolle(sitzung?.rollen ?? [], 'ops', 'admin');
+  // Ohne erlaubten Folgestatus (z. B. Endzustand) kein leeres Statusfeld.
+  const naechsteRechnung = naechsteStatus(RECHNUNG_STATUS, r.status, istRechnungUebergangErlaubt);
 
   return (
     <>
@@ -73,14 +75,14 @@ export default async function RechnungDetail({
           <dd>{formatDatum(r.gestelltAm)}</dd>
           <dt>bezahlt</dt>
           <dd>{formatDatum(r.bezahltAm)}</dd>
-          {darfAendern ? (
+          {darfAendern && naechsteRechnung.length > 0 ? (
             <>
               <dt>Status</dt>
               <dd>
                 <StatusFormular
                   aktion={aendereRechnungStatus}
                   id={r.id}
-                  naechste={naechsteStatus(RECHNUNG_STATUS, r.status, istRechnungUebergangErlaubt)}
+                  naechste={naechsteRechnung}
                   label="Rechnungsstatus ändern"
                 />
               </dd>

@@ -346,6 +346,28 @@ gleichen Zeitpunkt weiter (`POST /v1/sensoren/:id/tausch`). Die Kalibrierung
 des neuen Sensors kann gleich mit erfasst werden – ohne sie ist das Fahrzeug
 nicht buchbar. Wiederholte Anfragen sind idempotent.
 
+## Demo-Daten für Vorführungen
+
+Erfundene, in sich stimmige Daten (D-015): 5 Fahrzeuge (`DEMO-101` …), 3
+Kunden mit Zusatz „(Demo)“ und Fahrern, 6 Mieten – abgeschlossen mit
+eingehaltener Kühlkette, abgeschlossen mit Temperaturausreißer (Alarme,
+Abweichung bewertet und geschlossen), eine laufende mit offenen Alarmen, zwei
+künftige –, Rechnungen in verschiedenen Status sowie Fristen-Warnungen
+(Kalibrierung, Führerschein).
+
+```bash
+docker compose down -v && pnpm stack:up        # frische Datenbank (löscht lokale Daten!)
+pnpm --filter @rent2cool/core db:migrate
+pnpm --filter @rent2cool/core db:seed           # Platzhalter-Mandant und -Standort
+pnpm --filter @rent2cool/core db:seed:demo      # Demo-Daten (einmalig; zweiter Lauf tut nichts)
+```
+
+Alles läuft über die echten Services (Regeln, Audit Trail mit Akteur
+„Demo-Daten“, Telematik-Verarbeitung, Alarm-Auswertung). Szenarien stehen in
+`apps/core/src/db/seed/demo-daten.ts`. Hinweis: Die Integrationstests
+schreiben in denselben Platzhalter-Mandanten – für eine saubere Vorführung
+danach die Datenbank neu aufsetzen.
+
 ## Betrieb und Cloud
 
 Lokal mit Docker Compose; der Umzug in die Cloud ist reine Konfiguration

@@ -13,6 +13,56 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Demo-Daten für Vorführungen
+
+**Demo-Daten – erledigt.** (Auf Toms Auftrag; Planung möge die Aufgabe in
+`TASKS.md` nachziehen.)
+
+Erledigt:
+- `pnpm --filter @rent2cool/core db:seed:demo` lädt erfundene, stimmige
+  Daten (D-015: Firmen mit „(Demo)“, Kennzeichen `DEMO-…`, Mustermann-Namen,
+  USt-IDs `DE00000000x`):
+  - 5 Fahrzeuge mit Kühlaufbau, Sensor und Kalibrierung (eine läuft in 12
+    Tagen ab), eines in Wartung, eines gerade vermietet.
+  - 3 Kunden (2 freigegeben, 1 in Prüfung), 3 Fahrer (ein Führerschein läuft
+    in 20 Tagen ab).
+  - 6 Mieten: abgeschlossen mit eingehaltener Kühlkette (Rechnung bezahlt),
+    abgeschlossen mit 35-Minuten-Ausreißer auf 9,6 °C (Alarme quittiert und
+    geschlossen, Abweichung bewertet und geschlossen, Rechnung gestellt),
+    abgeschlossen im Bereich 15–25 °C (Rechnung Entwurf), eine laufende mit
+    kurzem Ausreißer vor zwei Stunden (offene Alarme), zwei künftige.
+  - ~7.500 Messwerte (1 je Minute), deterministisch erzeugt.
+- **Echte Wege:** Anlegen, Status, Kalibrierung, Rechnung, Abweichung über
+  die Services (Regeln + Audit Trail, Akteur „Demo-Daten“); Messwerte durch
+  die Telematik-Verarbeitung, Alarme durch die Alarm-Auswertung. Nur
+  vergangene/laufende Mieten werden direkt mit ihren historischen Zeiten
+  angelegt (ein Statuswechsel setzt „jetzt“) – ebenfalls mit Audit-Eintrag.
+- Einmalig: Ein zweiter Lauf erkennt die vorhandenen Daten und tut nichts.
+  Laden dauert ca. 6 Sekunden.
+- **Fehler behoben:** Auf Miete, Rechnung und Kunde stand im Endzustand
+  (z. B. „abgerechnet“) ein leeres Feld „Status“, weil es keinen erlaubten
+  Folgestatus gibt. Jetzt erscheint das Feld nur mit Auswahl.
+- **Tests:** Kern 46 Unit + 56 Integration (102/102); Demo-Daten mit eigenem
+  Mandanten geprüft (Nachweise „eingehalten“/„verletzt“, Alarme, Rechnungen,
+  Fahrzeugstatus, Audit-Akteur, zweiter Lauf). Alle 8 Browser-Tests grün.
+- Lokale Datenbank dieser Cloud-Session wurde dafür neu aufgesetzt (enthielt
+  nur Testdaten der Integrationstests).
+
+Offen / Hinweise:
+- Die Integrationstests schreiben in den Platzhalter-Mandanten, also in
+  dieselbe Datenbank wie die Demo-Daten. Für eine saubere Vorführung danach
+  neu aufsetzen. Besser wäre eine eigene Test-Datenbank → Vorschlag.
+- Direkt nach `docker compose up` einer frischen Datenbank kann die erste
+  Migration scheitern (das Postgres-Image startet nach der Initialisierung
+  neu); einfach wiederholen.
+- Übersicht und Listen zeigen bei Fahrzeugen in Alarmen noch Kurz-IDs statt
+  Kennzeichen (bekannte Abkürzung aus der Admin-Oberfläche v1).
+
+Fragen an Planung:
+- Keine neuen. F-24, F-26 bis F-33 weiter offen (siehe unten).
+
+---
+
 ### 2026-10-17 – Formatierung und Typprüfung in der CI
 
 **Formatprüfung und Typprüfung der Tests in der CI – erledigt.** (Auf Toms

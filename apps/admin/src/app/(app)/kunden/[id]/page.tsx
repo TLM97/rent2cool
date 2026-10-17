@@ -47,6 +47,8 @@ export default async function KundeDetail({
     holeSitzung(),
   ]);
   const darfAendern = hatRolle(sitzung?.rollen ?? [], 'ops', 'admin');
+  // Ohne erlaubten Folgestatus (z. B. Endzustand) kein leeres Statusfeld.
+  const naechsteKunde = naechsteStatus(KUNDE_STATUS, kunde.status, istKundeUebergangErlaubt);
   const pfad = `/kunden/${id}`;
 
   return (
@@ -80,14 +82,14 @@ export default async function KundeDetail({
           </dd>
           <dt>angelegt</dt>
           <dd>{formatDatum(kunde.erstelltAm)}</dd>
-          {darfAendern ? (
+          {darfAendern && naechsteKunde.length > 0 ? (
             <>
               <dt>Prüfung/Freigabe</dt>
               <dd>
                 <StatusFormular
                   aktion={aendereKundeStatus}
                   id={kunde.id}
-                  naechste={naechsteStatus(KUNDE_STATUS, kunde.status, istKundeUebergangErlaubt)}
+                  naechste={naechsteKunde}
                   label="Kundenstatus ändern"
                 />
               </dd>

@@ -51,6 +51,8 @@ export default async function MieteDetail({
   ]);
   const rollen = sitzung?.rollen ?? [];
   const darfAendern = hatRolle(rollen, 'ops', 'admin');
+  // Ohne erlaubten Folgestatus (z. B. Endzustand) kein leeres Statusfeld.
+  const naechsteMiete = naechsteStatus(MIETE_STATUS, miete.status, istMieteUebergangErlaubt);
   const darfAbweichung = hatRolle(rollen, 'ops', 'admin', 'qa_approver');
   const rechnung = rechnungen.eintraege[0];
 
@@ -103,14 +105,14 @@ export default async function MieteDetail({
             <dd>
               {miete.temperaturprofil ? `${miete.temperaturprofil} °C` : 'Standard des Fahrzeugs'}
             </dd>
-            {darfAendern ? (
+            {darfAendern && naechsteMiete.length > 0 ? (
               <>
                 <dt>Status</dt>
                 <dd>
                   <StatusFormular
                     aktion={aendereMieteStatus}
                     id={miete.id}
-                    naechste={naechsteStatus(MIETE_STATUS, miete.status, istMieteUebergangErlaubt)}
+                    naechste={naechsteMiete}
                     label="Mietstatus ändern"
                   />
                 </dd>
