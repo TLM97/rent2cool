@@ -1,0 +1,39 @@
+{
+  "name": "@rent2cool/oberflaeche",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Reine Bausteine der Oberflächen (Admin, Kundenportal): Kern-API-Client, Formatierung, Formular- und Seitenhelfer, Token. Ohne React, ohne Node-Module (läuft auch in der Edge-Middleware).",
+  "exports": {
+    "./api-client": {
+      "types": "./dist/api-client.d.ts",
+      "default": "./dist/api-client.js"
+    },
+    "./format": {
+      "types": "./dist/format.d.ts",
+      "default": "./dist/format.js"
+    },
+    "./formular": {
+      "types": "./dist/formular.d.ts",
+      "default": "./dist/formular.js"
+    },
+    "./seiten": {
+      "types": "./dist/seiten.d.ts",
+      "default": "./dist/seiten.js"
+    },
+    "./token": {
+      "types": "./dist/token.d.ts",
+      "default": "./dist/token.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@rent2cool/shared": "workspace:*",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8",
+    "@types/node": "^22.10.5"
+  }
+}

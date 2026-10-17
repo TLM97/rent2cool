@@ -13,6 +13,65 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Kundenportal v1 (Registrierung, Unternehmen, Mieten & Nachweise)
+
+Tom: „Dann fahre fort bitte“ (Vorschlag: Portal-Oberfläche für F-51).
+**Hinweis an Planung:** Laut Roadmap ist das Kundenportal Phase 3 („Portal
+entwerfen“ Phase 2). Gebaut wurde es jetzt, weil Selbstregistrierung (F-51)
+ohne Oberfläche nicht nutzbar ist. Bitte Aufgabe in `TASKS.md` nachziehen
+und D-021 prüfen.
+
+Erledigt:
+- **`apps/web`**: öffentliche Startseite (Platzhalter bis Website v1) und
+  Kundenportal unter `/portal` (Next.js, Port 3003).
+- **Anmeldung** über eigenen Keycloak-Client `rent2cool-portal` mit eigenen
+  Cookies und eigenem Secret (sonst überschrieben sich Admin- und
+  Portal-Sitzung auf demselben Host). „Konto anlegen“ öffnet direkt die
+  Keycloak-Registrierung; E-Mail ist Benutzername; Keycloak-Seiten auf
+  Deutsch.
+- **Seiten:** Übersicht (Status, „in Prüfung“-Hinweis, letzte Mieten),
+  Unternehmen registrieren, Unternehmen verwalten (Firmendaten, Personen
+  und Aufgaben, Einladungen), Einladung annehmen, Mieten mit
+  Temperaturnachweisen (PDF/JSON, Siegel, SHA-256), Rechnungen. Navigation
+  und Knöpfe je Aufgabe; entscheiden tut der Kern.
+- **GDP-Grenze** (Vorschlag **D-021**): keine Datenbank, kein Dienstkonto;
+  alles mit dem Token der angemeldeten Person über die Kern-API.
+  Öffentliche Seiten sprechen nicht mit der Kern-API. Ein Test prüft
+  beides.
+- **`packages/oberflaeche`**: API-Client, Formatierung, Formular-, Seiten-
+  und Token-Helfer aus der Admin-Oberfläche herausgelöst und von beiden
+  genutzt (Admin unverändert, Tests mitgezogen).
+
+Tests: Web 12 Unit-Tests (Regeln, Cookies, GDP-Grenze), Oberfläche 35,
+Admin 26, Kern 166/166 Integration. **Browser-Tests Portal 4/4** mit echter
+Keycloak-Registrierung, Mailbestätigung über Mailpit, Einladung per Mail
+und Annahme; Selbstregistrierung bis „in Prüfung“. Admin-Browser-Tests 9/9
+grün (Realm geändert).
+
+Abkürzungen (vor Go-live ersetzen):
+- **Buchen im Portal fehlt noch** (Kern-Route existiert: Fahrzeugsuche und
+  `POST /v1/mieten`); ebenso Fahrer und Schlüssel, Alarme/Abweichungen
+  und Echtheitsprüfung für die QA. Nächster Schritt.
+- PDF/JSON-Links sind vorsignierte Objektspeicher-URLs (laufen ab; Seite
+  neu laden). Für die Produktion: Download über eine Portal-Route.
+- `next start` warnt bei `output: standalone` (wie Admin) – für Container
+  `node .next/standalone/server.js`. Kein Container-Image für Web/Admin.
+- Anzeigename neuer Konten ist die E-Mail (Keycloak `preferred_username`);
+  Vor- und Nachname aus der Registrierung werden noch nicht angezeigt.
+- Website v1 (Inhalte, Anfrage, Rechtstexte) ist nur ein Platzhalter.
+
+Fragen an Planung:
+- **F-52 (angepasst):** Mitarbeitende und Kunden nutzen jetzt getrennte
+  Clients. Registrierung ist aber realm-weit an, daher steht „Registrieren“
+  auch auf der Admin-Anmeldung (harmlos, ohne interne Rolle kein Zugang).
+  Eigener Realm für Kunden oder MFA-Pflicht für interne Konten?
+- **F-53:** Ist die Auslegung von Architekturregel 2 in D-021 so richtig?
+  Das Portal ändert Daten (Unternehmen, Einladungen, künftig Buchungen) nur
+  über den Kern mit dem Token des Kunden, nie selbst.
+- F-24, F-26 bis F-37, F-42 bis F-45, F-49, F-50 weiter offen.
+
+---
+
 ### 2026-10-17 – F-51: Kunden registrieren sich selbst und verwalten ihre Organisation
 
 Tom hat F-51 direkt beantwortet: „Der Kunde kann seinen Account selbst

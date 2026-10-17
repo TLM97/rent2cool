@@ -11,15 +11,16 @@ Entscheidungen in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 ## Monorepo
 
-| Paket             | Zweck                                                                                                                                                                        |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/core`       | Kern: Backend + Datenbank (NestJS + Fastify, Drizzle/PostgreSQL+TimescaleDB). Gesundheits-Endpunkte, Config aus Env, Logs, OpenTelemetry, **Telematik-Verarbeiter** (T-003). |
-| `apps/ingest`     | Telematik-Eingang (eigener Prozess, prüft Format + Signatur, schreibt nur in die Warteschlange).                                                                             |
-| `apps/admin`      | Interne Admin-Oberfläche (Next.js, Keycloak-Login) für Ops und QA – siehe „Admin-Oberfläche".                                                                                |
-| `apps/web`        | Öffentliche Website + Kundenportal (Next.js), ohne Schreibzugriff auf GDP-Daten. _Gerüst._                                                                                   |
-| `apps/mobile`     | App für Fahrer (React Native/Expo). _Gerüst._                                                                                                                                |
-| `packages/shared` | Geteilte Typen für alle Pakete (inkl. neutrales Telematik-Format).                                                                                                           |
-| `tools/simulator` | Telematik-Simulator: virtuelle Fahrzeuge als erster Adapter, inkl. Lasttest (T-003).                                                                                         |
+| Paket                  | Zweck                                                                                                                                                                        |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/core`            | Kern: Backend + Datenbank (NestJS + Fastify, Drizzle/PostgreSQL+TimescaleDB). Gesundheits-Endpunkte, Config aus Env, Logs, OpenTelemetry, **Telematik-Verarbeiter** (T-003). |
+| `apps/ingest`          | Telematik-Eingang (eigener Prozess, prüft Format + Signatur, schreibt nur in die Warteschlange).                                                                             |
+| `apps/admin`           | Interne Admin-Oberfläche (Next.js, Keycloak-Login) für Ops und QA – siehe „Admin-Oberfläche".                                                                                |
+| `apps/web`             | Öffentliche Website + Kundenportal (Next.js, Port 3003) – siehe „Kundenportal“. Keine Datenbank, kein Dienstkonto (GDP-Grenze).                                              |
+| `apps/mobile`          | App für Fahrer (React Native/Expo). _Gerüst._                                                                                                                                |
+| `packages/shared`      | Geteilte Typen für alle Pakete (inkl. neutrales Telematik-Format).                                                                                                           |
+| `packages/oberflaeche` | Reine Bausteine für Admin und Portal: Kern-API-Client, Formatierung, Formular-, Seiten- und Token-Helfer (ohne React, ohne Node-Module).                                     |
+| `tools/simulator`      | Telematik-Simulator: virtuelle Fahrzeuge als erster Adapter, inkl. Lasttest (T-003).                                                                                         |
 
 Werkzeuge: **pnpm Workspaces + Turborepo**, **TypeScript** (strikt) überall.
 
@@ -60,15 +61,17 @@ Infrastruktur stoppen: `pnpm stack:down`. Logs: `pnpm stack:logs`.
 
 ### Lokale Dienste
 
-| Dienst               | Adresse               | Hinweis                             |
-| -------------------- | --------------------- | ----------------------------------- |
-| Kern (API)           | http://localhost:3000 |                                     |
-| PostgreSQL/Timescale | localhost:5432        | DB/User `rent2cool`                 |
-| Redpanda (Kafka-API) | localhost:19092       |                                     |
-| Valkey (Redis-API)   | localhost:6379        | BullMQ                              |
-| SeaweedFS (S3-API)   | http://localhost:8333 | Bucket per `objektspeicher-setup`   |
-| Mailpit (E-Mail)     | http://localhost:8025 | SMTP localhost:1025, fängt alles ab |
-| Keycloak (OIDC)      | http://localhost:8080 | Realm `rent2cool` (Platzhalter)     |
+| Dienst               | Adresse               | Hinweis                              |
+| -------------------- | --------------------- | ------------------------------------ |
+| Kern (API)           | http://localhost:3000 |                                      |
+| PostgreSQL/Timescale | localhost:5432        | DB/User `rent2cool`                  |
+| Redpanda (Kafka-API) | localhost:19092       |                                      |
+| Valkey (Redis-API)   | localhost:6379        | BullMQ                               |
+| SeaweedFS (S3-API)   | http://localhost:8333 | Bucket per `objektspeicher-setup`    |
+| Mailpit (E-Mail)     | http://localhost:8025 | SMTP localhost:1025, fängt alles ab  |
+| Keycloak (OIDC)      | http://localhost:8080 | Realm `rent2cool` (Platzhalter)      |
+| Admin-Oberfläche     | http://localhost:3002 | `pnpm --filter @rent2cool/admin dev` |
+| Website + Portal     | http://localhost:3003 | `pnpm --filter @rent2cool/web dev`   |
 
 ## Nützliche Befehle (Repo-weit)
 
@@ -357,6 +360,38 @@ API im Kern (rollengeschützt, Schreibzugriffe auditiert):
 - `POST /v1/abweichungen`, `GET /v1/abweichungen`, `GET /v1/abweichungen/:id`,
   `POST /v1/abweichungen/:id/status` (inkl. Bewertung/Maßnahmen, Rolle
   `qa_approver`).
+
+## Kundenportal
+
+Website und Kundenportal (`apps/web`, Next.js, Port 3003). Die Startseite ist
+öffentlich (Platzhalter bis Website v1); `/portal` verlangt eine Anmeldung über
+**Keycloak** (eigener Client `rent2cool-portal`, Authorization Code + PKCE,
+eigene Sitzungs-Cookies `r2c-portal.*` und eigenes Secret – getrennt von der
+Admin-Oberfläche).
+
+- **Konto anlegen** öffnet direkt die Keycloak-Registrierung (E-Mail als
+  Benutzername, Bestätigung per Mail – lokal in Mailpit). Danach registriert
+  der Kunde sein Unternehmen (`/portal/registrierung`) und ist dessen
+  Verwalter; Status „in Prüfung“, bis wir freigeben.
+- **Unternehmen** (`/portal/organisation`): Firmendaten, Personen mit
+  Aufgaben (Verwaltung, Disposition, Qualitätssicherung), Einladungen per
+  E-Mail. Firmenname, Handelsregister und USt-ID nach der Freigabe nur
+  durch Rent2Cool.
+- **Einladung** (`/einladung?code=…`, Link aus der Mail): anmelden oder
+  Konto mit der eingeladenen Adresse anlegen, annehmen.
+- **Mieten & Nachweise**: eigene Mieten (paginiert), je Miete die
+  Temperaturnachweise als gesiegeltes PDF und JSON mit SHA-256.
+  **Rechnungen**: eigene Rechnungen.
+
+**GDP-Grenze (Vorschlag D-021):** Das Paket hat keine Datenbank und kein
+Dienstkonto; jede Anfrage trägt das Token der angemeldeten Person, Rechte,
+Sichtbarkeit und Audit Trail setzt der Kern durch. Seiten der öffentlichen
+Website sprechen nicht mit der Kern-API – ein Test
+(`apps/web/src/lib/gdp-grenze.spec.ts`) prüft beides.
+
+Lokal: `kunde.dev` (Verwalter von „Nordlicht“). Browser-Tests mit echter
+Registrierung, Mailbestätigung und Einladung: `pnpm --filter @rent2cool/web
+test:e2e` (braucht Keycloak, Mailpit, Kern und Portal).
 
 ## Admin-Oberfläche
 

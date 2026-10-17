@@ -2,12 +2,29 @@
   "name": "@rent2cool/web",
   "version": "0.0.0",
   "private": true,
-  "description": "Öffentliche Website + Kundenportal (Next.js, D-001). OHNE Schreibzugriff auf GDP-Daten (D-002). Leeres Gerüst.",
+  "description": "Öffentliche Website + Kundenportal (Next.js, D-001). Kein Schreibzugriff auf GDP-Daten (D-002): keine Datenbank, kein Dienstkonto – das Portal handelt nur mit dem Token des angemeldeten Kunden über die Kern-API.",
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "dev": "next dev --port 3003",
+    "build": "next build",
+    "start": "next start --port 3003",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@rent2cool/oberflaeche": "workspace:*",
+    "@rent2cool/shared": "workspace:*",
+    "next": "15.5.28",
+    "next-auth": "4.24.15",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "@types/node": "^22.10.5",
-    "typescript": "^5.7.3"
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
   }
 }

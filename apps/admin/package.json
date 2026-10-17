@@ -12,6 +12,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@rent2cool/oberflaeche": "workspace:*",
     "@rent2cool/shared": "workspace:*",
     "next": "15.5.28",
     "next-auth": "4.24.15",

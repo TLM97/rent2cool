@@ -1,0 +1,539 @@
+/* Rent2Cool Website und Kundenportal – ruhig, kontrastreich, barrierearm (D-010). */
+:root {
+  --bg: #f4f6f8;
+  --flaeche: #ffffff;
+  --rand: #dfe5eb;
+  --rand-stark: #c9d2db;
+  --text: #17212b;
+  --text-leise: #5b6875;
+  --akzent: #0b6e7a;
+  --akzent-hover: #095a64;
+  --akzent-zart: #e4f2f3;
+  --kopf: #0f2533;
+  --kopf-text: #c8d6df;
+  --kopf-aktiv: #ffffff;
+  --fokus: #1a73e8;
+
+  --ok-bg: #e5f4ea;
+  --ok-fg: #1d6136;
+  --info-bg: #e6eefb;
+  --info-fg: #1f4c8f;
+  --warn-bg: #fff3d6;
+  --warn-fg: #7a4f00;
+  --kritisch-bg: #fde8e7;
+  --kritisch-fg: #9b1c1c;
+  --neutral-bg: #eceff2;
+  --neutral-fg: #46525e;
+
+  --radius: 10px;
+  --schatten: 0 1px 2px rgba(16, 32, 48, 0.06), 0 1px 1px rgba(16, 32, 48, 0.04);
+  font-family:
+    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+a {
+  color: var(--akzent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+:focus-visible {
+  outline: 3px solid var(--fokus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+h1 {
+  font-size: 26px;
+  line-height: 1.25;
+  margin: 0 0 6px;
+}
+h2 {
+  font-size: 17px;
+  margin: 0 0 12px;
+}
+
+.leise {
+  color: var(--text-leise);
+}
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+.unsichtbar {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.sprunglink {
+  position: absolute;
+  left: -999px;
+  top: 8px;
+  background: var(--flaeche);
+  padding: 8px 12px;
+  border-radius: 6px;
+  z-index: 10;
+}
+.sprunglink:focus {
+  left: 8px;
+}
+
+/* --- Marke --- */
+.marke {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+  font-weight: 700;
+  font-size: 17px;
+}
+.marke:hover {
+  text-decoration: none;
+}
+.marke-zeichen {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #18a0ad, #0b6e7a);
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  color: #fff;
+}
+.marke small {
+  display: block;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+/* --- Knöpfe --- */
+.knopf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--akzent);
+  background: var(--akzent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+.knopf:hover {
+  background: var(--akzent-hover);
+  text-decoration: none;
+}
+.knopf[disabled] {
+  opacity: 0.6;
+  cursor: progress;
+}
+.knopf.zweitrangig {
+  background: var(--flaeche);
+  color: var(--akzent);
+  border-color: var(--rand-stark);
+}
+.knopf.zweitrangig:hover {
+  background: var(--akzent-zart);
+}
+.knopf.gefahr {
+  background: var(--flaeche);
+  color: var(--kritisch-fg);
+  border-color: #e9b4b1;
+}
+.knopf.gefahr:hover {
+  background: var(--kritisch-bg);
+}
+.knopf.klein {
+  padding: 5px 10px;
+  font-size: 13px;
+}
+.knopfreihe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+/* --- Hinweise und Plaketten --- */
+.hinweis {
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin: 0 0 16px;
+  border: 1px solid transparent;
+}
+.hinweis ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+.hinweis.info {
+  background: var(--info-bg);
+  color: var(--info-fg);
+}
+.hinweis.erfolg {
+  background: var(--ok-bg);
+  color: var(--ok-fg);
+}
+.hinweis.warn {
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+}
+.hinweis.fehler {
+  background: var(--kritisch-bg);
+  color: var(--kritisch-fg);
+  border-color: #f2c4c1;
+}
+
+.plakette {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.plakette.ok {
+  background: var(--ok-bg);
+  color: var(--ok-fg);
+}
+.plakette.info {
+  background: var(--info-bg);
+  color: var(--info-fg);
+}
+.plakette.warn {
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+}
+.plakette.kritisch {
+  background: var(--kritisch-bg);
+  color: var(--kritisch-fg);
+}
+.plakette.neutral {
+  background: var(--neutral-bg);
+  color: var(--neutral-fg);
+}
+
+/* --- Website --- */
+.website-kopf {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 32px;
+  background: var(--flaeche);
+  border-bottom: 1px solid var(--rand);
+}
+.website-inhalt {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 72px 24px;
+}
+.website-inhalt h1 {
+  font-size: 36px;
+}
+.einleitung {
+  font-size: 18px;
+  color: var(--text-leise);
+  margin: 0 0 24px;
+}
+
+/* --- Anmeldung, Einladung --- */
+.anmeldung {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.anmeldung .karte {
+  max-width: 460px;
+  width: 100%;
+}
+.anmeldung h1 {
+  margin-top: 18px;
+}
+
+/* --- Portal --- */
+.portal-kopf {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 12px 28px;
+  background: var(--kopf);
+  color: var(--kopf-aktiv);
+}
+.portal-kopf .marke small {
+  color: var(--kopf-text);
+}
+.navigation {
+  flex: 1;
+}
+.navigation ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.navigation a {
+  display: block;
+  padding: 7px 12px;
+  border-radius: 7px;
+  color: var(--kopf-text);
+  font-weight: 500;
+}
+.navigation a:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--kopf-aktiv);
+  text-decoration: none;
+}
+.navigation a[aria-current='page'] {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--kopf-aktiv);
+}
+.nutzer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-left: auto;
+  text-align: right;
+}
+.nutzer span {
+  display: block;
+  font-size: 12.5px;
+  color: var(--kopf-text);
+}
+.portal-inhalt {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 28px 24px 64px;
+}
+
+.seitenkopf {
+  margin-bottom: 20px;
+}
+.seitenkopf p {
+  margin: 0;
+  color: var(--text-leise);
+}
+.brotkrume {
+  margin-bottom: 6px;
+  font-size: 13.5px;
+}
+
+.karte {
+  background: var(--flaeche);
+  border: 1px solid var(--rand);
+  border-radius: var(--radius);
+  box-shadow: var(--schatten);
+  padding: 20px 22px;
+  margin-bottom: 20px;
+}
+.karte-kopf {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.kacheln {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.kachel {
+  background: var(--flaeche);
+  border: 1px solid var(--rand);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+.kachel-titel {
+  font-size: 13px;
+  color: var(--text-leise);
+}
+.kachel-zahl {
+  font-size: 26px;
+}
+
+.liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.liste li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rand);
+}
+.liste li:last-child {
+  border-bottom: 0;
+}
+
+.leer {
+  padding: 18px;
+  border: 1px dashed var(--rand-stark);
+  border-radius: 8px;
+  color: var(--text-leise);
+  text-align: center;
+}
+
+.daten {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 8px 16px;
+  margin: 0;
+}
+.daten dt {
+  color: var(--text-leise);
+}
+.daten dd {
+  margin: 0;
+}
+
+/* --- Tabellen --- */
+.tabelle-huelle {
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th,
+td {
+  text-align: left;
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--rand);
+  vertical-align: top;
+}
+th {
+  font-size: 12.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-leise);
+  font-weight: 600;
+}
+tr:last-child td {
+  border-bottom: 0;
+}
+.zeilenformular {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.zeilenformular fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.zeilenformular label {
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+.blaettern {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  font-size: 14px;
+}
+
+/* --- Formulare --- */
+.formular .felder {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+  margin-bottom: 18px;
+}
+.feld {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.feld.breit,
+.breit {
+  grid-column: 1 / -1;
+}
+.feld label,
+.feld-titel {
+  font-weight: 600;
+  font-size: 14px;
+}
+.feld p {
+  margin: 0;
+}
+.pflicht {
+  color: var(--kritisch-fg);
+}
+.feld input[type='text'],
+.feld input[type='email'] {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--rand-stark);
+  border-radius: 7px;
+  background: var(--flaeche);
+}
+.feld input[aria-invalid='true'] {
+  border-color: var(--kritisch-fg);
+}
+.feld.haken label {
+  font-weight: 500;
+}
+.feldhinweis {
+  font-size: 13px;
+  color: var(--text-leise);
+}
+.feldfehler {
+  font-size: 13px;
+  color: var(--kritisch-fg);
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .portal-kopf {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+  .nutzer {
+    margin-left: 0;
+    text-align: left;
+  }
+  .formular .felder,
+  .daten {
+    grid-template-columns: 1fr;
+  }
+}

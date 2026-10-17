@@ -6,6 +6,10 @@
   "registrationAllowed": true,
   "verifyEmail": true,
   "loginWithEmailAllowed": true,
+  "registrationEmailAsUsername": true,
+  "internationalizationEnabled": true,
+  "supportedLocales": ["de", "en"],
+  "defaultLocale": "de",
   "smtpServer": {
     "host": "mail",
     "port": "1025",
@@ -73,6 +77,23 @@
       "secret": "PLACEHOLDER_ADMIN_OIDC_CLIENT_SECRET",
       "attributes": {
         "post.logout.redirect.uris": "http://localhost:3002/*",
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "rent2cool-portal",
+      "name": "Rent2Cool Kundenportal",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:3003/*"],
+      "webOrigins": ["http://localhost:3003"],
+      "secret": "PLACEHOLDER_PORTAL_OIDC_CLIENT_SECRET",
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:3003/*",
         "pkce.code.challenge.method": "S256"
       }
     }
