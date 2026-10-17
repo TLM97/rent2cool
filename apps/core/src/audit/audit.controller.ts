@@ -3,16 +3,18 @@ import { z } from 'zod';
 import { Roles } from '../auth/decorators';
 import { AuditService } from './audit.service';
 
-/** `typ=a&typ=b` oder `typ=a,b`. */
-const einOderMehrere = z
-  .union([z.string().min(1), z.array(z.string().min(1)).min(1)])
-  .transform((t) => (Array.isArray(t) ? t : [t]).flatMap((x) => x.split(',')).filter(Boolean))
-  .pipe(z.array(z.string()).min(1).max(10));
+/** `x=a&x=b` oder `x=a,b`; höchstens `max` Werte. */
+const liste = (max: number) =>
+  z
+    .union([z.string().min(1), z.array(z.string().min(1)).min(1)])
+    .transform((t) => (Array.isArray(t) ? t : [t]).flatMap((x) => x.split(',')).filter(Boolean))
+    .pipe(z.array(z.string()).min(1).max(max));
 
 const verlaufSchema = z.object({
-  entitaetId: z.string().min(1),
+  /** Ein oder mehrere Datensätze, z. B. Fahrzeug und seine Sensoren. */
+  entitaetId: liste(50),
   /** Audit-Typen, z. B. `typ=miete,miete_status`. */
-  typ: einOderMehrere,
+  typ: liste(10),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -33,7 +35,7 @@ export class AuditController {
       throw new BadRequestException(r.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '));
     }
     const { entitaetId, typ, limit, offset } = r.data;
-    const res = await this.audit.verlauf({ entitaetId, typen: typ, limit, offset });
+    const res = await this.audit.verlauf({ entitaetIds: entitaetId, typen: typ, limit, offset });
     return { ...res, limit, offset };
   }
 }

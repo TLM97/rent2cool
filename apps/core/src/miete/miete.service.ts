@@ -13,6 +13,7 @@ import {
   type Principal,
   type TemperaturNachweis,
 } from '@rent2cool/shared';
+import { protokolliereAnlage } from '../audit/audit.service';
 import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Database, Transaktion } from '../db/client';
 import { DB } from '../db/db.module';
@@ -103,11 +104,15 @@ export class MieteService {
     return gruende;
   }
 
+  /**
+   * Buchung anlegen. Audit (vollständige Miete) in derselben Transaktion; eine
+   * idempotente Wiederholung legt nichts an und protokolliert daher nichts.
+   */
   async erstelle(
-    mandantId: string | undefined,
+    principal: Principal,
     p: MieteErstellen,
   ): Promise<{ id: string; status: MieteStatus; idempotent: boolean }> {
-    const mandant = mandantId ?? PLACEHOLDER_MANDANT_ID;
+    const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
     const start = new Date(p.startGeplant);
     const ende = new Date(p.endeGeplant);
     if (ende.getTime() <= start.getTime()) {
@@ -138,8 +143,9 @@ export class MieteService {
     }
 
     try {
-      const [row] = await this.db
-        .insert(miete)
+      return await this.db.transaction(async (tx) => {
+        const [row] = await tx
+          .insert(miete)
         .values({
           mandantId: mandant,
           kundeId: p.kundeId,
@@ -156,8 +162,10 @@ export class MieteService {
           status: 'bestaetigt',
           idempotencyKey: p.idempotencyKey ?? null,
         })
-        .returning({ id: miete.id });
-      return { id: row!.id, status: 'bestaetigt', idempotent: false };
+          .returning();
+        await protokolliereAnlage(tx, principal, 'miete', row!.id, row);
+        return { id: row!.id, status: 'bestaetigt' as const, idempotent: false };
+      });
     } catch (e: unknown) {
       // Race auf idempotency_key: bestehende Miete zurückgeben.
       if (p.idempotencyKey && String(e).includes('23505')) {

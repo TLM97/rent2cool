@@ -9,10 +9,26 @@ import { beschreibe, type AuditEintrag } from '../lib/verlauf';
 import { Leer } from './bausteine';
 
 const LIMIT = 50;
+/** Höchstzahl Datensätze je Abfrage (wie im Kern). */
+const MAX_IDS = 50;
 
-export async function Verlauf({ entitaetId, typen }: { entitaetId: string; typen: readonly string[] }) {
+/**
+ * `entitaetIds`: der Datensatz selbst und ggf. zugehörige (z. B. Sensoren eines
+ * Fahrzeugs, Fahrer eines Kunden). `bezeichnungen` benennt die zugehörigen in
+ * der Tabelle.
+ */
+export async function Verlauf({
+  entitaetIds,
+  typen,
+  bezeichnungen = {},
+}: {
+  entitaetIds: readonly string[];
+  typen: readonly string[];
+  bezeichnungen?: Record<string, string>;
+}) {
+  const entitaetId = entitaetIds[0]!;
   const daten = await apiGetOderNull<Liste<AuditEintrag>>('/v1/audit', {
-    entitaetId,
+    entitaetId: entitaetIds.slice(0, MAX_IDS).join(','),
     typ: typen.join(','),
     limit: LIMIT,
     offset: 0,
@@ -50,7 +66,12 @@ export async function Verlauf({ entitaetId, typen }: { entitaetId: string; typen
                       {b.wer}
                       {e.akteurRolle ? <div className="leise">{e.akteurRolle.replaceAll(',', ', ')}</div> : null}
                     </td>
-                    <td>{b.vorgang}</td>
+                    <td>
+                      {e.entitaetId && bezeichnungen[e.entitaetId] ? (
+                        <div className="leise">{bezeichnungen[e.entitaetId]}</div>
+                      ) : null}
+                      {b.vorgang}
+                    </td>
                     <td>
                       {b.aenderungen.length === 0 ? (
                         <span className="leise">–</span>
@@ -58,7 +79,14 @@ export async function Verlauf({ entitaetId, typen }: { entitaetId: string; typen
                         <ul className="aenderungen">
                           {b.aenderungen.map((a) => (
                             <li key={a.feld}>
-                              <span className="leise">{a.feld}:</span> {a.alt} → <strong>{a.neu}</strong>
+                              <span className="leise">{a.feld}:</span>{' '}
+                              {a.alt === null ? (
+                                a.neu
+                              ) : (
+                                <>
+                                  {a.alt} → <strong>{a.neu}</strong>
+                                </>
+                              )}
                             </li>
                           ))}
                         </ul>

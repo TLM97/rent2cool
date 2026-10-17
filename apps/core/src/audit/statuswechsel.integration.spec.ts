@@ -57,7 +57,7 @@ describe.skipIf(!RUN)('Statuswechsel mit Audit (Integration, braucht DB)', () =>
 
   /** Bestätigte Miete auf einem kalibrierten Fahrzeug eines freigegebenen Kunden. */
   async function bestaetigteMiete(): Promise<string> {
-    const { id: fahrzeugId } = await fahrzeuge.erstelle(undefined, {
+    const { id: fahrzeugId } = await fahrzeuge.erstelle(ops, {
       kennzeichen: `ST-${randomUUID().slice(0, 8)}`,
       zulGesamtmasseKg: 3500,
       benoetigteFuehrerscheinklasse: 'B',
@@ -66,14 +66,14 @@ describe.skipIf(!RUN)('Statuswechsel mit Audit (Integration, braucht DB)', () =>
     });
     await fahrzeuge.aendereStatus(ops, fahrzeugId, 'verfuegbar');
     const sensorId = (await fahrzeuge.holeAkte(fahrzeugId)).aggregate[0]!.sensoren[0]!.id;
-    await fahrzeuge.fuegeKalibrierungHinzu(sensorId, 'test', {
+    await fahrzeuge.fuegeKalibrierungHinzu(ops, sensorId, {
       durchgefuehrtAm: new Date().toISOString(),
       gueltigBis: new Date(Date.now() + 365 * 86_400_000).toISOString(),
     });
-    const { id: kundeId } = await kunden.erstelleKunde(undefined, { firmenname: 'Statuskunde', land: 'DE' });
+    const { id: kundeId } = await kunden.erstelleKunde(ops, { firmenname: 'Statuskunde', land: 'DE' });
     await kunden.aendereKundeStatus(ops, kundeId, 'in_pruefung');
     await kunden.aendereKundeStatus(ops, kundeId, 'freigegeben');
-    const r = await mieten.erstelle(undefined, {
+    const r = await mieten.erstelle(ops, {
       kundeId,
       fahrzeugId,
       auslandsfahrtGeplant: false,
@@ -117,13 +117,23 @@ describe.skipIf(!RUN)('Statuswechsel mit Audit (Integration, braucht DB)', () =>
 
     // Lesbar im Verlauf (neueste zuerst), mit Anmeldename.
     const verlauf = await new AuditService(client.db).verlauf({
-      entitaetId: id,
+      entitaetIds: [id],
       typen: ['miete', 'miete_status'],
       limit: 10,
       offset: 0,
     });
-    expect(verlauf.gesamt).toBe(1);
-    expect(verlauf.eintraege[0]).toMatchObject({ akteurName: 'ops.test', akteurRolle: 'ops,qa_approver' });
+    expect(verlauf.gesamt).toBe(2);
+    expect(verlauf.eintraege[0]).toMatchObject({
+      entitaetTyp: 'miete_status',
+      akteurName: 'ops.test',
+      akteurRolle: 'ops,qa_approver',
+    });
+    // Ältester Eintrag: das Anlegen mit der vollständigen Miete als neuem Wert.
+    expect(verlauf.eintraege[1]).toMatchObject({
+      entitaetTyp: 'miete',
+      altWert: null,
+      neuWert: { id, status: 'bestaetigt', auslandsfahrtGeplant: false },
+    });
 
     // Gleicher Status nochmal → nichts geändert, kein weiterer Eintrag.
     expect((await mieten.aendereStatus(ops, id, 'aktiv')).geaendert).toBe(false);
@@ -147,7 +157,7 @@ describe.skipIf(!RUN)('Statuswechsel mit Audit (Integration, braucht DB)', () =>
     const id = await bestaetigteMiete();
     await mieten.aendereStatus(ops, id, 'aktiv');
     await mieten.aendereStatus(ops, id, 'beendet');
-    const rechnung = await rechnungen.erstelle(undefined, { mieteId: id, netto: 100 });
+    const rechnung = await rechnungen.erstelle(ops, { mieteId: id, netto: 100 });
     await rechnungen.aendereStatus(ops, rechnung.id, 'gestellt');
 
     expect((await mieten.holeMiete(id)).status).toBe('abgerechnet');
@@ -158,7 +168,7 @@ describe.skipIf(!RUN)('Statuswechsel mit Audit (Integration, braucht DB)', () =>
   });
 
   it('Abweichung: Feldänderung ohne Statuswechsel wird protokolliert', async () => {
-    const { id } = await abweichungen.erstelle(undefined, {
+    const { id } = await abweichungen.erstelle(ops, {
       bezugTyp: 'miete',
       bezugId: randomUUID(),
       beschreibung: 'Test',

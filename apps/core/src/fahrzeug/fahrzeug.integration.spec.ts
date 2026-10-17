@@ -47,7 +47,7 @@ describe.skipIf(!RUN)('Fahrzeugakte (Integration, braucht DB)', () => {
   });
 
   it('legt Akte an, steuert Status und bewertet Buchbarkeit über Kalibrierung', async () => {
-    const { id } = await service.erstelle(undefined, neuesFahrzeug(`T-${randomUUID().slice(0, 8)}`));
+    const { id } = await service.erstelle(AKTEUR, neuesFahrzeug(`T-${randomUUID().slice(0, 8)}`));
 
     const akte = await service.holeAkte(id);
     expect(akte.aggregate).toHaveLength(1);
@@ -61,7 +61,7 @@ describe.skipIf(!RUN)('Fahrzeugakte (Integration, braucht DB)', () => {
     // Immer noch nicht buchbar: keine gültige Kalibrierung.
     expect((await service.buchbarkeit(id, new Date())).buchbar).toBe(false);
 
-    await service.fuegeKalibrierungHinzu(sensorId, 'tester', {
+    await service.fuegeKalibrierungHinzu(AKTEUR, sensorId, {
       durchgefuehrtAm: new Date().toISOString(),
       gueltigBis: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
     });
@@ -70,13 +70,13 @@ describe.skipIf(!RUN)('Fahrzeugakte (Integration, braucht DB)', () => {
   });
 
   it('verweigert einen unerlaubten Statusübergang', async () => {
-    const { id } = await service.erstelle(undefined, neuesFahrzeug(`T-${randomUUID().slice(0, 8)}`));
+    const { id } = await service.erstelle(AKTEUR, neuesFahrzeug(`T-${randomUUID().slice(0, 8)}`));
     await service.aendereStatus(AKTEUR, id, 'verfuegbar');
     await expect(service.aendereStatus(AKTEUR, id, 'stillgelegt')).rejects.toThrow();
   });
 
   it('listet fällige Kalibrierungen (Sensor ohne Kalibrierung)', async () => {
-    const { id } = await service.erstelle(undefined, neuesFahrzeug(`T-${randomUUID().slice(0, 8)}`));
+    const { id } = await service.erstelle(AKTEUR, neuesFahrzeug(`T-${randomUUID().slice(0, 8)}`));
     const akte = await service.holeAkte(id);
     const sensorId = akte.aggregate[0]!.sensoren[0]!.id;
     const faellig = await service.faelligeKalibrierungen(undefined, new Date());

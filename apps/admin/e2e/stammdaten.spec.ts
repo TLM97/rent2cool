@@ -77,9 +77,14 @@ test('Kunde, Fahrer und Fahrzeug bearbeiten', async ({ page, context }) => {
   await page.getByLabel('Führerschein gültig bis').fill('2035-06-30');
   await page.getByRole('button', { name: 'Änderungen speichern' }).click();
   await expect(page.getByRole('status')).toContainText('Änderungen gespeichert');
-  const zeile = page.getByRole('row', { name: new RegExp(fahrerName) });
+  const zeile = page.getByRole('region', { name: /^Fahrer \(/ }).getByRole('row', { name: new RegExp(fahrerName) });
   await expect(zeile).toContainText('C1');
   await expect(zeile).toContainText('30.06.2035');
+  // Kundenverlauf enthält auch die Fahrer.
+  const kundenVerlauf = page.getByRole('region', { name: 'Verlauf' });
+  await expect(kundenVerlauf).toContainText(`Fahrer ${fahrerName}`);
+  await expect(kundenVerlauf).toContainText(`Firmenname: ${firma}`);
+  await expect(kundenVerlauf).toContainText('Führerscheinklasse: B → C1');
   await page.screenshot({ path: `${SCREENS}/18-kunde-bearbeitet.png`, fullPage: true });
 
   // --- Fahrzeug anlegen und bearbeiten (inkl. Pflichtfeld) ---

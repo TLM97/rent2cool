@@ -6,6 +6,7 @@ import {
   type AbweichungStatus,
   type Principal,
 } from '@rent2cool/shared';
+import { protokolliereAnlage } from '../audit/audit.service';
 import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Database } from '../db/client';
 import { DB } from '../db/db.module';
@@ -23,18 +24,21 @@ export interface AbweichungErstellen {
 export class AbweichungService {
   constructor(@Inject(DB) private readonly db: Database) {}
 
-  async erstelle(mandantId: string | undefined, p: AbweichungErstellen): Promise<{ id: string }> {
-    const [row] = await this.db
-      .insert(abweichung)
-      .values({
-        mandantId: mandantId ?? PLACEHOLDER_MANDANT_ID,
-        bezugTyp: p.bezugTyp,
-        bezugId: p.bezugId,
-        beschreibung: p.beschreibung,
-        schweregrad: p.schweregrad ?? null,
-      })
-      .returning({ id: abweichung.id });
-    return { id: row!.id };
+  async erstelle(principal: Principal, p: AbweichungErstellen): Promise<{ id: string }> {
+    return this.db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(abweichung)
+        .values({
+          mandantId: principal.mandantId ?? PLACEHOLDER_MANDANT_ID,
+          bezugTyp: p.bezugTyp,
+          bezugId: p.bezugId,
+          beschreibung: p.beschreibung,
+          schweregrad: p.schweregrad ?? null,
+        })
+        .returning();
+      await protokolliereAnlage(tx, principal, 'abweichung', row!.id, row);
+      return { id: row!.id };
+    });
   }
 
   async liste(

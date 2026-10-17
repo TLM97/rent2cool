@@ -37,7 +37,7 @@ describe.skipIf(!RUN)('Rechnung (Integration, braucht DB)', () => {
   let rechnungen: RechnungService;
 
   async function beendeteMiete(): Promise<string> {
-    const { id: fahrzeugId } = await fahrzeuge.erstelle(undefined, {
+    const { id: fahrzeugId } = await fahrzeuge.erstelle(AKTEUR, {
       kennzeichen: `R-${randomUUID().slice(0, 8)}`,
       zulGesamtmasseKg: 3500,
       benoetigteFuehrerscheinklasse: 'B',
@@ -46,14 +46,14 @@ describe.skipIf(!RUN)('Rechnung (Integration, braucht DB)', () => {
     });
     await fahrzeuge.aendereStatus(AKTEUR, fahrzeugId, 'verfuegbar');
     const akte = await fahrzeuge.holeAkte(fahrzeugId);
-    await fahrzeuge.fuegeKalibrierungHinzu(akte.aggregate[0]!.sensoren[0]!.id, 'tester', {
+    await fahrzeuge.fuegeKalibrierungHinzu(AKTEUR, akte.aggregate[0]!.sensoren[0]!.id, {
       durchgefuehrtAm: new Date().toISOString(),
       gueltigBis: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
     });
-    const { id: kundeId } = await kunden.erstelleKunde(undefined, { firmenname: 'RK', land: 'DE' });
+    const { id: kundeId } = await kunden.erstelleKunde(AKTEUR, { firmenname: 'RK', land: 'DE' });
     await kunden.aendereKundeStatus(AKTEUR, kundeId, 'in_pruefung');
     await kunden.aendereKundeStatus(AKTEUR, kundeId, 'freigegeben');
-    const r = await mieten.erstelle(undefined, {
+    const r = await mieten.erstelle(AKTEUR, {
       kundeId,
       fahrzeugId,
       auslandsfahrtGeplant: false,
@@ -86,7 +86,7 @@ describe.skipIf(!RUN)('Rechnung (Integration, braucht DB)', () => {
 
   it('erstellt Rechnung aus beendeter Miete mit korrekter Steuer und Nummer', async () => {
     const mieteId = await beendeteMiete();
-    const r = await rechnungen.erstelle(undefined, { mieteId, netto: 100 });
+    const r = await rechnungen.erstelle(AKTEUR, { mieteId, netto: 100 });
     expect(r.nettoCent).toBe(10000);
     expect(r.steuerCent).toBe(1900);
     expect(r.bruttoCent).toBe(11900);
@@ -95,7 +95,7 @@ describe.skipIf(!RUN)('Rechnung (Integration, braucht DB)', () => {
     expect(r.status).toBe('entwurf');
 
     // Zweite Rechnung zur selben Miete -> Konflikt.
-    await expect(rechnungen.erstelle(undefined, { mieteId, netto: 50 })).rejects.toThrow();
+    await expect(rechnungen.erstelle(AKTEUR, { mieteId, netto: 50 })).rejects.toThrow();
 
     // Liste lässt sich nach Miete filtern (für die Mietseite der Oberfläche).
     const zurMiete = await rechnungen.liste(undefined, { mieteId, limit: 10, offset: 0 });
@@ -110,7 +110,7 @@ describe.skipIf(!RUN)('Rechnung (Integration, braucht DB)', () => {
   });
 
   it('lehnt Rechnung für eine nicht beendete Miete ab', async () => {
-    const { id: fahrzeugId } = await fahrzeuge.erstelle(undefined, {
+    const { id: fahrzeugId } = await fahrzeuge.erstelle(AKTEUR, {
       kennzeichen: `R-${randomUUID().slice(0, 8)}`,
       zulGesamtmasseKg: 3500,
       benoetigteFuehrerscheinklasse: 'B',
@@ -119,26 +119,26 @@ describe.skipIf(!RUN)('Rechnung (Integration, braucht DB)', () => {
     });
     await fahrzeuge.aendereStatus(AKTEUR, fahrzeugId, 'verfuegbar');
     const akte = await fahrzeuge.holeAkte(fahrzeugId);
-    await fahrzeuge.fuegeKalibrierungHinzu(akte.aggregate[0]!.sensoren[0]!.id, 'tester', {
+    await fahrzeuge.fuegeKalibrierungHinzu(AKTEUR, akte.aggregate[0]!.sensoren[0]!.id, {
       durchgefuehrtAm: new Date().toISOString(),
       gueltigBis: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
     });
-    const { id: kundeId } = await kunden.erstelleKunde(undefined, { firmenname: 'RK2', land: 'DE' });
+    const { id: kundeId } = await kunden.erstelleKunde(AKTEUR, { firmenname: 'RK2', land: 'DE' });
     await kunden.aendereKundeStatus(AKTEUR, kundeId, 'in_pruefung');
     await kunden.aendereKundeStatus(AKTEUR, kundeId, 'freigegeben');
-    const r = await mieten.erstelle(undefined, {
+    const r = await mieten.erstelle(AKTEUR, {
       kundeId,
       fahrzeugId,
       auslandsfahrtGeplant: false,
       startGeplant: new Date(Date.now() + 3600_000).toISOString(),
       endeGeplant: new Date(Date.now() + 7200_000).toISOString(),
     }); // Status bestaetigt (nicht beendet)
-    await expect(rechnungen.erstelle(undefined, { mieteId: r.id, netto: 100 })).rejects.toThrow();
+    await expect(rechnungen.erstelle(AKTEUR, { mieteId: r.id, netto: 100 })).rejects.toThrow();
   });
 
   it('vergibt fortlaufende Rechnungsnummern', async () => {
-    const r1 = await rechnungen.erstelle(undefined, { mieteId: await beendeteMiete(), netto: 10 });
-    const r2 = await rechnungen.erstelle(undefined, { mieteId: await beendeteMiete(), netto: 20 });
+    const r1 = await rechnungen.erstelle(AKTEUR, { mieteId: await beendeteMiete(), netto: 10 });
+    const r2 = await rechnungen.erstelle(AKTEUR, { mieteId: await beendeteMiete(), netto: 20 });
     const n1 = Number(r1.rechnungsnummer.split('-')[1]);
     const n2 = Number(r2.rechnungsnummer.split('-')[1]);
     expect(n2).toBe(n1 + 1);

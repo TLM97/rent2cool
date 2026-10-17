@@ -40,7 +40,8 @@ export default async function FahrzeugDetail({
   const darfAendern = hatRolle(rollen, 'ops', 'admin');
   const darfAbweichung = hatRolle(rollen, 'ops', 'admin', 'qa_approver');
   const naechste = istFahrzeugStatus(f.status) ? erlaubteUebergaenge(f.status) : [];
-  const sensoren = akte.aggregate.flatMap((a) => a.sensoren.filter((s) => s.aktiv));
+  const alleSensoren = akte.aggregate.flatMap((a) => a.sensoren);
+  const sensoren = alleSensoren.filter((s) => s.aktiv);
 
   return (
     <>
@@ -231,7 +232,13 @@ export default async function FahrzeugDetail({
           </FormularRahmen>
         </section>
       ) : null}
-      <Verlauf entitaetId={f.id} typen={['fahrzeug', 'fahrzeug_status']} />
+      <Verlauf
+        entitaetIds={[f.id, ...alleSensoren.map((s) => s.id)]}
+        typen={['fahrzeug', 'fahrzeug_status', 'kalibrierung', 'sensor_tausch']}
+        bezeichnungen={Object.fromEntries(
+          alleSensoren.map((s) => [s.id, `Sensor ${s.seriennummer ? `SN ${s.seriennummer}` : kurzeId(s.id)}`]),
+        )}
+      />
     </>
   );
 }

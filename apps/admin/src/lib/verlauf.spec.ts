@@ -10,6 +10,7 @@ function eintrag(t: Partial<AuditEintrag>): AuditEintrag {
     akteurRolle: 'ops',
     aktion: 'POST',
     entitaetTyp: 'miete_status',
+    entitaetId: 'm1',
     altWert: null,
     neuWert: null,
     ...t,
@@ -41,9 +42,25 @@ describe('Verlauf', () => {
     expect(beschreibe(eintrag({ aktion: 'PATCH', entitaetTyp: 'kunde' })).vorgang).toBe('Stammdaten geändert');
   });
 
-  it('Anlegen zeigt keine Feldliste; ohne Namen die gekürzte Kennung', () => {
-    const b = beschreibe(eintrag({ entitaetTyp: 'miete', neuWert: { id: 'x' } }));
-    expect(b).toEqual({ vorgang: 'angelegt', wer: 'Konto 0f4c2a9e', aenderungen: [] });
+  it('Anlegen zeigt die gefüllten Felder ohne alten Wert; ohne Namen die gekürzte Kennung', () => {
+    const b = beschreibe(
+      eintrag({
+        entitaetTyp: 'rechnung',
+        neuWert: { id: 'x', mandantId: 'm', rechnungsnummer: '2026-00001', nettoCent: 10000, status: 'entwurf', bezahltAm: null },
+      }),
+    );
+    expect(b.vorgang).toBe('angelegt');
+    expect(b.wer).toBe('Konto 0f4c2a9e');
+    expect(b.aenderungen).toEqual([
+      { feld: 'Status', alt: null, neu: 'Entwurf' },
+      { feld: 'Rechnungsnummer', alt: null, neu: '2026-00001' },
+      { feld: 'Netto', alt: null, neu: '100,00\u00a0€' },
+    ]);
+    // Alte Einträge der Rückfallebene enthielten nur die ID.
+    expect(beschreibe(eintrag({ entitaetTyp: 'miete', neuWert: { id: 'x' } })).aenderungen).toEqual([]);
+    expect(beschreibe(eintrag({ entitaetTyp: 'kalibrierung', neuWert: { zertifikatRef: 'K1' } })).vorgang).toBe(
+      'Kalibrierung erfasst',
+    );
   });
 
   it('formatiert Werte deutsch', () => {

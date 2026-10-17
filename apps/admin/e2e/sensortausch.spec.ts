@@ -74,5 +74,12 @@ test('Sensor tauschen mit und ohne Kalibrierung', async ({ page }) => {
   await expect(page.locator('tr.ausgebaut')).toHaveCount(2);
   await expect(page.getByRole('link', { name: 'Tauschen' })).toHaveCount(1);
   expect(page.url()).toContain(akte);
+  // Verlauf der Akte: Anlegen, Kalibrierungen und Tausch je Sensor.
+  const verlauf = page.getByRole('region', { name: 'Verlauf' });
+  await expect(verlauf).toContainText(`Kennzeichen: ${kennzeichen}`);
+  await expect(verlauf).toContainText(`Sensor SN SN-${lauf}-1`);
+  await expect(verlauf.getByText('Sensor getauscht')).toHaveCount(2);
+  await expect(verlauf.getByText('Kalibrierung erfasst')).toHaveCount(2);
+  await expect(verlauf).toContainText(`Zertifikat: KAL-${lauf}-2`);
   await page.screenshot({ path: `${SCREENS}/21-sensor-historie.png`, fullPage: true });
 });

@@ -122,7 +122,7 @@ test('kompletter Ablauf von Fahrzeug bis Abweichung', async ({ page }) => {
   await statusWechseln(page, 'Rechnungsstatus ändern', 'gestellt', 'Status');
   await statusWechseln(page, 'Rechnungsstatus ändern', 'bezahlt', 'Status');
   await expect(page.getByRole('region', { name: 'Verlauf' })).toContainText('Status: gestellt → bezahlt');
-  await expect(page.getByText('297,50')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Rechnungsdaten' })).toContainText('297,50');
   await page.screenshot({ path: `${SCREENS}/15-rechnung.png`, fullPage: true });
 
   // --- Abweichung aus der Miete erfassen und durch die QA abschließen ---

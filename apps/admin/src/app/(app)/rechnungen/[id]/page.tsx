@@ -85,7 +85,7 @@ export default async function RechnungDetail({
           ) : null}
         </dl>
       </section>
-      <Verlauf entitaetId={r.id} typen={['rechnung', 'rechnung_status']} />
+      <Verlauf entitaetIds={[r.id]} typen={['rechnung', 'rechnung_status']} />
     </>
   );
 }

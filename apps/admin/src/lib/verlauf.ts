@@ -2,7 +2,7 @@
  * Audit-Einträge lesbar machen: was ist passiert, welche Felder haben sich wie
  * geändert. Beschriftungen und Formate liegen hier an einer Stelle.
  */
-import { formatDatumZeit, statusLabel } from './format';
+import { formatDatumZeit, formatEuro, statusLabel } from './format';
 
 export interface AuditEintrag {
   id: string;
@@ -12,13 +12,15 @@ export interface AuditEintrag {
   akteurRolle: string | null;
   aktion: string;
   entitaetTyp: string;
+  entitaetId: string | null;
   altWert: unknown;
   neuWert: unknown;
 }
 
 export interface Feldaenderung {
   feld: string;
-  alt: string;
+  /** `null` beim Anlegen: es gab keinen alten Wert. */
+  alt: string | null;
   neu: string;
 }
 
@@ -52,6 +54,25 @@ const FELDER: Record<string, string> = {
   fuehrerscheinKlasse: 'Führerscheinklasse',
   fuehrerscheinNummer: 'Führerscheinnummer',
   fuehrerscheinGueltigBis: 'Führerschein gültig bis',
+  startGeplant: 'Start (geplant)',
+  endeGeplant: 'Ende (geplant)',
+  auslandsfahrtGeplant: 'Auslandsfahrt',
+  temperaturprofil: 'Temperaturprofil',
+  rechnungsnummer: 'Rechnungsnummer',
+  nettoCent: 'Netto',
+  steuerSatz: 'USt-Satz (%)',
+  bruttoCent: 'Brutto',
+  beschreibung: 'Beschreibung',
+  schweregrad: 'Schweregrad',
+  bezugTyp: 'Bezug',
+  durchgefuehrtAm: 'geprüft am',
+  gueltigBis: 'gültig bis',
+  pruefstelle: 'Prüfstelle',
+  zertifikatRef: 'Zertifikat',
+  ergebnis: 'Ergebnis',
+  seriennummer: 'Seriennummer',
+  modell: 'Modell',
+  grund: 'Grund',
 };
 
 const ISO_ZEIT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
@@ -64,7 +85,7 @@ export function formatWert(feld: string, wert: unknown): string {
   if (wert === null || wert === undefined || wert === '') return '–';
   if (feld === 'status' && typeof wert === 'string') return statusLabel(wert);
   if (typeof wert === 'boolean') return wert ? 'ja' : 'nein';
-  if (typeof wert === 'number') return wert.toLocaleString('de-DE');
+  if (typeof wert === 'number') return feld.endsWith('Cent') ? formatEuro(wert) : wert.toLocaleString('de-DE');
   if (typeof wert === 'string') return ISO_ZEIT.test(wert) ? formatDatumZeit(wert) : wert;
   return JSON.stringify(wert);
 }
@@ -79,8 +100,20 @@ export function feldaenderungen(alt: unknown, neu: unknown): Feldaenderung[] {
     .map((f) => ({ feld: FELDER[f] ?? f, alt: formatWert(f, a[f]), neu: formatWert(f, n[f]) }));
 }
 
+/**
+ * Beim Anlegen: die beschrifteten, gefüllten Felder des neuen Datensatzes
+ * (technische Felder wie IDs bleiben weg).
+ */
+export function angelegteFelder(neu: unknown): Feldaenderung[] {
+  if (!istObjekt(neu)) return [];
+  return Object.keys(FELDER)
+    .filter((f) => neu[f] !== null && neu[f] !== undefined && neu[f] !== '')
+    .map((f) => ({ feld: FELDER[f]!, alt: null, neu: formatWert(f, neu[f]) }));
+}
+
 /** Kurzbeschreibung des Vorgangs. */
 export function vorgang(e: AuditEintrag): string {
+  if (e.entitaetTyp === 'kalibrierung') return 'Kalibrierung erfasst';
   if (e.entitaetTyp === 'alarm_quittieren') return 'Alarm quittiert';
   if (e.entitaetTyp === 'alarm_schliessen') return 'Alarm geschlossen';
   if (e.entitaetTyp === 'sensor_tausch') return 'Sensor getauscht';
@@ -100,7 +133,13 @@ export function akteur(e: AuditEintrag): string {
 }
 
 export function beschreibe(e: AuditEintrag): { vorgang: string; wer: string; aenderungen: Feldaenderung[] } {
-  // Beim Anlegen (Rückfallebene) steht im neuen Wert nur die Antwort – keine Feldliste zeigen.
-  const angelegt = vorgang(e) === 'angelegt';
-  return { vorgang: vorgang(e), wer: akteur(e), aenderungen: angelegt ? [] : feldaenderungen(e.altWert, e.neuWert) };
+  const v = vorgang(e);
+  const neuAngelegt = v === 'angelegt' || v === 'Kalibrierung erfasst';
+  return {
+    vorgang: v,
+    wer: akteur(e),
+    // Anlegen: Felder des neuen Datensatzes. Ältere Einträge (vor 2026-10-17)
+    // enthalten nur die ID – dann bleibt die Liste leer.
+    aenderungen: neuAngelegt ? angelegteFelder(e.neuWert) : feldaenderungen(e.altWert, e.neuWert),
+  };
 }

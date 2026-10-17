@@ -132,16 +132,18 @@ Fundament für alle GDP-Schreibzugriffe (CLAUDE.md, „nicht verhandelbar"):
 - **Audit Trail**: append-only-Tabelle `audit_event` (per DB-Trigger
   unveränderbar): wer (Konto-ID, Anmeldename, alle Rollen), wann, was, alter
   und neuer Wert. Zwei Wege:
-  - **Präzise (`@AuditImService`)**: Statuswechsel, Stammdaten-Änderungen und
-    Sensortausch schreiben den Eintrag selbst – nur geänderte Felder, alt und
-    neu, in derselben Transaktion wie die Änderung. Statuswechsel laufen
+  - **Präzise (`@AuditImService`)**: Anlegen, Statuswechsel,
+    Stammdaten-Änderungen und Sensortausch schreiben den Eintrag selbst, in
+    derselben Transaktion wie die Änderung – beim Anlegen der vollständige
+    neue Datensatz, beim Ändern nur geänderte Felder (alt und neu). Statuswechsel laufen
     über einen gemeinsamen Baustein (`apps/core/src/audit/statuswechsel.ts`)
     mit Zeilensperre, damit zwei gleichzeitige Wechsel nicht beide gelingen.
-  - **Rückfallebene (`@Audited`)**: übrige schreibende Routen (z. B. Anlegen)
-    protokolliert ein Interceptor vor der Antwort.
+  - **Rückfallebene (`@Audited`)**: nur noch Temperaturnachweis erzeugen und
+    der Demo-Endpunkt; ein Interceptor protokolliert die Antwort.
   - Ein Test stellt sicher, dass jede schreibende Route einen der beiden Wege hat.
 - **Verlauf**: `GET /v1/audit?entitaetId=…&typ=miete,miete_status` (nur interne
-  Rollen); die Admin-Oberfläche zeigt ihn auf den Detailseiten.
+  Rollen; mehrere IDs kommagetrennt, z. B. Fahrzeug und seine Sensoren); die
+  Admin-Oberfläche zeigt ihn auf den Detailseiten.
 
 Ein geschützter, auditierter Demo-Endpunkt (`POST /v1/admin/audit-demo`,
 Rolle `admin`) weist die Kette Guard → Rolle → Audit nach; er wird ersetzt,

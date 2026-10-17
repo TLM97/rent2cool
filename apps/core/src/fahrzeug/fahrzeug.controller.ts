@@ -12,7 +12,7 @@ import {
 import { z } from 'zod';
 import type { Principal } from '@rent2cool/shared';
 import { CurrentUser, Roles } from '../auth/decorators';
-import { AuditImService, Audited } from '../audit/audited.decorator';
+import { AuditImService } from '../audit/audited.decorator';
 import {
   fahrzeugAendernSchema,
   fahrzeugErstellenSchema,
@@ -37,10 +37,10 @@ export class FahrzeugController {
 
   @Post()
   @Roles('ops', 'admin')
-  @Audited('fahrzeug')
+  @AuditImService('fahrzeug')
   @HttpCode(201)
   erstelle(@CurrentUser() user: Principal, @Body() body: unknown): Promise<{ id: string }> {
-    return this.service.erstelle(user.mandantId, parse(fahrzeugErstellenSchema, body));
+    return this.service.erstelle(user, parse(fahrzeugErstellenSchema, body));
   }
 
   @Get()
@@ -102,14 +102,14 @@ export class SensorController {
 
   @Post(':sensorId/kalibrierungen')
   @Roles('ops', 'admin')
-  @Audited('kalibrierung')
+  @AuditImService('kalibrierung')
   @HttpCode(201)
   kalibriere(
     @CurrentUser() user: Principal,
     @Param('sensorId') sensorId: string,
     @Body() body: unknown,
   ): Promise<{ id: string }> {
-    return this.service.fuegeKalibrierungHinzu(sensorId, user.akteurId, parse(kalibrierungSchema, body));
+    return this.service.fuegeKalibrierungHinzu(user, sensorId, parse(kalibrierungSchema, body));
   }
 
   /** Sensor tauschen (Ausbau + Einbau, optional mit Kalibrierung). Audit mit alt/neu im Service. */

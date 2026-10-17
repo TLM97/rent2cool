@@ -90,7 +90,7 @@ export default async function AbweichungDetail({
           </FormularRahmen>
         </section>
       ) : null}
-      <Verlauf entitaetId={a.id} typen={['abweichung', 'abweichung_status']} />
+      <Verlauf entitaetIds={[a.id]} typen={['abweichung', 'abweichung_status']} />
     </>
   );
 }

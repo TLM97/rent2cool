@@ -153,7 +153,11 @@ export default async function KundeDetail({
           </FormularRahmen>
         </section>
       ) : null}
-      <Verlauf entitaetId={kunde.id} typen={['kunde', 'kunde_status']} />
+      <Verlauf
+        entitaetIds={[kunde.id, ...fahrer.map((f) => f.id)]}
+        typen={['kunde', 'kunde_status', 'fahrer', 'fahrer_status']}
+        bezeichnungen={Object.fromEntries(fahrer.map((f) => [f.id, `Fahrer ${f.name}`]))}
+      />
     </>
   );
 }

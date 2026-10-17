@@ -31,7 +31,7 @@ describe.skipIf(!RUN)('Buchung/Miete (Integration, braucht DB)', () => {
   let kunden: KundeService;
 
   async function bereitesFahrzeug(tacho: boolean): Promise<string> {
-    const { id } = await fahrzeuge.erstelle(undefined, {
+    const { id } = await fahrzeuge.erstelle(AKTEUR, {
       kennzeichen: `M-${randomUUID().slice(0, 8)}`,
       zulGesamtmasseKg: 3500,
       benoetigteFuehrerscheinklasse: 'B',
@@ -41,7 +41,7 @@ describe.skipIf(!RUN)('Buchung/Miete (Integration, braucht DB)', () => {
     await fahrzeuge.aendereStatus(AKTEUR, id, 'verfuegbar');
     const akte = await fahrzeuge.holeAkte(id);
     const sensorId = akte.aggregate[0]!.sensoren[0]!.id;
-    await fahrzeuge.fuegeKalibrierungHinzu(sensorId, 'tester', {
+    await fahrzeuge.fuegeKalibrierungHinzu(AKTEUR, sensorId, {
       durchgefuehrtAm: new Date().toISOString(),
       gueltigBis: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
     });
@@ -49,14 +49,14 @@ describe.skipIf(!RUN)('Buchung/Miete (Integration, braucht DB)', () => {
   }
 
   async function freigegebenerKunde(): Promise<string> {
-    const { id } = await kunden.erstelleKunde(undefined, { firmenname: `K ${randomUUID().slice(0, 6)}`, land: 'DE' });
+    const { id } = await kunden.erstelleKunde(AKTEUR, { firmenname: `K ${randomUUID().slice(0, 6)}`, land: 'DE' });
     await kunden.aendereKundeStatus(AKTEUR, id, 'in_pruefung');
     await kunden.aendereKundeStatus(AKTEUR, id, 'freigegeben');
     return id;
   }
 
   async function freigegebenerFahrer(kundeId: string): Promise<string> {
-    const { id } = await kunden.erstelleFahrer(kundeId, {
+    const { id } = await kunden.erstelleFahrer(AKTEUR, kundeId, {
       name: 'Fahrer Test',
       fuehrerscheinKlasse: 'B',
       fuehrerscheinGueltigBis: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
@@ -92,9 +92,9 @@ describe.skipIf(!RUN)('Buchung/Miete (Integration, braucht DB)', () => {
 
   it('lehnt Buchung ab, wenn der Kunde nicht freigegeben ist', async () => {
     const fahrzeugId = await bereitesFahrzeug(false);
-    const { id: kundeId } = await kunden.erstelleKunde(undefined, { firmenname: 'Nicht frei', land: 'DE' });
+    const { id: kundeId } = await kunden.erstelleKunde(AKTEUR, { firmenname: 'Nicht frei', land: 'DE' });
     await expect(
-      mieten.erstelle(undefined, { kundeId, fahrzeugId, auslandsfahrtGeplant: false, ...fenster() }),
+      mieten.erstelle(AKTEUR, { kundeId, fahrzeugId, auslandsfahrtGeplant: false, ...fenster() }),
     ).rejects.toThrow();
   });
 
@@ -102,7 +102,7 @@ describe.skipIf(!RUN)('Buchung/Miete (Integration, braucht DB)', () => {
     const fahrzeugId = await bereitesFahrzeug(false);
     const kundeId = await freigegebenerKunde();
     await expect(
-      mieten.erstelle(undefined, { kundeId, fahrzeugId, auslandsfahrtGeplant: true, ...fenster() }),
+      mieten.erstelle(AKTEUR, { kundeId, fahrzeugId, auslandsfahrtGeplant: true, ...fenster() }),
     ).rejects.toThrow();
   });
 
@@ -113,7 +113,7 @@ describe.skipIf(!RUN)('Buchung/Miete (Integration, braucht DB)', () => {
     const f = fenster();
     const key = `idem-${randomUUID()}`;
 
-    const r1 = await mieten.erstelle(undefined, {
+    const r1 = await mieten.erstelle(AKTEUR, {
       kundeId,
       fahrzeugId,
       fahrerId,
@@ -125,20 +125,20 @@ describe.skipIf(!RUN)('Buchung/Miete (Integration, braucht DB)', () => {
     expect(r1.idempotent).toBe(false);
 
     // Gleicher Key -> dieselbe Miete (idempotent).
-    const r2 = await mieten.erstelle(undefined, { kundeId, fahrzeugId, fahrerId, auslandsfahrtGeplant: true, idempotencyKey: key, ...f });
+    const r2 = await mieten.erstelle(AKTEUR, { kundeId, fahrzeugId, fahrerId, auslandsfahrtGeplant: true, idempotencyKey: key, ...f });
     expect(r2.idempotent).toBe(true);
     expect(r2.id).toBe(r1.id);
 
     // Überlappende Buchung ohne Key -> abgelehnt (Doppelbuchung).
     await expect(
-      mieten.erstelle(undefined, { kundeId, fahrzeugId, fahrerId, auslandsfahrtGeplant: true, ...f }),
+      mieten.erstelle(AKTEUR, { kundeId, fahrzeugId, fahrerId, auslandsfahrtGeplant: true, ...f }),
     ).rejects.toThrow();
   });
 
   it('führt den Status-Lebenszyklus bis abgerechnet', async () => {
     const fahrzeugId = await bereitesFahrzeug(false);
     const kundeId = await freigegebenerKunde();
-    const r = await mieten.erstelle(undefined, { kundeId, fahrzeugId, auslandsfahrtGeplant: false, ...fenster() });
+    const r = await mieten.erstelle(AKTEUR, { kundeId, fahrzeugId, auslandsfahrtGeplant: false, ...fenster() });
     await mieten.aendereStatus(AKTEUR, r.id, 'aktiv');
     await mieten.aendereStatus(AKTEUR, r.id, 'beendet');
     await mieten.aendereStatus(AKTEUR, r.id, 'abgerechnet');
@@ -155,7 +155,7 @@ describe.skipIf(!RUN)('Buchung/Miete (Integration, braucht DB)', () => {
     const start = new Date(Date.now() - 3600_000); // Fenster in der Vergangenheit
     const ende = new Date();
     // Keine Statusänderung -> startIst/endeIst bleiben leer -> geplantes Fenster gilt.
-    const r = await mieten.erstelle(undefined, {
+    const r = await mieten.erstelle(AKTEUR, {
       kundeId,
       fahrzeugId,
       auslandsfahrtGeplant: false,

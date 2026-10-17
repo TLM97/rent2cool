@@ -14,9 +14,10 @@ import {
   type Principal,
   type RechnungStatus,
 } from '@rent2cool/shared';
+import { protokolliereAnlage } from '../audit/audit.service';
 import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Env } from '../config/env';
-import type { Database } from '../db/client';
+import type { Database, Transaktion } from '../db/client';
 import { DB } from '../db/db.module';
 import { miete, rechnung, rechnungSequenz } from '../db/schema';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
@@ -31,8 +32,9 @@ export class RechnungService {
     private readonly mieten: MieteService,
   ) {}
 
-  private async naechsteNummer(mandant: string, jahr: number): Promise<number> {
-    const [row] = await this.db
+  /** Nächste Nummer; in der Transaktion des Anlegens, damit ein Abbruch keine Lücke hinterlässt. */
+  private async naechsteNummer(tx: Transaktion, mandant: string, jahr: number): Promise<number> {
+    const [row] = await tx
       .insert(rechnungSequenz)
       .values({ mandantId: mandant, jahr, letzteNummer: 1 })
       .onConflictDoUpdate({
@@ -43,8 +45,8 @@ export class RechnungService {
     return row!.nr;
   }
 
-  async erstelle(mandantId: string | undefined, p: RechnungErstellen) {
-    const mandant = mandantId ?? PLACEHOLDER_MANDANT_ID;
+  async erstelle(principal: Principal, p: RechnungErstellen) {
+    const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
     const m = await this.mieten.holeMiete(p.mieteId);
     if (m.mandantId !== mandant) {
       throw new NotFoundException('Miete nicht gefunden');
@@ -69,30 +71,32 @@ export class RechnungService {
     const bis = m.endeIst ?? m.endeGeplant;
     const jahr = new Date().getUTCFullYear();
 
-    const nr = await this.naechsteNummer(mandant, jahr);
-    const rechnungsnummer = formatRechnungsnummer(jahr, nr);
-
-    const [row] = await this.db
-      .insert(rechnung)
-      .values({
-        mandantId: mandant,
-        kundeId: m.kundeId,
-        mieteId: m.id,
-        rechnungsnummer,
-        zeitraumVon: von,
-        zeitraumBis: bis,
-        nettoCent: betraege.nettoCent,
-        steuerSatz: betraege.steuerSatzProzent,
-        steuerCent: betraege.steuerCent,
-        bruttoCent: betraege.bruttoCent,
-        waehrung,
-        status: 'entwurf',
-      })
-      .returning({ id: rechnung.id });
+    const row = await this.db.transaction(async (tx) => {
+      const nr = await this.naechsteNummer(tx, mandant, jahr);
+      const [neu] = await tx
+        .insert(rechnung)
+        .values({
+          mandantId: mandant,
+          kundeId: m.kundeId,
+          mieteId: m.id,
+          rechnungsnummer: formatRechnungsnummer(jahr, nr),
+          zeitraumVon: von,
+          zeitraumBis: bis,
+          nettoCent: betraege.nettoCent,
+          steuerSatz: betraege.steuerSatzProzent,
+          steuerCent: betraege.steuerCent,
+          bruttoCent: betraege.bruttoCent,
+          waehrung,
+          status: 'entwurf',
+        })
+        .returning();
+      await protokolliereAnlage(tx, principal, 'rechnung', neu!.id, neu);
+      return neu!;
+    });
 
     return {
-      id: row!.id,
-      rechnungsnummer,
+      id: row.id,
+      rechnungsnummer: row.rechnungsnummer,
       status: 'entwurf' as RechnungStatus,
       nettoCent: betraege.nettoCent,
       steuerCent: betraege.steuerCent,

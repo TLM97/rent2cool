@@ -36,7 +36,7 @@ describe.skipIf(!RUN)('Kunde & Fahrer (Integration, braucht DB)', () => {
 
   it('führt Kunde und Fahrer durch die Freigabe und prüft die Einsatzbereitschaft', async () => {
     // Kunde: angelegt -> in_pruefung -> freigegeben
-    const { id: kundeId } = await kunden.erstelleKunde(undefined, {
+    const { id: kundeId } = await kunden.erstelleKunde(AKTEUR, {
       firmenname: `Testkunde ${randomUUID().slice(0, 8)}`,
       ustId: 'DE123456789',
       land: 'DE',
@@ -46,7 +46,7 @@ describe.skipIf(!RUN)('Kunde & Fahrer (Integration, braucht DB)', () => {
     expect((await kunden.holeKunde(kundeId)).status).toBe('freigegeben');
 
     // Fahrzeug (Klasse B)
-    const { id: fahrzeugId } = await fahrzeuge.erstelle(undefined, {
+    const { id: fahrzeugId } = await fahrzeuge.erstelle(AKTEUR, {
       kennzeichen: `KF-${randomUUID().slice(0, 8)}`,
       zulGesamtmasseKg: 3500,
       benoetigteFuehrerscheinklasse: 'B',
@@ -54,7 +54,7 @@ describe.skipIf(!RUN)('Kunde & Fahrer (Integration, braucht DB)', () => {
     });
 
     // Fahrer: Klasse B, gültig, noch nicht freigegeben
-    const { id: fahrerId } = await kunden.erstelleFahrer(kundeId, {
+    const { id: fahrerId } = await kunden.erstelleFahrer(AKTEUR, kundeId, {
       name: 'Erika Mustermann',
       fuehrerscheinKlasse: 'B',
       fuehrerscheinGueltigBis: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
@@ -76,13 +76,13 @@ describe.skipIf(!RUN)('Kunde & Fahrer (Integration, braucht DB)', () => {
   });
 
   it('verweigert einen unerlaubten Kunde-Statusübergang', async () => {
-    const { id } = await kunden.erstelleKunde(undefined, { firmenname: 'X', land: 'DE' });
+    const { id } = await kunden.erstelleKunde(AKTEUR, { firmenname: 'X', land: 'DE' });
     await expect(kunden.aendereKundeStatus(AKTEUR, id, 'freigegeben')).rejects.toThrow();
   });
 
   it('listet fällige Führerscheine (abgelaufen)', async () => {
-    const { id: kundeId } = await kunden.erstelleKunde(undefined, { firmenname: 'Y', land: 'DE' });
-    const { id: fahrerId } = await kunden.erstelleFahrer(kundeId, {
+    const { id: kundeId } = await kunden.erstelleKunde(AKTEUR, { firmenname: 'Y', land: 'DE' });
+    const { id: fahrerId } = await kunden.erstelleFahrer(AKTEUR, kundeId, {
       name: 'Max Abgelaufen',
       fuehrerscheinKlasse: 'B',
       fuehrerscheinGueltigBis: new Date('2020-01-01T00:00:00Z').toISOString(),

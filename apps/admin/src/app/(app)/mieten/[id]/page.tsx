@@ -188,7 +188,7 @@ export default async function MieteDetail({
           </div>
         </section>
       ) : null}
-      <Verlauf entitaetId={miete.id} typen={['miete', 'miete_status']} />
+      <Verlauf entitaetIds={[miete.id]} typen={['miete', 'miete_status']} />
     </>
   );
 }

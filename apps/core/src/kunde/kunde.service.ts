@@ -16,7 +16,7 @@ import {
   type Principal,
 } from '@rent2cool/shared';
 import { ermittleAenderungen, neueWerte, pruefeVersion, versionVon, type StammdatenErgebnis } from '../audit/aenderung';
-import { schreibeAudit } from '../audit/audit.service';
+import { protokolliereAnlage, schreibeAudit } from '../audit/audit.service';
 import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Database } from '../db/client';
 import { DB } from '../db/db.module';
@@ -29,21 +29,24 @@ export class KundeService {
   constructor(@Inject(DB) private readonly db: Database) {}
 
   // --- Kunde ---
-  async erstelleKunde(mandantId: string | undefined, p: KundeErstellen): Promise<{ id: string }> {
-    const [row] = await this.db
-      .insert(kunde)
-      .values({
-        mandantId: mandantId ?? PLACEHOLDER_MANDANT_ID,
-        firmenname: p.firmenname,
-        handelsregisternummer: p.handelsregisternummer ?? null,
-        ustId: p.ustId ?? null,
-        strasse: p.strasse ?? null,
-        plz: p.plz ?? null,
-        ort: p.ort ?? null,
-        land: p.land,
-      })
-      .returning({ id: kunde.id });
-    return { id: row!.id };
+  async erstelleKunde(principal: Principal, p: KundeErstellen): Promise<{ id: string }> {
+    return this.db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(kunde)
+        .values({
+          mandantId: principal.mandantId ?? PLACEHOLDER_MANDANT_ID,
+          firmenname: p.firmenname,
+          handelsregisternummer: p.handelsregisternummer ?? null,
+          ustId: p.ustId ?? null,
+          strasse: p.strasse ?? null,
+          plz: p.plz ?? null,
+          ort: p.ort ?? null,
+          land: p.land,
+        })
+        .returning();
+      await protokolliereAnlage(tx, principal, 'kunde', row!.id, row);
+      return { id: row!.id };
+    });
   }
 
   async listeKunden(
@@ -134,19 +137,29 @@ export class KundeService {
   }
 
   // --- Fahrer ---
-  async erstelleFahrer(kundeId: string, p: FahrerErstellen): Promise<{ id: string }> {
-    await this.holeKunde(kundeId); // 404, wenn Kunde fehlt
-    const [row] = await this.db
-      .insert(fahrer)
-      .values({
-        kundeId,
-        name: p.name,
-        fuehrerscheinKlasse: p.fuehrerscheinKlasse,
-        fuehrerscheinNummer: p.fuehrerscheinNummer ?? null,
-        fuehrerscheinGueltigBis: p.fuehrerscheinGueltigBis ? new Date(p.fuehrerscheinGueltigBis) : null,
-      })
-      .returning({ id: fahrer.id });
-    return { id: row!.id };
+  async erstelleFahrer(principal: Principal, kundeId: string, p: FahrerErstellen): Promise<{ id: string }> {
+    const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
+    return this.db.transaction(async (tx) => {
+      const [k] = await tx
+        .select({ id: kunde.id })
+        .from(kunde)
+        .where(and(eq(kunde.id, kundeId), eq(kunde.mandantId, mandant)));
+      if (!k) {
+        throw new NotFoundException('Kunde nicht gefunden');
+      }
+      const [row] = await tx
+        .insert(fahrer)
+        .values({
+          kundeId,
+          name: p.name,
+          fuehrerscheinKlasse: p.fuehrerscheinKlasse,
+          fuehrerscheinNummer: p.fuehrerscheinNummer ?? null,
+          fuehrerscheinGueltigBis: p.fuehrerscheinGueltigBis ? new Date(p.fuehrerscheinGueltigBis) : null,
+        })
+        .returning();
+      await protokolliereAnlage(tx, principal, 'fahrer', row!.id, row);
+      return { id: row!.id };
+    });
   }
 
   async holeFahrer(id: string): Promise<typeof fahrer.$inferSelect> {

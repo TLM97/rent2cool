@@ -13,6 +13,59 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Protokollierung beim Anlegen
+
+**Anlegen mit vollständigem Audit – erledigt.** (Auf Toms Auftrag; Planung
+möge die Aufgabe in `TASKS.md` nachziehen.)
+
+Erledigt:
+- **Fahrzeugakte, Kalibrierung, Kunde, Fahrer, Buchung, Rechnung,
+  Abweichung** schreiben beim Anlegen den **vollständigen neuen Datensatz**
+  in den Audit Trail – in derselben Transaktion wie das Anlegen. Vorher stand
+  dort nur die Antwort (meist nur die ID). Die Fahrzeugakte wird als ein
+  Eintrag mit Kühlaufbau und Sensoren protokolliert.
+- **Idempotente Wiederholung** einer Buchung legt nichts an und
+  protokolliert daher nichts mehr (vorher entstand je Wiederholung ein
+  Eintrag).
+- **Kalibrierungen** werden unter der Sensor-ID protokolliert (wie der
+  Sensortausch). Damit zeigt der Verlauf der Fahrzeugakte Anlegen,
+  Statuswechsel, Kalibrierungen und Tausch zusammen.
+- **Rechnungsnummern ohne Lücken:** Die Nummernvergabe liegt jetzt in der
+  Transaktion des Anlegens. Ein abgebrochenes Anlegen gibt die Nummer zurück
+  (vorher blieb eine Lücke). Getestet mit einem gleichzeitig abgewiesenen
+  Doppel.
+- **Mandantenprüfung** jetzt auch beim Anlegen von Fahrern und beim Erfassen
+  von Kalibrierungen.
+- **Verlauf:** Mehrere zusammengehörige Datensätze in einer Abfrage
+  (Fahrzeug + Sensoren, Kunde + Fahrer), mit Bezug je Zeile („Sensor SN …“,
+  „Fahrer …“). Anlege-Einträge zeigen die wichtigsten Felder.
+- Auf der Rückfallebene (`@Audited`) bleiben nur Temperaturnachweis erzeugen
+  und der Demo-Endpunkt (Nachtrag in D-016).
+- **Tests:** shared 41, admin 42, Kern 38 Unit + 44 Integration (82/82 gegen
+  den lokalen Stack; neuer Test für Anlegen mit eigenem Mandanten je Lauf).
+  Alle 8 Browser-Tests grün, inkl. Verlauf von Fahrzeug und Kunde.
+
+Gefunden, nicht Teil dieser Aufgabe:
+- **Doppelbuchung bei gleichzeitigen Buchungen möglich:** Überschneidungsprüfung
+  und Anlegen sind getrennte Schritte ohne Sperre oder Datenbank-Regel.
+  Zwei gleichzeitige Buchungen desselben Fahrzeugs im selben Zeitraum könnten
+  beide bestätigt werden. Vorschlag: Exclusion-Constraint auf
+  (Fahrzeug, Zeitraum) für bestätigte/aktive Mieten. Als eigene Aufgabe
+  vorgeschlagen – bitte in `TASKS.md` aufnehmen, **vor Go-live zwingend**.
+
+Offen / Abkürzungen:
+- Alarme, die die Telematik automatisch anlegt, haben keinen Audit-Eintrag
+  (kein menschlicher Akteur). Vorschlag: technischer Akteur „system:telematik“
+  → F-32.
+- Alte Audit-Einträge (vor heute) zeigen beim Anlegen weiter nur die ID.
+
+Fragen an Planung:
+- **F-32:** Sollen automatisch erzeugte Datensätze (Alarme aus der
+  Telematik) mit einem technischen Akteur im Audit Trail stehen?
+- F-24, F-26 bis F-31 weiter offen (siehe unten).
+
+---
+
 ### 2026-10-17 – Protokollierung der Statuswechsel
 
 **Statuswechsel mit vollständigem Audit – erledigt.** (Auf Toms Auftrag;

@@ -12,7 +12,7 @@ import {
 import { z } from 'zod';
 import { istFahrerStatus, istKundeStatus, type Principal } from '@rent2cool/shared';
 import { CurrentUser, Roles } from '../auth/decorators';
-import { AuditImService, Audited } from '../audit/audited.decorator';
+import { AuditImService } from '../audit/audited.decorator';
 import {
   fahrerAendernSchema,
   fahrerErstellenSchema,
@@ -38,10 +38,10 @@ export class KundeController {
 
   @Post()
   @Roles('ops', 'admin')
-  @Audited('kunde')
+  @AuditImService('kunde')
   @HttpCode(201)
   erstelle(@CurrentUser() user: Principal, @Body() body: unknown): Promise<{ id: string }> {
-    return this.service.erstelleKunde(user.mandantId, parse(kundeErstellenSchema, body));
+    return this.service.erstelleKunde(user, parse(kundeErstellenSchema, body));
   }
 
   @Get()
@@ -80,10 +80,14 @@ export class KundeController {
 
   @Post(':kundeId/fahrer')
   @Roles('ops', 'admin')
-  @Audited('fahrer')
+  @AuditImService('fahrer')
   @HttpCode(201)
-  erstelleFahrer(@Param('kundeId') kundeId: string, @Body() body: unknown): Promise<{ id: string }> {
-    return this.service.erstelleFahrer(kundeId, parse(fahrerErstellenSchema, body));
+  erstelleFahrer(
+    @CurrentUser() user: Principal,
+    @Param('kundeId') kundeId: string,
+    @Body() body: unknown,
+  ): Promise<{ id: string }> {
+    return this.service.erstelleFahrer(user, kundeId, parse(fahrerErstellenSchema, body));
   }
 
   @Get(':kundeId/fahrer')

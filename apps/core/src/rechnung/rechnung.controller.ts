@@ -11,7 +11,7 @@ import {
 import { z } from 'zod';
 import { istRechnungStatus, type Principal } from '@rent2cool/shared';
 import { CurrentUser, Roles } from '../auth/decorators';
-import { AuditImService, Audited } from '../audit/audited.decorator';
+import { AuditImService } from '../audit/audited.decorator';
 import { listeAbfrageSchema, rechnungErstellenSchema, rechnungStatusSchema } from './dto';
 import { RechnungService } from './rechnung.service';
 
@@ -29,10 +29,10 @@ export class RechnungController {
 
   @Post()
   @Roles('ops', 'admin')
-  @Audited('rechnung')
+  @AuditImService('rechnung')
   @HttpCode(201)
   erstelle(@CurrentUser() user: Principal, @Body() body: unknown) {
-    return this.service.erstelle(user.mandantId, parse(rechnungErstellenSchema, body));
+    return this.service.erstelle(user, parse(rechnungErstellenSchema, body));
   }
 
   @Get()

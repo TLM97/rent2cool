@@ -11,7 +11,7 @@ import {
 import { z } from 'zod';
 import { istMieteStatus, type Principal, type TemperaturNachweis } from '@rent2cool/shared';
 import { CurrentUser, Roles } from '../auth/decorators';
-import { AuditImService, Audited } from '../audit/audited.decorator';
+import { AuditImService } from '../audit/audited.decorator';
 import { listeAbfrageSchema, mieteErstellenSchema, mieteStatusSchema } from './dto';
 import { MieteService } from './miete.service';
 
@@ -31,10 +31,10 @@ export class MieteController {
    *  bei Erfolg; idempotent über idempotencyKey (D-003). */
   @Post()
   @Roles('ops', 'admin', 'kunde_dispo')
-  @Audited('miete')
+  @AuditImService('miete')
   @HttpCode(201)
   erstelle(@CurrentUser() user: Principal, @Body() body: unknown) {
-    return this.service.erstelle(user.mandantId, parse(mieteErstellenSchema, body));
+    return this.service.erstelle(user, parse(mieteErstellenSchema, body));
   }
 
   @Get()

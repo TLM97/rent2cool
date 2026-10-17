@@ -46,7 +46,7 @@ describe.skipIf(!RUN)('Stammdaten ändern (Integration, braucht DB)', () => {
   });
 
   it('Kunde: ändert nur geänderte Felder und protokolliert alt/neu', async () => {
-    const { id } = await kunden.erstelleKunde(undefined, {
+    const { id } = await kunden.erstelleKunde(ops, {
       firmenname: `Stamm ${randomUUID().slice(0, 8)}`,
       ort: 'Berlin',
       ustId: 'DE111111111',
@@ -84,7 +84,7 @@ describe.skipIf(!RUN)('Stammdaten ändern (Integration, braucht DB)', () => {
   });
 
   it('Kunde: gleichzeitiges Speichern mit demselben Stand – genau eines gewinnt', async () => {
-    const { id } = await kunden.erstelleKunde(undefined, { firmenname: 'Parallel', land: 'DE' });
+    const { id } = await kunden.erstelleKunde(ops, { firmenname: 'Parallel', land: 'DE' });
     const v = (await kunden.holeKunde(id)).aktualisiertAm.toISOString();
     const ergebnisse = await Promise.allSettled([
       kunden.aendereKunde(ops, id, { version: v, ort: 'A' }),
@@ -96,8 +96,8 @@ describe.skipIf(!RUN)('Stammdaten ändern (Integration, braucht DB)', () => {
   });
 
   it('Fahrer: Führerscheindaten ändern und leeren', async () => {
-    const { id: kundeId } = await kunden.erstelleKunde(undefined, { firmenname: 'Fahrerfirma', land: 'DE' });
-    const { id } = await kunden.erstelleFahrer(kundeId, {
+    const { id: kundeId } = await kunden.erstelleKunde(ops, { firmenname: 'Fahrerfirma', land: 'DE' });
+    const { id } = await kunden.erstelleFahrer(ops, kundeId, {
       name: 'Erika Muster',
       fuehrerscheinKlasse: 'B',
       fuehrerscheinGueltigBis: '2030-12-31T22:59:00.000Z',
@@ -121,13 +121,13 @@ describe.skipIf(!RUN)('Stammdaten ändern (Integration, braucht DB)', () => {
 
   it('Fahrzeug: Stammdaten ändern, doppeltes Kennzeichen wird abgelehnt', async () => {
     const kz = `S-${randomUUID().slice(0, 8)}`;
-    const { id } = await fahrzeuge.erstelle(undefined, {
+    const { id } = await fahrzeuge.erstelle(ops, {
       kennzeichen: kz,
       zulGesamtmasseKg: 3500,
       benoetigteFuehrerscheinklasse: 'B',
       hatFahrtenschreiber: false,
     });
-    const { id: anderes } = await fahrzeuge.erstelle(undefined, {
+    const { id: anderes } = await fahrzeuge.erstelle(ops, {
       kennzeichen: `${kz}-2`,
       zulGesamtmasseKg: 3500,
       benoetigteFuehrerscheinklasse: 'B',

@@ -38,7 +38,7 @@ describe.skipIf(!RUN)('Alarme & Abweichungen (Integration, braucht DB)', () => {
   });
 
   async function fahrzeugId(): Promise<string> {
-    const { id } = await fahrzeuge.erstelle(undefined, {
+    const { id } = await fahrzeuge.erstelle(AKTEUR, {
       kennzeichen: `A-${randomUUID().slice(0, 8)}`,
       zulGesamtmasseKg: 3500,
       benoetigteFuehrerscheinklasse: 'B',
@@ -84,7 +84,7 @@ describe.skipIf(!RUN)('Alarme & Abweichungen (Integration, braucht DB)', () => {
     await alarme.auswerteNachricht(nachricht(fz), profil, { mandantId: PLACEHOLDER_MANDANT_ID });
     const liste = await alarme.liste(PLACEHOLDER_MANDANT_ID, { fahrzeugId: fz, limit: 1, offset: 0 });
 
-    const { id } = await abweichungen.erstelle(undefined, {
+    const { id } = await abweichungen.erstelle(AKTEUR, {
       bezugTyp: 'alarm',
       bezugId: liste.eintraege[0]!.id,
       beschreibung: 'Temperatur über Grenze während Transport',
@@ -99,7 +99,7 @@ describe.skipIf(!RUN)('Alarme & Abweichungen (Integration, braucht DB)', () => {
   });
 
   it('verweigert einen unerlaubten Abweichungs-Übergang', async () => {
-    const { id } = await abweichungen.erstelle(undefined, {
+    const { id } = await abweichungen.erstelle(AKTEUR, {
       bezugTyp: 'fahrzeug',
       bezugId: randomUUID(),
       beschreibung: 'Test',

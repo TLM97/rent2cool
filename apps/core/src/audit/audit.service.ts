@@ -4,7 +4,7 @@
  * Für Routen, die das (noch) nicht tun, greift zusätzlich der AuditInterceptor.
  */
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, inArray, sql } from 'drizzle-orm';
 import type { Principal } from '@rent2cool/shared';
 import type { Database, Transaktion } from '../db/client';
 import { DB } from '../db/db.module';
@@ -42,6 +42,20 @@ export async function schreibeAudit(
   });
 }
 
+/**
+ * Anlegen protokollieren: der vollständige neue Datensatz als neuer Wert
+ * (alter Wert leer), in der Transaktion des Anlegens.
+ */
+export function protokolliereAnlage(
+  tx: Database | Transaktion,
+  principal: Principal,
+  entitaetTyp: string,
+  entitaetId: string,
+  datensatz: unknown,
+): Promise<void> {
+  return schreibeAudit(tx, principal, { aktion: 'POST', entitaetTyp, entitaetId, altWert: null, neuWert: datensatz });
+}
+
 @Injectable()
 export class AuditService {
   constructor(@Inject(DB) private readonly db: Database) {}
@@ -51,17 +65,18 @@ export class AuditService {
   }
 
   /**
-   * Verlauf eines Datensatzes, neueste zuerst. `typen` begrenzt auf die
+   * Verlauf eines oder mehrerer zusammengehöriger Datensätze (z. B. Fahrzeug
+   * und Sensoren), neueste zuerst. `typen` begrenzt auf die
    * Audit-Typen der Entität (z. B. `miete`, `miete_status`) und nutzt so den
    * Index (entitaet_typ, entitaet_id, zeit).
    */
   async verlauf(opts: {
-    entitaetId: string;
+    entitaetIds: string[];
     typen: string[];
     limit: number;
     offset: number;
   }): Promise<{ eintraege: (typeof auditEvent.$inferSelect)[]; gesamt: number }> {
-    const filter = and(eq(auditEvent.entitaetId, opts.entitaetId), inArray(auditEvent.entitaetTyp, opts.typen));
+    const filter = and(inArray(auditEvent.entitaetId, opts.entitaetIds), inArray(auditEvent.entitaetTyp, opts.typen));
     const [eintraege, [zaehler]] = await Promise.all([
       this.db
         .select()

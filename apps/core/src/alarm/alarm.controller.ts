@@ -15,7 +15,7 @@ import {
   type Principal,
 } from '@rent2cool/shared';
 import { CurrentUser, Roles } from '../auth/decorators';
-import { AuditImService, Audited } from '../audit/audited.decorator';
+import { AuditImService } from '../audit/audited.decorator';
 import { AlarmService } from './alarm.service';
 import { AbweichungService } from './abweichung.service';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
@@ -83,10 +83,10 @@ export class AbweichungController {
 
   @Post()
   @Roles('ops', 'admin', 'qa_approver')
-  @Audited('abweichung')
+  @AuditImService('abweichung')
   @HttpCode(201)
   erstelle(@CurrentUser() user: Principal, @Body() body: unknown) {
-    return this.service.erstelle(user.mandantId, parse(abweichungErstellenSchema, body));
+    return this.service.erstelle(user, parse(abweichungErstellenSchema, body));
   }
 
   @Get()

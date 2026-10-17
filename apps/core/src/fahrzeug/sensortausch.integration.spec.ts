@@ -37,7 +37,7 @@ describe.skipIf(!RUN)('Sensortausch (Integration, braucht DB)', () => {
   /** Verfügbares, kalibriertes Fahrzeug mit einem Laderaum-Sensor. */
   async function fahrzeugMitSensor(): Promise<{ fahrzeugId: string; sensorId: string; sn: string }> {
     const sn = `SN-${randomUUID().slice(0, 8)}`;
-    const { id: fahrzeugId } = await service.erstelle(undefined, {
+    const { id: fahrzeugId } = await service.erstelle(ops, {
       kennzeichen: `T-${randomUUID().slice(0, 8)}`,
       zulGesamtmasseKg: 3500,
       benoetigteFuehrerscheinklasse: 'B',
@@ -45,7 +45,7 @@ describe.skipIf(!RUN)('Sensortausch (Integration, braucht DB)', () => {
       aggregat: { sensoren: [{ messgroesse: 'temperatur_laderaum', einheit: 'C', seriennummer: sn }] },
     });
     const sensorId = (await service.holeAkte(fahrzeugId)).aggregate[0]!.sensoren[0]!.id;
-    await service.fuegeKalibrierungHinzu(sensorId, 'test', kalibrierung());
+    await service.fuegeKalibrierungHinzu(ops, sensorId, kalibrierung());
     await service.aendereStatus(ops, fahrzeugId, 'verfuegbar');
     return { fahrzeugId, sensorId, sn };
   }
@@ -82,7 +82,7 @@ describe.skipIf(!RUN)('Sensortausch (Integration, braucht DB)', () => {
 
     const b = await service.buchbarkeit(fahrzeugId, new Date());
     expect(b.buchbar).toBe(false);
-    await service.fuegeKalibrierungHinzu(r.neuerSensorId, 'test', kalibrierung());
+    await service.fuegeKalibrierungHinzu(ops, r.neuerSensorId, kalibrierung());
     expect((await service.buchbarkeit(fahrzeugId, new Date())).buchbar).toBe(true);
 
     const audit = await client.db

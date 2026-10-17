@@ -7,7 +7,7 @@ import {
 import { and, desc, eq, inArray, max, sql } from 'drizzle-orm';
 import { istFahrzeugStatus, istUebergangErlaubt, type FahrzeugStatus, type Principal } from '@rent2cool/shared';
 import { ermittleAenderungen, neueWerte, pruefeVersion, versionVon, type StammdatenErgebnis } from '../audit/aenderung';
-import { schreibeAudit } from '../audit/audit.service';
+import { protokolliereAnlage, schreibeAudit } from '../audit/audit.service';
 import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Database } from '../db/client';
 import { DB } from '../db/db.module';
@@ -43,12 +43,13 @@ function kalibrierungsWerte(sensorId: string, erfasstVon: string, k: Kalibrierun
 export class FahrzeugService {
   constructor(@Inject(DB) private readonly db: Database) {}
 
-  async erstelle(mandantId: string | undefined, p: FahrzeugErstellen): Promise<{ id: string }> {
-    const mandant = mandantId ?? PLACEHOLDER_MANDANT_ID;
+  /** Fahrzeugakte anlegen (Fahrzeug, Kühlaufbau, Sensoren) – ein Audit-Eintrag mit der ganzen Akte. */
+  async erstelle(principal: Principal, p: FahrzeugErstellen): Promise<{ id: string }> {
+    const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
     return this.db.transaction(async (tx) => {
-      let fahrzeugId: string;
+      let fz: typeof fahrzeug.$inferSelect | undefined;
       try {
-        const [fz] = await tx
+        [fz] = await tx
           .insert(fahrzeug)
           .values({
             mandantId: mandant,
@@ -63,8 +64,7 @@ export class FahrzeugService {
             standardTemperaturprofil: p.standardTemperaturprofil ?? null,
             status: 'angelegt',
           })
-          .returning({ id: fahrzeug.id });
-        fahrzeugId = fz!.id;
+          .returning();
       } catch (e: unknown) {
         const msg = String(e);
         if (msg.includes('23505') || msg.toLowerCase().includes('unique')) {
@@ -72,31 +72,41 @@ export class FahrzeugService {
         }
         throw e;
       }
+      if (!fz) {
+        throw new Error('Fahrzeug wurde nicht angelegt');
+      }
 
+      let aufbau: (typeof aggregat.$inferSelect & { sensoren: (typeof sensor.$inferSelect)[] }) | null = null;
       if (p.aggregat) {
         const [ag] = await tx
           .insert(aggregat)
           .values({
-            fahrzeugId,
+            fahrzeugId: fz.id,
             typ: p.aggregat.typ ?? null,
             hersteller: p.aggregat.hersteller ?? null,
             seriennummer: p.aggregat.seriennummer ?? null,
             temperaturQuelle: p.aggregat.temperaturQuelle ?? null,
           })
-          .returning({ id: aggregat.id });
-        if (p.aggregat.sensoren.length > 0) {
-          await tx.insert(sensor).values(
-            p.aggregat.sensoren.map((s) => ({
-              aggregatId: ag!.id,
-              messgroesse: s.messgroesse,
-              einheit: s.einheit,
-              modell: s.modell ?? null,
-              seriennummer: s.seriennummer ?? null,
-            })),
-          );
-        }
+          .returning();
+        const sensoren =
+          p.aggregat.sensoren.length > 0
+            ? await tx
+                .insert(sensor)
+                .values(
+                  p.aggregat.sensoren.map((s) => ({
+                    aggregatId: ag!.id,
+                    messgroesse: s.messgroesse,
+                    einheit: s.einheit,
+                    modell: s.modell ?? null,
+                    seriennummer: s.seriennummer ?? null,
+                  })),
+                )
+                .returning()
+            : [];
+        aufbau = { ...ag!, sensoren };
       }
-      return { id: fahrzeugId };
+      await protokolliereAnlage(tx, principal, 'fahrzeug', fz.id, { ...fz, aggregat: aufbau });
+      return { id: fz.id };
     });
   }
 
@@ -321,20 +331,29 @@ export class FahrzeugService {
     });
   }
 
-  async fuegeKalibrierungHinzu(
-    sensorId: string,
-    erfasstVon: string,
-    k: KalibrierungEingabe,
-  ): Promise<{ id: string }> {
-    const [s] = await this.db.select({ id: sensor.id }).from(sensor).where(eq(sensor.id, sensorId));
-    if (!s) {
-      throw new NotFoundException('Sensor nicht gefunden');
-    }
-    const [row] = await this.db
-      .insert(kalibrierung)
-      .values(kalibrierungsWerte(sensorId, erfasstVon, k))
-      .returning({ id: kalibrierung.id });
-    return { id: row!.id };
+  /**
+   * Kalibrierung erfassen. Audit unter der Sensor-ID, damit der Verlauf der
+   * Fahrzeugakte Kalibrierungen und Tausch eines Sensors zusammen zeigt.
+   */
+  async fuegeKalibrierungHinzu(principal: Principal, sensorId: string, k: KalibrierungEingabe): Promise<{ id: string }> {
+    const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
+    return this.db.transaction(async (tx) => {
+      const [s] = await tx
+        .select({ id: sensor.id })
+        .from(sensor)
+        .innerJoin(aggregat, eq(sensor.aggregatId, aggregat.id))
+        .innerJoin(fahrzeug, eq(aggregat.fahrzeugId, fahrzeug.id))
+        .where(and(eq(sensor.id, sensorId), eq(fahrzeug.mandantId, mandant)));
+      if (!s) {
+        throw new NotFoundException('Sensor nicht gefunden');
+      }
+      const [row] = await tx
+        .insert(kalibrierung)
+        .values(kalibrierungsWerte(sensorId, principal.akteurId, k))
+        .returning();
+      await protokolliereAnlage(tx, principal, 'kalibrierung', sensorId, row);
+      return { id: row!.id };
+    });
   }
 
   async buchbarkeit(id: string, stichtag: Date): Promise<BuchbarkeitErgebnis> {

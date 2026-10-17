@@ -57,7 +57,7 @@ export default async function FahrerBearbeiten({ params }: { params: Promise<{ i
           </>
         )}
       </section>
-      <Verlauf entitaetId={fahrer.id} typen={['fahrer', 'fahrer_status']} />
+      <Verlauf entitaetIds={[fahrer.id]} typen={['fahrer', 'fahrer_status']} />
     </>
   );
 }
