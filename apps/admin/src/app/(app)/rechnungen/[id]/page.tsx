@@ -53,9 +53,7 @@ export default async function RechnungDetail({
           </dd>
           <dt>Miete</dt>
           <dd>
-            <Link className="mono" href={`/mieten/${r.mieteId}`}>
-              {kurzeId(r.mieteId)}
-            </Link>
+            <Link href={`/mieten/${r.mieteId}`}>Mietakte öffnen</Link>
           </dd>
           <dt>Leistungszeitraum</dt>
           <dd>

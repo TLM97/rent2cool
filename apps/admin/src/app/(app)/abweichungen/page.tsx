@@ -8,7 +8,7 @@ import { blattAus, erster, type SuchParameter } from '../../../lib/seiten';
 import { holeSitzung } from '../../../lib/sitzung';
 import { hatRolle } from '../../../lib/token';
 import type { Abweichung, Liste } from '../../../lib/typen';
-import { BEZUG } from './bezug';
+import { BEZUG, bezugLink } from './bezug';
 
 export const metadata: Metadata = { title: 'Abweichungen' };
 
@@ -69,7 +69,9 @@ export default async function Abweichungen({
                     </td>
                     <td>
                       {BEZUG[a.bezugTyp] ?? a.bezugTyp}{' '}
-                      <span className="mono leise">{kurzeId(a.bezugId)}</span>
+                      <Link href={bezugLink(a.bezugTyp, a.bezugId)}>
+                        {a.bezugKennzeichen ?? <span className="mono">{kurzeId(a.bezugId)}</span>}
+                      </Link>
                     </td>
                     <td>{a.schweregrad ?? '–'}</td>
                     <td>

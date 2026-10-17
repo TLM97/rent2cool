@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { ALARM_STATUS } from '@rent2cool/shared';
 import {
   Blaettern,
+  FahrzeugLink,
   Leer,
   Meldungen,
   Plakette,
@@ -10,7 +11,7 @@ import {
   StatusFilter,
 } from '../../../components/bausteine';
 import { apiGet } from '../../../lib/api';
-import { formatDatumZeit, formatTemperatur, kurzeId, statusLabel } from '../../../lib/format';
+import { formatDatumZeit, formatTemperatur, statusLabel } from '../../../lib/format';
 import { blattAus, erster, seitenLink, type SuchParameter } from '../../../lib/seiten';
 import { holeSitzung } from '../../../lib/sitzung';
 import { hatRolle } from '../../../lib/token';
@@ -75,9 +76,7 @@ export default async function Alarme({ searchParams }: { searchParams: Promise<S
                       <td className="zahl">{temp ? formatTemperatur(a.wert) : '–'}</td>
                       <td className="zahl">{temp ? formatTemperatur(a.schwelle) : '–'}</td>
                       <td>
-                        <Link className="mono" href={`/fahrzeuge/${a.fahrzeugId}`}>
-                          {kurzeId(a.fahrzeugId)}
-                        </Link>
+                        <FahrzeugLink id={a.fahrzeugId} kennzeichen={a.fahrzeugKennzeichen} />
                       </td>
                       <td>
                         <Plakette status={a.status} />

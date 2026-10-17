@@ -191,10 +191,17 @@ export class MieteService {
     }
   }
 
+  /** Liste mit Kennzeichen und Firmenname (ein Join statt einer Abfrage je Zeile, D-003). */
   async liste(
     mandantId: string | undefined,
     opts: { status?: string; kundeId?: string; fahrzeugId?: string; limit: number; offset: number },
-  ): Promise<{ eintraege: (typeof miete.$inferSelect)[]; gesamt: number }> {
+  ): Promise<{
+    eintraege: (typeof miete.$inferSelect & {
+      fahrzeugKennzeichen: string;
+      kundeFirmenname: string;
+    })[];
+    gesamt: number;
+  }> {
     const mandant = mandantId ?? PLACEHOLDER_MANDANT_ID;
     const filter = and(
       eq(miete.mandantId, mandant),
@@ -202,10 +209,16 @@ export class MieteService {
       opts.kundeId ? eq(miete.kundeId, opts.kundeId) : undefined,
       opts.fahrzeugId ? eq(miete.fahrzeugId, opts.fahrzeugId) : undefined,
     );
-    const [eintraege, [zaehler]] = await Promise.all([
+    const [zeilen, [zaehler]] = await Promise.all([
       this.db
-        .select()
+        .select({
+          m: miete,
+          fahrzeugKennzeichen: fahrzeug.kennzeichen,
+          kundeFirmenname: kunde.firmenname,
+        })
         .from(miete)
+        .innerJoin(fahrzeug, eq(miete.fahrzeugId, fahrzeug.id))
+        .innerJoin(kunde, eq(miete.kundeId, kunde.id))
         .where(filter)
         .orderBy(desc(miete.startGeplant))
         .limit(opts.limit)
@@ -215,7 +228,14 @@ export class MieteService {
         .from(miete)
         .where(filter),
     ]);
-    return { eintraege, gesamt: zaehler?.n ?? 0 };
+    return {
+      eintraege: zeilen.map((z) => ({
+        ...z.m,
+        fahrzeugKennzeichen: z.fahrzeugKennzeichen,
+        kundeFirmenname: z.kundeFirmenname,
+      })),
+      gesamt: zaehler?.n ?? 0,
+    };
   }
 
   async holeMiete(id: string): Promise<typeof miete.$inferSelect> {

@@ -14,7 +14,7 @@ import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Env } from '../config/env';
 import type { Database, Transaktion } from '../db/client';
 import { DB } from '../db/db.module';
-import { miete, rechnung, rechnungSequenz } from '../db/schema';
+import { kunde, miete, rechnung, rechnungSequenz } from '../db/schema';
 import { istPgFehler, PG_FEHLER } from '../db/fehler';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 import { MieteService } from '../miete/miete.service';
@@ -113,7 +113,10 @@ export class RechnungService {
   async liste(
     mandantId: string | undefined,
     opts: { status?: string; kundeId?: string; mieteId?: string; limit: number; offset: number },
-  ): Promise<{ eintraege: (typeof rechnung.$inferSelect)[]; gesamt: number }> {
+  ): Promise<{
+    eintraege: (typeof rechnung.$inferSelect & { kundeFirmenname: string })[];
+    gesamt: number;
+  }> {
     const mandant = mandantId ?? PLACEHOLDER_MANDANT_ID;
     const filter = and(
       eq(rechnung.mandantId, mandant),
@@ -121,10 +124,11 @@ export class RechnungService {
       opts.kundeId ? eq(rechnung.kundeId, opts.kundeId) : undefined,
       opts.mieteId ? eq(rechnung.mieteId, opts.mieteId) : undefined,
     );
-    const [eintraege, [zaehler]] = await Promise.all([
+    const [zeilen, [zaehler]] = await Promise.all([
       this.db
-        .select()
+        .select({ r: rechnung, kundeFirmenname: kunde.firmenname })
         .from(rechnung)
+        .innerJoin(kunde, eq(rechnung.kundeId, kunde.id))
         .where(filter)
         .orderBy(desc(rechnung.erstelltAm))
         .limit(opts.limit)
@@ -134,7 +138,10 @@ export class RechnungService {
         .from(rechnung)
         .where(filter),
     ]);
-    return { eintraege, gesamt: zaehler?.n ?? 0 };
+    return {
+      eintraege: zeilen.map((z) => ({ ...z.r, kundeFirmenname: z.kundeFirmenname })),
+      gesamt: zaehler?.n ?? 0,
+    };
   }
 
   async holeRechnung(id: string): Promise<typeof rechnung.$inferSelect> {

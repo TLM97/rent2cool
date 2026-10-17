@@ -95,6 +95,9 @@ export interface Miete {
   auslandsfahrtGeplant: boolean;
   temperaturprofil: string | null;
   status: string;
+  /** Nur in Listen (Join im Kern). */
+  fahrzeugKennzeichen?: string;
+  kundeFirmenname?: string;
 }
 
 export interface Rechnung {
@@ -113,6 +116,8 @@ export interface Rechnung {
   gestelltAm: string | null;
   bezahltAm: string | null;
   erstelltAm: string;
+  /** Nur in Listen (Join im Kern). */
+  kundeFirmenname?: string;
 }
 
 export interface Alarm {
@@ -125,6 +130,8 @@ export interface Alarm {
   ausgeloestAm: string;
   status: string;
   quittiertVon: string | null;
+  /** Nur in Listen (Join im Kern). */
+  fahrzeugKennzeichen?: string;
 }
 
 export interface Abweichung {
@@ -139,12 +146,15 @@ export interface Abweichung {
   verantwortlich: string | null;
   erfasstAm: string;
   geschlossenAm: string | null;
+  /** Kennzeichen des betroffenen Fahrzeugs (über Miete/Alarm aufgelöst). */
+  bezugKennzeichen?: string | null;
 }
 
 export interface FaelligeKalibrierung {
   fahrzeugId: string;
   kennzeichen: string;
   sensorId: string;
+  seriennummer: string | null;
   gueltigBis: string | null;
 }
 

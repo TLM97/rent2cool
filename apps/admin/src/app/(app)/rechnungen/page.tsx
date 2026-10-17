@@ -1,9 +1,16 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { RECHNUNG_STATUS } from '@rent2cool/shared';
-import { Blaettern, Leer, Plakette, Seitenkopf, StatusFilter } from '../../../components/bausteine';
+import {
+  Blaettern,
+  KundeLink,
+  Leer,
+  Plakette,
+  Seitenkopf,
+  StatusFilter,
+} from '../../../components/bausteine';
 import { apiGet } from '../../../lib/api';
-import { formatDatum, formatEuro, kurzeId } from '../../../lib/format';
+import { formatDatum, formatEuro } from '../../../lib/format';
 import { blattAus, erster, type SuchParameter } from '../../../lib/seiten';
 import type { Liste, Rechnung } from '../../../lib/typen';
 
@@ -41,6 +48,7 @@ export default async function Rechnungen({
                 <tr>
                   <th scope="col">Nummer</th>
                   <th scope="col">Status</th>
+                  <th scope="col">Kunde</th>
                   <th scope="col" className="zahl">
                     Netto
                   </th>
@@ -50,7 +58,7 @@ export default async function Rechnungen({
                   <th scope="col" className="zahl">
                     Brutto
                   </th>
-                  <th scope="col">Miete</th>
+                  <th scope="col">Leistung (Miete)</th>
                   <th scope="col">gestellt</th>
                 </tr>
               </thead>
@@ -65,14 +73,17 @@ export default async function Rechnungen({
                     <td>
                       <Plakette status={r.status} />
                     </td>
+                    <td>
+                      <KundeLink id={r.kundeId} firmenname={r.kundeFirmenname} />
+                    </td>
                     <td className="zahl">{formatEuro(r.nettoCent, r.waehrung)}</td>
                     <td className="zahl">{formatEuro(r.steuerCent, r.waehrung)}</td>
                     <td className="zahl">
                       <strong>{formatEuro(r.bruttoCent, r.waehrung)}</strong>
                     </td>
                     <td>
-                      <Link className="mono" href={`/mieten/${r.mieteId}`}>
-                        {kurzeId(r.mieteId)}
+                      <Link href={`/mieten/${r.mieteId}`}>
+                        {formatDatum(r.zeitraumVon)} – {formatDatum(r.zeitraumBis)}
                       </Link>
                     </td>
                     <td>{formatDatum(r.gestelltAm)}</td>

@@ -413,34 +413,44 @@ export class FahrzeugService {
   }
 
   /** Sensoren, deren jüngste Kalibrierung vor `bis` abläuft oder fehlt. */
+  /**
+   * Sensoren, deren jüngste Kalibrierung vor `bis` abläuft oder fehlt. Die
+   * Datenbank filtert (HAVING) – bei 4.000 Fahrzeugen nie alle Sensoren laden (D-003).
+   */
   async faelligeKalibrierungen(
     mandantId: string | undefined,
     bis: Date,
   ): Promise<
-    { fahrzeugId: string; kennzeichen: string; sensorId: string; gueltigBis: string | null }[]
+    {
+      fahrzeugId: string;
+      kennzeichen: string;
+      sensorId: string;
+      seriennummer: string | null;
+      gueltigBis: string | null;
+    }[]
   > {
     const mandant = mandantId ?? PLACEHOLDER_MANDANT_ID;
+    const juengste = sql<Date | null>`max(${kalibrierung.gueltigBis})`;
     const rows = await this.db
       .select({
         fahrzeugId: fahrzeug.id,
         kennzeichen: fahrzeug.kennzeichen,
         sensorId: sensor.id,
-        gueltigBis: sql<Date | null>`max(${kalibrierung.gueltigBis})`,
+        seriennummer: sensor.seriennummer,
+        gueltigBis: juengste,
       })
       .from(sensor)
       .innerJoin(aggregat, eq(sensor.aggregatId, aggregat.id))
       .innerJoin(fahrzeug, eq(aggregat.fahrzeugId, fahrzeug.id))
       .leftJoin(kalibrierung, eq(kalibrierung.sensorId, sensor.id))
       .where(and(eq(fahrzeug.mandantId, mandant), eq(sensor.aktiv, true)))
-      .groupBy(fahrzeug.id, fahrzeug.kennzeichen, sensor.id);
+      .groupBy(fahrzeug.id, fahrzeug.kennzeichen, sensor.id, sensor.seriennummer)
+      .having(sql`${juengste} is null or ${juengste} < ${bis.toISOString()}`)
+      .orderBy(sql`${juengste} asc nulls first`);
 
-    return rows
-      .filter((r) => r.gueltigBis === null || new Date(r.gueltigBis).getTime() < bis.getTime())
-      .map((r) => ({
-        fahrzeugId: r.fahrzeugId,
-        kennzeichen: r.kennzeichen,
-        sensorId: r.sensorId,
-        gueltigBis: r.gueltigBis ? new Date(r.gueltigBis).toISOString() : null,
-      }));
+    return rows.map((r) => ({
+      ...r,
+      gueltigBis: r.gueltigBis ? new Date(r.gueltigBis).toISOString() : null,
+    }));
   }
 }

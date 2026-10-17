@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, lt, notInArray, or, sql } from 'drizzle-orm';
 import {
   bewerteFahrerEinsatz,
   istFahrerStatus,
@@ -318,26 +318,30 @@ export class KundeService {
     bis: Date,
   ): Promise<{ fahrerId: string; name: string; kundeId: string; gueltigBis: string | null }[]> {
     const mandant = mandantId ?? PLACEHOLDER_MANDANT_ID;
+    // Filter in der Datenbank statt alle Fahrer zu laden (D-003).
     const rows = await this.db
       .select({
         fahrerId: fahrer.id,
         name: fahrer.name,
         kundeId: fahrer.kundeId,
         gueltigBis: fahrer.fuehrerscheinGueltigBis,
-        status: fahrer.status,
       })
       .from(fahrer)
       .innerJoin(kunde, eq(fahrer.kundeId, kunde.id))
-      .where(eq(kunde.mandantId, mandant));
+      .where(
+        and(
+          eq(kunde.mandantId, mandant),
+          notInArray(fahrer.status, ['archiviert', 'abgelehnt']),
+          or(isNull(fahrer.fuehrerscheinGueltigBis), lt(fahrer.fuehrerscheinGueltigBis, bis)),
+        ),
+      )
+      .orderBy(asc(fahrer.fuehrerscheinGueltigBis));
 
-    return rows
-      .filter((r) => r.status !== 'archiviert' && r.status !== 'abgelehnt')
-      .filter((r) => r.gueltigBis === null || r.gueltigBis.getTime() < bis.getTime())
-      .map((r) => ({
-        fahrerId: r.fahrerId,
-        name: r.name,
-        kundeId: r.kundeId,
-        gueltigBis: r.gueltigBis ? r.gueltigBis.toISOString() : null,
-      }));
+    return rows.map((r) => ({
+      fahrerId: r.fahrerId,
+      name: r.name,
+      kundeId: r.kundeId,
+      gueltigBis: r.gueltigBis ? r.gueltigBis.toISOString() : null,
+    }));
   }
 }

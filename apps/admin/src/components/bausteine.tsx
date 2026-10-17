@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { statusLabel, statusTon } from '../lib/format';
+import { kurzeId, statusLabel, statusTon } from '../lib/format';
 import { seitenLink, type SuchParameter } from '../lib/seiten';
 
 export function Marke() {
@@ -176,5 +176,23 @@ export function StatusFormular({
         Übernehmen
       </button>
     </form>
+  );
+}
+
+/** Verweis auf ein Fahrzeug: Kennzeichen, sonst gekürzte ID. */
+export function FahrzeugLink({ id, kennzeichen }: { id: string; kennzeichen?: string | null }) {
+  return (
+    <Link className={kennzeichen ? undefined : 'mono'} href={`/fahrzeuge/${id}`}>
+      {kennzeichen ?? kurzeId(id)}
+    </Link>
+  );
+}
+
+/** Verweis auf einen Kunden: Firmenname, sonst gekürzte ID. */
+export function KundeLink({ id, firmenname }: { id: string; firmenname?: string | null }) {
+  return (
+    <Link className={firmenname ? undefined : 'mono'} href={`/kunden/${id}`}>
+      {firmenname ?? kurzeId(id)}
+    </Link>
   );
 }

@@ -6,7 +6,7 @@ import { Meldungen, Plakette, Seitenkopf } from '../../../../components/baustein
 import { Verlauf } from '../../../../components/verlauf';
 import { Auswahl, Feld, FormularRahmen, Textfeld } from '../../../../components/formular';
 import { apiGetOderNull } from '../../../../lib/api';
-import { formatDatumZeit, kurzeId, statusLabel } from '../../../../lib/format';
+import { formatDatum, formatDatumZeit, kurzeId, statusLabel } from '../../../../lib/format';
 import { naechsteStatus } from '../../../../lib/formular';
 import { istUuid, type SuchParameter } from '../../../../lib/seiten';
 import { holeSitzung } from '../../../../lib/sitzung';
@@ -37,7 +37,7 @@ export default async function AbweichungDetail({
   return (
     <>
       <Seitenkopf
-        titel={`Abweichung ${kurzeId(a.id)}`}
+        titel={`Abweichung vom ${formatDatum(a.erfasstAm)}${a.bezugKennzeichen ? ` · ${a.bezugKennzeichen}` : ''}`}
         untertitel={<Plakette status={a.status} />}
         brotkrume={{ href: '/abweichungen', text: 'Abweichungen' }}
       />
@@ -49,7 +49,8 @@ export default async function AbweichungDetail({
           <dt>Bezug</dt>
           <dd>
             <Link href={bezugLink(a.bezugTyp, a.bezugId)}>
-              {BEZUG[a.bezugTyp] ?? a.bezugTyp} <span className="mono">{kurzeId(a.bezugId)}</span>
+              {BEZUG[a.bezugTyp] ?? a.bezugTyp}{' '}
+              {a.bezugKennzeichen ?? <span className="mono">{kurzeId(a.bezugId)}</span>}
             </Link>
           </dd>
           <dt>Beschreibung</dt>

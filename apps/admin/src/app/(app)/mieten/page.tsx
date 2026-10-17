@@ -1,11 +1,19 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { MIETE_STATUS } from '@rent2cool/shared';
-import { Blaettern, Leer, Plakette, Seitenkopf, StatusFilter } from '../../../components/bausteine';
+import {
+  Blaettern,
+  FahrzeugLink,
+  KundeLink,
+  Leer,
+  Plakette,
+  Seitenkopf,
+  StatusFilter,
+} from '../../../components/bausteine';
 import { apiGet } from '../../../lib/api';
 import { holeSitzung } from '../../../lib/sitzung';
 import { hatRolle } from '../../../lib/token';
-import { formatDatumZeit, kurzeId } from '../../../lib/format';
+import { formatDatumZeit } from '../../../lib/format';
 import { blattAus, erster, type SuchParameter } from '../../../lib/seiten';
 import type { Liste, Miete } from '../../../lib/typen';
 
@@ -44,10 +52,8 @@ export default async function Mieten({ searchParams }: { searchParams: Promise<S
               <caption>Mieten nach geplantem Start, neueste zuerst</caption>
               <thead>
                 <tr>
-                  <th scope="col">Miete</th>
+                  <th scope="col">Zeitraum (geplant)</th>
                   <th scope="col">Status</th>
-                  <th scope="col">Start (geplant)</th>
-                  <th scope="col">Ende (geplant)</th>
                   <th scope="col">Fahrzeug</th>
                   <th scope="col">Kunde</th>
                   <th scope="col">Ausland</th>
@@ -57,24 +63,18 @@ export default async function Mieten({ searchParams }: { searchParams: Promise<S
                 {daten.eintraege.map((m) => (
                   <tr key={m.id}>
                     <td>
-                      <Link className="mono" href={`/mieten/${m.id}`}>
-                        {kurzeId(m.id)}
+                      <Link href={`/mieten/${m.id}`}>
+                        {formatDatumZeit(m.startGeplant)} – {formatDatumZeit(m.endeGeplant)}
                       </Link>
                     </td>
                     <td>
                       <Plakette status={m.status} />
                     </td>
-                    <td>{formatDatumZeit(m.startGeplant)}</td>
-                    <td>{formatDatumZeit(m.endeGeplant)}</td>
                     <td>
-                      <Link className="mono" href={`/fahrzeuge/${m.fahrzeugId}`}>
-                        {kurzeId(m.fahrzeugId)}
-                      </Link>
+                      <FahrzeugLink id={m.fahrzeugId} kennzeichen={m.fahrzeugKennzeichen} />
                     </td>
                     <td>
-                      <Link className="mono" href={`/kunden/${m.kundeId}`}>
-                        {kurzeId(m.kundeId)}
-                      </Link>
+                      <KundeLink id={m.kundeId} firmenname={m.kundeFirmenname} />
                     </td>
                     <td>{m.auslandsfahrtGeplant ? 'ja' : 'nein'}</td>
                   </tr>

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { Leer, Seitenkopf } from '../../components/bausteine';
+import { FahrzeugLink, Leer, Seitenkopf } from '../../components/bausteine';
 import { apiGetOderNull } from '../../lib/api';
 import { formatDatumZeit, formatTemperatur, kurzeId, statusLabel } from '../../lib/format';
 import type {
@@ -140,9 +140,7 @@ export default async function Uebersicht() {
                         {a.typ.startsWith('temperatur') ? formatTemperatur(a.wert) : '–'}
                       </td>
                       <td>
-                        <Link className="mono" href={`/fahrzeuge/${a.fahrzeugId}`}>
-                          {kurzeId(a.fahrzeugId)}
-                        </Link>
+                        <FahrzeugLink id={a.fahrzeugId} kennzeichen={a.fahrzeugKennzeichen} />
                       </td>
                     </tr>
                   ))}
@@ -177,7 +175,7 @@ export default async function Uebersicht() {
                       <td>
                         <Link href={`/fahrzeuge/${k.fahrzeugId}`}>{k.kennzeichen}</Link>
                       </td>
-                      <td className="mono">{kurzeId(k.sensorId)}</td>
+                      <td className="mono">{k.seriennummer ?? kurzeId(k.sensorId)}</td>
                       <td>
                         {k.gueltigBis ? (
                           formatDatumZeit(k.gueltigBis)

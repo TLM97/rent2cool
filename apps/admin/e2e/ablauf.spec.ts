@@ -138,10 +138,7 @@ test('kompletter Ablauf von Fahrzeug bis Abweichung', async ({ page }) => {
   await page.screenshot({ path: `${SCREENS}/15-rechnung.png`, fullPage: true });
 
   // --- Abweichung aus der Miete erfassen und durch die QA abschließen ---
-  await page
-    .getByRole('link', { name: /^[0-9a-f]{8}$/ })
-    .first()
-    .click();
+  await page.getByRole('link', { name: 'Mietakte öffnen' }).click();
   await expect(page.getByRole('heading', { name: 'Temperaturnachweis' })).toBeVisible();
   await page.getByRole('link', { name: 'Abweichung erfassen' }).click();
   await page

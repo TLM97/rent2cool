@@ -10,7 +10,8 @@ import { protokolliereAnlage } from '../audit/audit.service';
 import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Database } from '../db/client';
 import { DB } from '../db/db.module';
-import { abweichung } from '../db/schema';
+import { alias } from 'drizzle-orm/pg-core';
+import { abweichung, alarm, fahrzeug, miete } from '../db/schema';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 
 export interface AbweichungErstellen {
@@ -18,6 +19,17 @@ export interface AbweichungErstellen {
   bezugId: string;
   beschreibung: string;
   schweregrad?: string;
+}
+
+export type AbweichungMitBezug = typeof abweichung.$inferSelect & {
+  bezugKennzeichen: string | null;
+};
+
+function zuAbweichung(z: {
+  a: typeof abweichung.$inferSelect;
+  bezugKennzeichen: string | null;
+}): AbweichungMitBezug {
+  return { ...z.a, bezugKennzeichen: z.bezugKennzeichen };
 }
 
 @Injectable()
@@ -44,16 +56,14 @@ export class AbweichungService {
   async liste(
     mandantId: string | undefined,
     opts: { status?: string; limit: number; offset: number },
-  ): Promise<{ eintraege: (typeof abweichung.$inferSelect)[]; gesamt: number }> {
+  ): Promise<{ eintraege: AbweichungMitBezug[]; gesamt: number }> {
     const mandant = mandantId ?? PLACEHOLDER_MANDANT_ID;
     const filter = and(
       eq(abweichung.mandantId, mandant),
       opts.status ? eq(abweichung.status, opts.status) : undefined,
     );
-    const [eintraege, [zaehler]] = await Promise.all([
-      this.db
-        .select()
-        .from(abweichung)
+    const [zeilen, [zaehler]] = await Promise.all([
+      this.mitBezug()
         .where(filter)
         .orderBy(desc(abweichung.erfasstAm))
         .limit(opts.limit)
@@ -63,15 +73,43 @@ export class AbweichungService {
         .from(abweichung)
         .where(filter),
     ]);
-    return { eintraege, gesamt: zaehler?.n ?? 0 };
+    return { eintraege: zeilen.map(zuAbweichung), gesamt: zaehler?.n ?? 0 };
   }
 
-  async hole(id: string): Promise<typeof abweichung.$inferSelect> {
-    const [row] = await this.db.select().from(abweichung).where(eq(abweichung.id, id));
+  async hole(id: string): Promise<AbweichungMitBezug> {
+    const [row] = await this.mitBezug().where(eq(abweichung.id, id));
     if (!row) {
       throw new NotFoundException('Abweichung nicht gefunden');
     }
-    return row;
+    return zuAbweichung(row);
+  }
+
+  /**
+   * Abweichung mit dem Kennzeichen des betroffenen Fahrzeugs – je nach Bezug
+   * direkt, über die Miete oder über den Alarm (Joins statt Einzelabfragen).
+   */
+  private mitBezug() {
+    const bezugMiete = alias(miete, 'bezug_miete');
+    const bezugAlarm = alias(alarm, 'bezug_alarm');
+    return this.db
+      .select({ a: abweichung, bezugKennzeichen: fahrzeug.kennzeichen })
+      .from(abweichung)
+      .leftJoin(
+        bezugMiete,
+        and(eq(abweichung.bezugTyp, 'miete'), eq(bezugMiete.id, abweichung.bezugId)),
+      )
+      .leftJoin(
+        bezugAlarm,
+        and(eq(abweichung.bezugTyp, 'alarm'), eq(bezugAlarm.id, abweichung.bezugId)),
+      )
+      .leftJoin(
+        fahrzeug,
+        eq(
+          fahrzeug.id,
+          sql`coalesce(case when ${abweichung.bezugTyp} = 'fahrzeug' then ${abweichung.bezugId} end, ${bezugMiete.fahrzeugId}, ${bezugAlarm.fahrzeugId})`,
+        ),
+      )
+      .$dynamic();
   }
 
   /** Status und Bewertungsfelder ändern (auch ohne Statuswechsel, z. B. Maßnahmen ergänzen). */

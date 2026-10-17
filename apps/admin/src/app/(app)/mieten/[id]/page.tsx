@@ -13,6 +13,7 @@ import { Verlauf } from '../../../../components/verlauf';
 import { Feld, FormularRahmen } from '../../../../components/formular';
 import { apiGet, apiGetOderNull } from '../../../../lib/api';
 import {
+  formatDatum,
   formatDatumZeit,
   formatEuro,
   formatTemperatur,
@@ -59,7 +60,7 @@ export default async function MieteDetail({
   return (
     <>
       <Seitenkopf
-        titel={`Miete ${kurzeId(miete.id)}`}
+        titel={`Miete ${fahrzeug?.fahrzeug.kennzeichen ?? kurzeId(miete.id)} · ${formatDatum(miete.startGeplant)}`}
         untertitel={<Plakette status={miete.status} />}
         brotkrume={{ href: '/mieten', text: 'Mieten' }}
         aktionen={
