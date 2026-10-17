@@ -23,7 +23,8 @@ import { RechnungService } from './rechnung.service';
 const AKTEUR: Principal = { akteurId: 'test-integration', rollen: ['admin'] };
 const RUN = process.env.RUN_INTEGRATION === '1';
 const url =
-  process.env.DATABASE_URL ?? 'postgres://rent2cool:rent2cool_local_dev@localhost:5432/rent2cool';
+  process.env.DATABASE_URL ??
+  'postgres://rent2cool:rent2cool_local_dev@localhost:5432/rent2cool_test';
 
 const fakeConfig = {
   get: (k: string) => (k === 'RECHNUNG_STEUERSATZ' ? 19 : 'EUR'),

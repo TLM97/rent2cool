@@ -23,7 +23,8 @@ import { MieteService } from './miete.service';
 
 const RUN = process.env.RUN_INTEGRATION === '1';
 const url =
-  process.env.DATABASE_URL ?? 'postgres://rent2cool:rent2cool_local_dev@localhost:5432/rent2cool';
+  process.env.DATABASE_URL ??
+  'postgres://rent2cool:rent2cool_local_dev@localhost:5432/rent2cool_test';
 const STUNDE = 3_600_000;
 
 /**

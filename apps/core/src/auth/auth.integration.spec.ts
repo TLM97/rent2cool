@@ -20,7 +20,8 @@ if (RUN) {
   process.env.NODE_ENV = 'test';
   process.env.LOG_LEVEL = 'error';
   process.env.TELEMETRY_CONSUMER_ENABLED = 'false';
-  process.env.DATABASE_URL ??= 'postgres://rent2cool:rent2cool_local_dev@localhost:5432/rent2cool';
+  process.env.DATABASE_URL ??=
+    'postgres://rent2cool:rent2cool_local_dev@localhost:5432/rent2cool_test';
   process.env.OIDC_ISSUER_URL = ISSUER;
   process.env.OIDC_CLIENT_ID ??= 'rent2cool-core';
   process.env.OIDC_CLIENT_SECRET ??= 'x';

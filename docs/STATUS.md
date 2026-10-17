@@ -13,6 +13,50 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Namen in Listen, eigene Test-Datenbank, Integrationstests in der CI
+
+**Erledigt.** (Auf Toms Auftrag; Planung möge die Aufgaben in `TASKS.md`
+nachziehen.)
+
+Namen statt Kurz-IDs:
+- Mieten, Alarme, Rechnungen und Abweichungen liefern Kennzeichen bzw.
+  Firmennamen gleich in der Listenabfrage mit (Join, keine Abfrage je Zeile,
+  D-003). Abweichungen lösen das betroffene Fahrzeug über Miete oder Alarm
+  auf.
+- Oberfläche: Übersicht, Alarme, Mieten (Spalte „Zeitraum“ statt Kurz-ID),
+  Rechnungen (Kunde, Leistungszeitraum), Abweichungen; Titel „Miete DEMO-102 ·
+  13.10.2026“ und „Abweichung vom … · DEMO-102“. Fällige Kalibrierungen mit
+  Sensor-Seriennummer.
+- **Last (D-003):** Fällige Kalibrierungen und Führerscheine wurden bisher
+  vollständig geladen und im Programm gefiltert (bei 4.000 Fahrzeugen bei
+  jedem Aufruf der Übersicht). Jetzt filtert die Datenbank.
+
+Eigene Test-Datenbank:
+- Integrationstests laufen gegen `rent2cool_test` (bzw. `TEST_DATABASE_URL`),
+  die beim Testlauf automatisch angelegt und migriert wird; Sicherung: Name
+  muss auf `_test` enden. Entwicklungs- und Demo-Daten bleiben unberührt
+  (geprüft). `pnpm test:integration` im Repo-Wurzelverzeichnis.
+- Wartet beim Start, bis die Datenbank bereit ist (Neustart nach der
+  Erstinitialisierung des Postgres-Containers).
+
+CI:
+- **Neuer Job „Integrationstests (PostgreSQL + TimescaleDB)“** mit
+  Service-Container (gleiches Image wie lokal). Damit laufen die
+  Integrationstests jetzt bei jedem Push, nicht mehr nur lokal.
+
+Tests: Kern 51 Unit + 58 Integration (109/109, auch mit frisch angelegter
+Test-Datenbank); alle 8 Browser-Tests grün.
+
+Offen:
+- Browser-Tests laufen weiter gegen den lokalen Stack (Entwicklungs-DB) und
+  legen dort Testdatensätze an. Eine eigene Umgebung dafür bräuchte einen
+  zweiten Kern – vorerst nicht nötig.
+
+Fragen an Planung:
+- Keine neuen. F-24, F-26 bis F-33 weiter offen (siehe unten).
+
+---
+
 ### 2026-10-17 – Demo-Daten für Vorführungen
 
 **Demo-Daten – erledigt.** (Auf Toms Auftrag; Planung möge die Aufgabe in
@@ -50,8 +94,8 @@ Erledigt:
 
 Offen / Hinweise:
 - Die Integrationstests schreiben in den Platzhalter-Mandanten, also in
-  dieselbe Datenbank wie die Demo-Daten. Für eine saubere Vorführung danach
-  neu aufsetzen. Besser wäre eine eigene Test-Datenbank → Vorschlag.
+  dieselbe Datenbank wie die Demo-Daten. (Nachtrag: erledigt, eigene
+  Test-Datenbank.)
 - Direkt nach `docker compose up` einer frischen Datenbank kann die erste
   Migration scheitern (das Postgres-Image startet nach der Initialisierung
   neu); einfach wiederholen.

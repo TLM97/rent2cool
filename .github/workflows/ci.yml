@@ -44,3 +44,47 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  integration:
+    name: Integrationstests (PostgreSQL + TimescaleDB)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # Gleiches Image wie docker-compose.yml.
+        image: timescale/timescaledb:2.17.2-pg16
+        env:
+          POSTGRES_USER: rent2cool
+          POSTGRES_PASSWORD: rent2cool_local_dev
+          POSTGRES_DB: rent2cool
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rent2cool"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      # Nur ein Wegwerf-Container der CI; die Tests nutzen daraus rent2cool_test.
+      DATABASE_URL: postgres://rent2cool:rent2cool_local_dev@localhost:5432/rent2cool
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: pnpm installieren
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+
+      - name: Node einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Abhängigkeiten installieren
+        run: pnpm install --frozen-lockfile
+
+      - name: Gemeinsames Paket bauen
+        run: pnpm --filter @rent2cool/shared build
+
+      - name: Integrationstests Kern
+        run: pnpm --filter @rent2cool/core test:integration

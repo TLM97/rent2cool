@@ -118,11 +118,16 @@ pnpm --filter @rent2cool/simulator start -- --vehicles 4000 --rounds 1 \
   --funkloch-rate 0.1 --duplikat-rate 0.05
 ```
 
-Integrationstests (Dedup, Append-only) gegen den laufenden Stack:
+Integrationstests (Dedup, Append-only u. v. m.) gegen den laufenden Stack:
 
 ```bash
-RUN_INTEGRATION=1 pnpm --filter @rent2cool/core test
+pnpm test:integration
 ```
+
+Sie nutzen eine **eigene Datenbank** (`rent2cool_test` bzw. `TEST_DATABASE_URL`),
+die beim Testlauf angelegt und migriert wird – Entwicklungs- und Demo-Daten
+bleiben unberührt. Der Name muss auf `_test` enden. Die CI führt sie mit
+einem TimescaleDB-Container aus.
 
 Lasttest-Ergebnisse stehen in [`docs/STATUS.md`](docs/STATUS.md).
 
@@ -364,9 +369,10 @@ pnpm --filter @rent2cool/core db:seed:demo      # Demo-Daten (einmalig; zweiter 
 
 Alles läuft über die echten Services (Regeln, Audit Trail mit Akteur
 „Demo-Daten“, Telematik-Verarbeitung, Alarm-Auswertung). Szenarien stehen in
-`apps/core/src/db/seed/demo-daten.ts`. Hinweis: Die Integrationstests
-schreiben in denselben Platzhalter-Mandanten – für eine saubere Vorführung
-danach die Datenbank neu aufsetzen.
+`apps/core/src/db/seed/demo-daten.ts`. Die Integrationstests nutzen eine eigene
+Datenbank; die Browser-Tests (`test:e2e`) laufen dagegen gegen den lokalen
+Stack und legen dort eigene, klar benannte Testdatensätze an – vor einer
+Vorführung also besser nicht ausführen oder danach neu aufsetzen.
 
 ## Betrieb und Cloud
 

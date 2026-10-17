@@ -9,23 +9,29 @@ import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 
-async function main(): Promise<void> {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error('DATABASE_URL ist nicht gesetzt.');
-  }
-
+/** Alle ausstehenden Migrationen auf `databaseUrl` anwenden (auch für die Test-Datenbank). */
+export async function migriere(databaseUrl: string): Promise<void> {
   // max=1 für Migrationen: eine Verbindung, keine Parallelität.
-  const sql = postgres(databaseUrl, { max: 1 });
+  const sql = postgres(databaseUrl, { max: 1, onnotice: () => {} });
   try {
     await migrate(drizzle(sql), { migrationsFolder: `${__dirname}/../../drizzle` });
-    console.log('Migrationen angewandt.');
   } finally {
     await sql.end();
   }
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+async function main(): Promise<void> {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL ist nicht gesetzt.');
+  }
+  await migriere(databaseUrl);
+  console.log('Migrationen angewandt.');
+}
+
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
