@@ -1,0 +1,6 @@
+# Reine Formatierungs-Commits – in `git blame` ausblenden:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# (GitHub berücksichtigt die Datei automatisch.)
+
+# Einmalige Formatierung mit Prettier
+47cf196d3f33ff7a5b824fa88550f0581c3e6892

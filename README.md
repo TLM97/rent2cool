@@ -72,12 +72,19 @@ Infrastruktur stoppen: `pnpm stack:down`. Logs: `pnpm stack:logs`.
 ## Nützliche Befehle (Repo-weit)
 
 ```bash
-pnpm lint         # ESLint über das ganze Repo
-pnpm typecheck    # TypeScript prüfen (alle Pakete)
-pnpm test         # Vitest (alle Pakete)
-pnpm build        # alle Pakete bauen
-pnpm format       # Prettier
+pnpm format        # Prettier: formatieren (vor dem Commit)
+pnpm format:check  # Prettier: nur prüfen (wie die CI)
+pnpm lint          # ESLint über das ganze Repo
+pnpm typecheck     # TypeScript prüfen, inkl. Tests (tsconfig.test.json je Paket)
+pnpm test          # Vitest (alle Pakete)
+pnpm build         # alle Pakete bauen
 ```
+
+Die CI prüft in dieser Reihenfolge Formatierung, Lint, Typen (auch der Tests),
+Tests und Build. `docs/` und `CLAUDE.md` sind von Prettier ausgenommen
+(Planungsdateien). Reine Formatierungs-Commits stehen in
+`.git-blame-ignore-revs`; lokal einmal
+`git config blame.ignoreRevsFile .git-blame-ignore-revs`.
 
 ## Telematik-Pfad (T-003)
 

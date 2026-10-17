@@ -13,6 +13,40 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Formatierung und Typprüfung in der CI
+
+**Formatprüfung und Typprüfung der Tests in der CI – erledigt.** (Auf Toms
+Auftrag; Planung möge die Aufgabe in `TASKS.md` nachziehen.)
+
+Erledigt:
+- **Typprüfung umfasst Tests:** je Paket `tsconfig.test.json`
+  (core, ingest, shared, admin – admin inkl. Playwright-Tests);
+  `pnpm typecheck` nutzt sie, die Build-Konfiguration bleibt unverändert.
+  Zwei Typfehler in Tests gefunden und behoben (Typimport aus `fastify`, das
+  keine direkte Abhängigkeit ist; Prototyp-Umwandlung im Audit-Wächtertest).
+- **Einmalige Formatierung** mit Prettier in eigenem Commit (109 Dateien,
+  keine inhaltlichen Änderungen). Geprüft: YAML und JSON (u. a.
+  docker-compose, Keycloak-Realm, package.json) inhaltlich identisch;
+  Lint, Typprüfung, Unit-, Integrations- (91/91) und Browser-Tests (8/8) grün.
+- `docs/` und `CLAUDE.md` von Prettier ausgenommen – Planungsdateien sollen
+  nicht automatisch umformatiert werden.
+- `.git-blame-ignore-revs` mit dem Formatierungs-Commit, damit `git blame`
+  die echten Autoren zeigt (GitHub berücksichtigt die Datei automatisch).
+- **CI:** neuer Schritt „Formatierung“ (`pnpm format:check`) vor Lint; Job
+  heißt jetzt „Format, Lint, Typecheck, Test, Build“. Keine Branch-Protection
+  auf `main`, die Umbenennung bricht also keine Pflicht-Checks.
+
+Hinweis für lokale Arbeit (auch Toms Mac): vor dem Commit `pnpm format`
+ausführen, sonst schlägt die CI fehl.
+
+Fragen an Planung:
+- **F-33:** Soll `main` eine Branch-Protection bekommen (CI muss grün sein
+  vor dem Merge)? Heute wird direkt auf `main` gearbeitet; eine rote CI
+  hält nichts auf.
+- F-24, F-26 bis F-32 weiter offen (siehe unten).
+
+---
+
 ### 2026-10-17 – Doppelbuchung verhindern
 
 **Doppelbuchung bei gleichzeitigen Buchungen – behoben.** (Fund aus der
@@ -49,9 +83,9 @@ Hinweise:
 - Die Migration schlägt fehl, wenn eine Datenbank bereits überlappende
   Buchungen enthält – gewollt; vor dem Einspielen Überschneidungen suchen und
   fachlich klären (welche Buchung gilt).
-- **Formatierung:** 97 Dateien entsprechen nicht der Prettier-Konfiguration
-  (schon vorher so); die CI prüft das nicht. Empfehlung: einmal `pnpm format`
-  in einem eigenen Commit und `format:check` in die CI aufnehmen.
+- **Formatierung:** 97 Dateien entsprachen nicht der Prettier-Konfiguration
+  (schon vorher so). (Nachtrag: erledigt, siehe „Formatierung und
+  Typprüfung in der CI“.)
 
 Fragen an Planung:
 - Keine neuen. F-24, F-26 bis F-32 weiter offen (siehe unten).

@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   build-test:
-    name: Lint, Typecheck, Test, Build
+    name: Format, Lint, Typecheck, Test, Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,9 +29,13 @@ jobs:
       - name: Abhängigkeiten installieren
         run: pnpm install --frozen-lockfile
 
+      - name: Formatierung
+        run: pnpm format:check
+
       - name: Lint
         run: pnpm lint
 
+      # Prüft auch die Testdateien (tsconfig.test.json je Paket).
       - name: Typecheck
         run: pnpm typecheck
 
