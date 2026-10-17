@@ -95,6 +95,10 @@ const FELDER: Record<string, string> = {
   widerrufGrund: 'Grund des Widerrufs',
   befehl: 'Befehl',
   gruende: 'Gründe',
+  art: 'Art',
+  kmStand: 'Kilometerstand',
+  checkliste: 'Checkliste',
+  schaeden: 'Schäden',
 };
 
 const ISO_ZEIT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
@@ -123,6 +127,18 @@ export function formatWert(feld: string, wert: unknown): string {
   if (feld === 'status' && typeof wert === 'string') return statusLabel(wert);
   if (feld === 'befehl' && typeof wert === 'string')
     return BEFEHL_NAME[wert as FahrzeugBefehl] ?? wert;
+  if (feld === 'checkliste' && istObjekt(wert)) {
+    const punkte = Object.values(wert) as { ok?: boolean }[];
+    const nein = punkte.filter((p) => p.ok === false).length;
+    return `${punkte.length} Punkte beantwortet${nein ? `, ${nein} × nein` : ''}`;
+  }
+  if (feld === 'schaeden' && Array.isArray(wert)) {
+    return wert.length === 0
+      ? 'keine'
+      : wert.map((x) => (istObjekt(x) ? String(x.beschreibung) : String(x))).join(' · ');
+  }
+  if (feld === 'art' && wert === 'uebergabe') return 'Übergabe';
+  if (feld === 'art' && wert === 'rueckgabe') return 'Rückgabe';
   if (Array.isArray(wert)) return wert.map(String).join(' · ');
   if (typeof wert === 'boolean') return wert ? 'ja' : 'nein';
   if (typeof wert === 'number')
@@ -159,6 +175,7 @@ export function vorgang(e: AuditEintrag): string {
   if (e.entitaetTyp === 'alarm_schliessen') return 'Alarm geschlossen';
   if (e.entitaetTyp === 'sensor_tausch') return 'Sensor getauscht';
   if (e.entitaetTyp === 'schluessel') return 'Schlüssel ausgestellt';
+  if (e.entitaetTyp === 'protokoll' && e.aktion === 'PATCH') return 'Protokoll ergänzt';
   if (e.aktion === 'PATCH') return 'Stammdaten geändert';
   if (e.entitaetTyp.endsWith('_status')) {
     const alt = istObjekt(e.altWert) ? e.altWert.status : undefined;

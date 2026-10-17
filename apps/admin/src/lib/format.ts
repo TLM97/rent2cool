@@ -93,6 +93,10 @@ const TON: Record<string, Ton> = {
   gesendet: 'info',
   ausgefuehrt: 'ok',
   fehlgeschlagen: 'kritisch',
+  // Übergabeprotokoll und Fotos
+  abgeschlossen: 'ok',
+  angefordert: 'neutral',
+  hochgeladen: 'ok',
 };
 
 export function statusTon(status: string): Ton {
@@ -139,6 +143,9 @@ const LABEL: Record<string, string> = {
   gesendet: 'gesendet',
   ausgefuehrt: 'ausgeführt',
   fehlgeschlagen: 'fehlgeschlagen',
+  abgeschlossen: 'abgeschlossen',
+  angefordert: 'nicht hochgeladen',
+  hochgeladen: 'hochgeladen',
   // Alarmtypen
   temperatur_ueber: 'Temperatur zu hoch',
   temperatur_unter: 'Temperatur zu niedrig',

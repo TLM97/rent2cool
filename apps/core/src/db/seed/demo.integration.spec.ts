@@ -27,9 +27,12 @@ import {
   fahrzeug,
   fahrzeugBefehl,
   miete,
+  protokollFoto,
   rechnung,
   schluessel,
+  uebergabeprotokoll,
 } from '../schema';
+import { testSpeicher } from '../../objektspeicher/testspeicher';
 import { DEMO_AKTEUR_ID } from './demo-daten';
 import { ladeDemoDaten, type DemoErgebnis } from './demo';
 
@@ -62,7 +65,7 @@ describe.skipIf(!RUN)('Demo-Daten (Integration, braucht DB)', () => {
         new InMemoryBerichtSpeicher(),
       ),
     );
-    ergebnis = await ladeDemoDaten(client.db, { mandantId });
+    ergebnis = await ladeDemoDaten(client.db, { mandantId, speicher: testSpeicher() });
   }, 120_000);
   afterAll(async () => {
     await client.sql.end({ timeout: 5 });
@@ -79,6 +82,8 @@ describe.skipIf(!RUN)('Demo-Daten (Integration, braucht DB)', () => {
       standorte: 2,
       schluessel: 2,
       befehle: 3,
+      protokolle: 2,
+      fotos: 13,
     });
     expect(ergebnis.messwerte).toBeGreaterThan(5000);
     expect(ergebnis.alarme).toBeGreaterThan(0);
@@ -279,6 +284,30 @@ describe.skipIf(!RUN)('Demo-Daten (Integration, braucht DB)', () => {
     ]);
     const kuenftig = schl.find((s) => s.mieteId !== aktiv.id)!;
     expect(kuenftig.gueltigVon.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('Protokolle: abgeschlossen, Fotos geprüft, Schaden mit Detailfoto', async () => {
+    const zeilen = await client.db
+      .select()
+      .from(uebergabeprotokoll)
+      .where(eq(uebergabeprotokoll.mandantId, mandantId));
+    expect(zeilen.map((p) => [p.art, p.status]).sort()).toEqual([
+      ['rueckgabe', 'abgeschlossen'],
+      ['uebergabe', 'abgeschlossen'],
+    ]);
+    const rueckgabe = zeilen.find((p) => p.art === 'rueckgabe')!;
+    expect(rueckgabe.schaeden).toEqual([
+      { beschreibung: expect.stringContaining('Kratzer'), fotoIds: [expect.any(String)] },
+    ]);
+    expect(rueckgabe.checkliste!.keine_neuen_schaeden).toMatchObject({ ok: false });
+    const fotos = await client.db
+      .select()
+      .from(protokollFoto)
+      .where(eq(protokollFoto.mandantId, mandantId));
+    expect(fotos).toHaveLength(13);
+    expect(fotos.every((f) => f.status === 'hochgeladen')).toBe(true);
+    // Die Übergabe hat der Fahrer mit seinem App-Konto protokolliert.
+    expect(zeilen.find((p) => p.art === 'uebergabe')!.erstelltVon).toMatch(/^demo-konto-max-/);
   });
 
   it('ein zweiter Lauf ändert nichts', async () => {

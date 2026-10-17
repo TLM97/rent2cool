@@ -12,10 +12,17 @@
  * Für eine frische Vorführung: `docker compose down -v`, dann Migrationen,
  * `db:seed` und `db:seed:demo`.
  */
+import { createHash } from 'node:crypto';
 import { ConflictException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import { and, eq } from 'drizzle-orm';
-import { STANDARD_TEMPERATURPROFILE, type Principal } from '@rent2cool/shared';
+import {
+  CHECKLISTE,
+  PFLICHT_FOTOS,
+  STANDARD_TEMPERATURPROFILE,
+  type FotoPerspektive,
+  type Principal,
+} from '@rent2cool/shared';
 import { AbweichungService } from '../../alarm/abweichung.service';
 import { AlarmService } from '../../alarm/alarm.service';
 import { protokolliereAnlage } from '../../audit/audit.service';
@@ -28,6 +35,12 @@ import type { Env } from '../../config/env';
 import { FahrzeugService } from '../../fahrzeug/fahrzeug.service';
 import { KundeService } from '../../kunde/kunde.service';
 import { MieteService } from '../../miete/miete.service';
+import {
+  S3ObjektSpeicher,
+  s3AusUmgebung,
+  type ObjektSpeicher,
+} from '../../objektspeicher/objekt-speicher';
+import { ProtokollService } from '../../protokoll/protokoll.service';
 import { RechnungService } from '../../rechnung/rechnung.service';
 import { SimulatorKeyProvider } from '../../schluessel/key-provider';
 import { SchluesselService } from '../../schluessel/schluessel.service';
@@ -49,6 +62,7 @@ import {
   temperaturVerlauf,
   versetzt,
 } from './demo-daten';
+import { demoBild } from './demo-bild';
 import { PLACEHOLDER_MANDANT_ID } from './placeholder-data';
 
 const TAG = 86_400_000;
@@ -65,11 +79,14 @@ export interface DemoErgebnis {
   standorte: number;
   schluessel: number;
   befehle: number;
+  protokolle: number;
+  fotos: number;
 }
 
 export async function ladeDemoDaten(
   db: Database,
-  o: { mandantId?: string; jetzt?: Date } = {},
+  // Ohne Objektspeicher entstehen keine Protokolle (Fotos brauchen S3, D-003).
+  o: { mandantId?: string; jetzt?: Date; speicher?: ObjektSpeicher } = {},
 ): Promise<DemoErgebnis> {
   const mandantId = o.mandantId ?? PLACEHOLDER_MANDANT_ID;
   const jetzt = o.jetzt ?? new Date();
@@ -85,6 +102,8 @@ export async function ladeDemoDaten(
     standorte: 0,
     schluessel: 0,
     befehle: 0,
+    protokolle: 0,
+    fotos: 0,
   };
 
   const [vorhanden] = await db
@@ -223,18 +242,19 @@ export async function ladeDemoDaten(
     ergebnis.kunden++;
   }
 
+  /** Login des Demo-Fahrers einer Miete (App-Konto, D-014). */
+  function fahrerLoginVon(m: DemoMiete): Principal {
+    const f = DEMO_KUNDEN.find((k) => k.schluessel === m.kunde)!.fahrer[m.fahrer]!;
+    return { akteurId: demoKonto(f.konto!), name: f.name, rollen: ['fahrer'], mandantId };
+  }
+
   // --- Digitaler Schlüssel (D-014): ausstellen, dann Befehle mit dem Fahrer-Login ---
+  const mieteIds = new Map<string, string>();
   async function digitalerSchluessel(m: DemoMiete, mieteId: string, fahrerId: string) {
     if (!m.digitalerSchluessel) return;
     const { id } = await schluesselDienst.stelleAus(akteur, mieteId, fahrerId);
     ergebnis.schluessel++;
-    const f = DEMO_KUNDEN.find((k) => k.schluessel === m.kunde)!.fahrer[m.fahrer]!;
-    const fahrerLogin: Principal = {
-      akteurId: demoKonto(f.konto!),
-      name: f.name,
-      rollen: ['fahrer'],
-      mandantId,
-    };
+    const fahrerLogin = fahrerLoginVon(m);
     for (const [i, befehl] of m.digitalerSchluessel.befehle.entries()) {
       try {
         await schluesselDienst.befehlMitSchluessel(fahrerLogin, id, {
@@ -274,6 +294,7 @@ export async function ladeDemoDaten(
         endeGeplant: ende.toISOString(),
       });
       ergebnis.mieten++;
+      mieteIds.set(m.schluessel, kuenftigId);
       await digitalerSchluessel(m, kuenftigId, fahrerId);
       continue;
     }
@@ -326,6 +347,7 @@ export async function ladeDemoDaten(
       return row!.id;
     });
     ergebnis.mieten++;
+    mieteIds.set(m.schluessel, mieteId);
 
     // Laderaumtemperatur bis Mietende bzw. bis jetzt – durch die echte Verarbeitung.
     const profil = STANDARD_TEMPERATURPROFILE.find((p) => p.name === profilName)!;
@@ -385,6 +407,68 @@ export async function ladeDemoDaten(
     }
   }
 
+  // --- Übergabe-/Rückgabeprotokolle mit Platzhalterfotos (D-014) ---
+  // Wie in der App: Foto anfordern, direkt in den Objektspeicher laden, bestätigen.
+  if (o.speicher) {
+    const protokolle = new ProtokollService(db, o.speicher);
+    const FARBE: Record<FotoPerspektive, [number, number, number]> = {
+      vorne: [11, 110, 122],
+      hinten: [31, 76, 143],
+      links: [29, 97, 54],
+      rechts: [122, 79, 0],
+      laderaum: [90, 104, 117],
+      tacho: [15, 37, 51],
+      schaden: [163, 38, 30],
+    };
+    for (const m of DEMO_MIETEN) {
+      for (const pr of m.protokolle ?? []) {
+        // Mit Schlüssel protokolliert der Fahrer selbst, sonst der Betrieb.
+        const wer = m.digitalerSchluessel ? fahrerLoginVon(m) : akteur;
+        const mieteId = mieteIds.get(m.schluessel)!;
+        const { id } = await protokolle.legeAn(wer, mieteId, pr.art);
+        const fotoIds = new Map<FotoPerspektive, string>();
+        const ansichten = [...PFLICHT_FOTOS, ...(pr.schaden ? (['schaden'] as const) : [])];
+        for (const perspektive of ansichten) {
+          const bild = demoBild(FARBE[perspektive]);
+          const r = await protokolle.fordereFotoAn(wer, id, {
+            perspektive,
+            contentType: 'image/png',
+            groesse: bild.length,
+            sha256: createHash('sha256').update(bild).digest('hex'),
+            idempotencyKey: `demo-${mandantId.slice(0, 8)}-${m.schluessel}-${pr.art}-${perspektive}`,
+          });
+          const put = await fetch(r.upload!.url, {
+            method: 'PUT',
+            body: bild,
+            headers: r.upload!.kopfzeilen,
+          });
+          if (!put.ok) throw new Error(`Demo-Foto nicht hochgeladen (${put.status})`);
+          await protokolle.bestaetigeFoto(wer, id, r.foto.id);
+          fotoIds.set(perspektive, r.foto.id);
+          ergebnis.fotos++;
+        }
+        const { version } = await protokolle.hole(wer, id);
+        await protokolle.aendere(wer, id, {
+          version,
+          kmStand: pr.kmStand,
+          checkliste: Object.fromEntries(
+            CHECKLISTE[pr.art].map((c) => [
+              c.id,
+              pr.schaden && c.id === 'keine_neuen_schaeden'
+                ? { ok: false, bemerkung: pr.schaden }
+                : { ok: true },
+            ]),
+          ),
+          schaeden: pr.schaden
+            ? [{ beschreibung: pr.schaden, fotoIds: [fotoIds.get('schaden')!] }]
+            : [],
+        });
+        await protokolle.schliesseAb(wer, id);
+        ergebnis.protokolle++;
+      }
+    }
+  }
+
   // Fahrzeuge, die nicht unterwegs sind, stehen jetzt an ihrem Standort.
   const unterwegs = new Set(DEMO_MIETEN.filter((m) => m.status === 'aktiv').map((m) => m.fahrzeug));
   for (const f of DEMO_FAHRZEUGE) {
@@ -415,7 +499,9 @@ async function main(): Promise<void> {
   }
   const { db, sql } = createDbClient(databaseUrl);
   try {
-    const e = await ladeDemoDaten(db);
+    const e = await ladeDemoDaten(db, {
+      speicher: new S3ObjektSpeicher(s3AusUmgebung(process.env)),
+    });
     if (e.bereitsVorhanden) {
       console.log('Demo-Daten sind bereits geladen – nichts zu tun.');
       return;

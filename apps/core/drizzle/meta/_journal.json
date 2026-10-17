@@ -99,6 +99,13 @@
       "when": 1760644800000,
       "tag": "0013_schluessel_fernzugriff",
       "breakpoints": false
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1760648400000,
+      "tag": "0014_uebergabeprotokoll",
+      "breakpoints": false
     }
   ]
 }

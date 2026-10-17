@@ -6,6 +6,7 @@
  * (@rent2cool/shared, dieselben Regeln wie der Kern) → Kern-API aufrufen →
  * bei Erfolg zur Detailseite. Rechte und Audit Trail setzt der Kern durch.
  */
+import { createHash } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import {
@@ -13,6 +14,13 @@ import {
   abweichungStatusSchema,
   BEFEHL_NAME,
   fahrzeugBefehlSchema,
+  FOTO_MAX_BYTES,
+  FOTO_TYPEN,
+  fotoAnfordernSchema,
+  PROTOKOLL_ART_NAME,
+  PROTOKOLL_ARTEN,
+  protokollAendernSchema,
+  type ProtokollArt,
   fahrerAendernSchema,
   fahrerErstellenSchema,
   fahrzeugAendernSchema,
@@ -41,6 +49,7 @@ import {
   type FormularZustand,
 } from '../../lib/formular';
 import { regelnAusFormular } from '../../lib/oeffnungszeiten';
+import { checklisteAusFormular, feldName, schaedenAusText } from '../../lib/protokoll';
 import { istUuid } from '../../lib/seiten';
 
 const PRUEFEN = 'Bitte die markierten Felder prüfen.';
@@ -504,6 +513,138 @@ export async function sendeFahrzeugBefehl(
       ? `${name} ausgeführt.`
       : `${name} gesendet – Bestätigung des Fahrzeugs steht aus.`,
   );
+}
+
+// --- Übergabeprotokoll (Ausnahmeprozess mit Personal, D-014) ---
+function protokollKontext(fd: FormData) {
+  const mieteId = text(fd, 'mieteId') ?? '';
+  const protokollId = text(fd, 'protokollId') ?? '';
+  const art = text(fd, 'art') as ProtokollArt | undefined;
+  const gueltig =
+    istUuid(mieteId) && (protokollId === '' || istUuid(protokollId)) && art !== undefined;
+  return gueltig && (PROTOKOLL_ARTEN as readonly string[]).includes(art)
+    ? { mieteId, protokollId, art }
+    : null;
+}
+
+export async function legeProtokollAn(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const k = protokollKontext(fd);
+  if (!k) return { fehler: 'Miete fehlt.', werte };
+  try {
+    await apiPost(`/v1/mieten/${k.mieteId}/protokolle`, { art: k.art });
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(`/mieten/${k.mieteId}`, `${PROTOKOLL_ART_NAME[k.art]}protokoll angelegt.`);
+}
+
+/**
+ * Foto hochladen wie die App: Prüfsumme bilden, beim Kern anfordern, direkt in
+ * den Objektspeicher laden, Kern prüfen lassen.
+ */
+export async function ladeProtokollFotoHoch(
+  _z: FormularZustand,
+  fd: FormData,
+): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const k = protokollKontext(fd);
+  if (!k || !k.protokollId) return { fehler: 'Protokoll fehlt.', werte };
+  const feld = feldName(k.art, 'foto');
+  const datei = fd.get(feld);
+  if (!(datei instanceof File) || datei.size === 0) {
+    return { fehler: PRUEFEN, feldFehler: { [feld]: 'Bitte ein Foto wählen' }, werte };
+  }
+  if (!(FOTO_TYPEN as readonly string[]).includes(datei.type)) {
+    return { fehler: PRUEFEN, feldFehler: { [feld]: 'Nur JPEG, PNG oder WebP' }, werte };
+  }
+  if (datei.size > FOTO_MAX_BYTES) {
+    return { fehler: PRUEFEN, feldFehler: { [feld]: 'Höchstens 15 MB' }, werte };
+  }
+  const daten = Buffer.from(await datei.arrayBuffer());
+  const p = pruefe(
+    fotoAnfordernSchema,
+    {
+      perspektive: text(fd, feldName(k.art, 'perspektive')) ?? '',
+      contentType: datei.type,
+      groesse: daten.length,
+      sha256: createHash('sha256').update(daten).digest('hex'),
+      idempotencyKey: text(fd, 'idempotencyKey') ?? '',
+    },
+    werte,
+  );
+  if (!p.ok) return p.zustand;
+  try {
+    const r = await apiPost<{
+      foto: { id: string; status: string };
+      upload: { url: string; kopfzeilen: Record<string, string> } | null;
+    }>(`/v1/protokolle/${k.protokollId}/fotos`, p.daten);
+    if (r.upload) {
+      const put = await fetch(r.upload.url, {
+        method: 'PUT',
+        body: daten,
+        headers: r.upload.kopfzeilen,
+      });
+      if (!put.ok) {
+        return { fehler: `Hochladen in den Objektspeicher fehlgeschlagen (${put.status}).`, werte };
+      }
+    }
+    await apiPost(`/v1/protokolle/${k.protokollId}/fotos/${r.foto.id}/bestaetigung`);
+  } catch (e) {
+    revalidatePath('/', 'layout');
+    return kernFehler(e, werte);
+  }
+  weiter(`/mieten/${k.mieteId}`, 'Foto gespeichert.');
+}
+
+export async function speichereProtokoll(
+  _z: FormularZustand,
+  fd: FormData,
+): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const k = protokollKontext(fd);
+  if (!k || !k.protokollId) return { fehler: 'Protokoll fehlt.', werte };
+  const kmFeld = feldName(k.art, 'kmStand');
+  const p = pruefe(
+    protokollAendernSchema,
+    {
+      version: text(fd, 'version') ?? '',
+      kmStand: text(fd, kmFeld) ?? null,
+      checkliste: checklisteAusFormular(k.art, (n) => text(fd, n)),
+      schaeden:
+        (text(fd, feldName(k.art, 'schaeden')) ?? '') === (text(fd, 'schaedenVorher') ?? '')
+          ? undefined
+          : schaedenAusText(text(fd, feldName(k.art, 'schaeden'))),
+    },
+    werte,
+  );
+  if (!p.ok) {
+    // Feldfehler „kmStand“ dem präfixierten Formularfeld zuordnen.
+    const ff = p.zustand.feldFehler ?? {};
+    return { ...p.zustand, feldFehler: ff.kmStand ? { [kmFeld]: ff.kmStand } : ff };
+  }
+  let r: Aenderung;
+  try {
+    r = await apiPatch<Aenderung>(`/v1/protokolle/${k.protokollId}`, p.daten);
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(`/mieten/${k.mieteId}`, aenderungsMeldung(r));
+}
+
+export async function schliesseProtokollAb(
+  _z: FormularZustand,
+  fd: FormData,
+): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const k = protokollKontext(fd);
+  if (!k || !k.protokollId) return { fehler: 'Protokoll fehlt.', werte };
+  try {
+    await apiPost(`/v1/protokolle/${k.protokollId}/abschluss`);
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(`/mieten/${k.mieteId}`, `${PROTOKOLL_ART_NAME[k.art]}protokoll abgeschlossen.`);
 }
 
 // --- Rechnung ---

@@ -13,6 +13,7 @@ import { FahrzeugController, SensorController } from '../fahrzeug/fahrzeug.contr
 import { HealthController } from '../health/health.controller';
 import { FahrerController, KundeController } from '../kunde/kunde.controller';
 import { MieteController } from '../miete/miete.controller';
+import { MieteProtokollController, ProtokollController } from '../protokoll/protokoll.controller';
 import { RechnungController } from '../rechnung/rechnung.controller';
 import {
   BefehlController,
@@ -42,6 +43,8 @@ const CONTROLLER = [
   SchluesselController,
   FahrzeugBefehlController,
   BefehlController,
+  MieteProtokollController,
+  ProtokollController,
 ];
 const LESEND = new Set([RequestMethod.GET, RequestMethod.HEAD, RequestMethod.OPTIONS]);
 

@@ -19,3 +19,4 @@ export * from './miete';
 export * from './rechnung';
 export * from './alarm';
 export * from './schluessel';
+export * from './protokoll';

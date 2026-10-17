@@ -25,7 +25,7 @@ if (RUN) {
   process.env.OIDC_ISSUER_URL = ISSUER;
   process.env.OIDC_CLIENT_ID ??= 'rent2cool-core';
   process.env.OIDC_CLIENT_SECRET ??= 'x';
-  process.env.S3_ENDPOINT ??= 'http://localhost:9000';
+  process.env.S3_ENDPOINT ??= 'http://localhost:8333';
   process.env.S3_ACCESS_KEY ??= 'a';
   process.env.S3_SECRET_KEY ??= 'b';
   process.env.S3_BUCKET ??= 'c';

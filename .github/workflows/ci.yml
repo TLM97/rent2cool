@@ -46,7 +46,7 @@ jobs:
         run: pnpm build
 
   integration:
-    name: Integrationstests (PostgreSQL + TimescaleDB)
+    name: Integrationstests (PostgreSQL + TimescaleDB, S3)
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -85,6 +85,13 @@ jobs:
 
       - name: Gemeinsames Paket bauen
         run: pnpm --filter @rent2cool/shared build
+
+      # Objektspeicher (S3-API) wie lokal aus docker-compose.yml – SeaweedFS
+      # mit Platzhalter-Zugangsdaten, Bucket per Setup-Container.
+      - name: Objektspeicher starten
+        run: |
+          docker compose up -d --wait objektspeicher
+          docker compose run --rm objektspeicher-setup
 
       - name: Integrationstests Kern
         run: >-

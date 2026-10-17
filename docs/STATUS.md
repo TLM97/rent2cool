@@ -13,6 +13,67 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Übergabe- und Rückgabeprotokoll mit Foto-Check
+
+**Foto-Check / Übergabeprotokoll – erledigt.** (Nächste Aufgabe auf Toms
+„weiter“; D-014: App, Schlüssel und Foto-Check gehören ins erste Release.
+Planung möge die Aufgabe in `TASKS.md` nachziehen und D-019 prüfen.)
+
+Erledigt:
+- **Objektspeicher endlich lokal verfügbar:** MinIO-Images sind nicht mehr
+  beziehbar → SeaweedFS (S3-API) in `docker-compose.yml` und in der CI
+  (Vorschlag **D-019**). Kern-Modul `objektspeicher` (Interface
+  `ObjektSpeicher`, S3-Umsetzung mit AWS SDK, signierte Links, optional
+  eigene öffentliche Adresse `S3_OEFFENTLICHER_ENDPOINT`).
+- **Geteilte Regeln** `packages/shared/src/protokoll.ts`: Pflichtfotos,
+  Checklisten je Art (Konfiguration), „nein“ verlangt Bemerkung,
+  Vollständigkeitsprüfung, Objektschlüssel ohne Personendaten, Schemas.
+- **Kern-Modul `protokoll`:** je Miete ein Übergabe- und ein
+  Rückgabeprotokoll (idempotent), Fotos per signiertem Upload direkt in den
+  Speicher, Bestätigung prüft Größe, Typ und SHA-256 (sonst „verworfen“ mit
+  Grund), Checkliste wird ergänzt statt ersetzt, Schäden mit Fotoverweisen,
+  Abschluss nur vollständig. **Abgeschlossen ist unveränderbar** – im Kern
+  und per Datenbank-Trigger (auch am Kern vorbei). Zugriff: Fahrer nur mit
+  gültigem Schlüssel zur Miete, Betrieb schreibt, QA liest. Alles auditiert,
+  Migration `0014_uebergabeprotokoll`.
+- **Oberfläche:** Mietakte mit Protokollkarte (Fotos, Checkliste, Schäden,
+  was fehlt); Ausnahmeprozess mit Personal: anlegen, Fotos hochladen,
+  Angaben, abschließen.
+- **Demo-Daten:** Übergabe der laufenden Miete (vom Fahrer protokolliert) und
+  Rückgabe mit Schaden + Detailfoto; 13 Platzhalterbilder (erzeugte PNGs,
+  sichtbar keine echten Fotos, D-015).
+
+Tests: shared 68, admin 59, Kern 144/144 Integration (neu: 4 Protokoll gegen
+echten Objektspeicher, Demo), Browser-Test „Ablauf“ protokolliert eine
+Übergabe mit sechs Fotos bis zum Abschluss; alle 9 grün.
+
+Abkürzungen (vor Go-live ersetzen):
+- **SHA-256 rechnet der Kern** beim Bestätigen (liest das Foto) – bei
+  12.000 Fotos/Tag auf speicherseitige Prüfsummen oder Hintergrundjob
+  umstellen (D-019).
+- Keine Vorschaubilder: die Oberfläche lädt die Originalfotos (Hintergrundjob
+  für Thumbnails fehlt).
+- Nie hochgeladene oder verworfene Objekte werden nicht aufgeräumt
+  (Lifecycle-Regel im Speicher fehlt).
+- Der Temperaturnachweis liegt weiter im Arbeitsspeicher
+  (`InMemoryBerichtSpeicher`) – kann jetzt auf den Objektspeicher umziehen.
+
+Fragen an Planung:
+- **F-42:** Soll die Miete erst mit **abgeschlossenem Übergabeprotokoll**
+  starten (heute: erstes Entriegeln, F-39)? Und soll „beendet“ ein
+  abgeschlossenes Rückgabeprotokoll voraussetzen?
+- **F-43:** Pflichtfotos und Checklistenpunkte bitte fachlich (QA)
+  bestätigen bzw. ergänzen (z. B. Temperaturanzeige, Reinigung,
+  Tankstand/Ladestand).
+- **F-44:** Neuer Schaden bei der Rückgabe: automatisch eine Abweichung bzw.
+  einen Schadenfall anlegen?
+- **F-45:** Aufbewahrungsfrist der Fotos (hängt an F-2) – und dürfen sie
+  EXIF/GPS enthalten oder sollen sie beim Eingang bereinigt werden
+  (Datenschutz)?
+- F-24, F-26 bis F-37, F-41 weiter offen.
+
+---
+
 ### 2026-10-17 – Schlüssel: Antworten zu F-38 bis F-40 umgesetzt
 
 Tom hat F-38 bis F-40 direkt beantwortet; umgesetzt und in D-018 als

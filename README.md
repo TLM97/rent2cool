@@ -37,7 +37,7 @@ pnpm install
 # 2. Umgebungsdatei anlegen (nur lokale Platzhalterwerte, keine echten Secrets)
 cp .env.example .env
 
-# 3. Infrastruktur starten: PostgreSQL+TimescaleDB, Redpanda, Valkey, MinIO, Keycloak
+# 3. Infrastruktur starten: PostgreSQL+TimescaleDB, Redpanda, Valkey, SeaweedFS (S3), Keycloak
 pnpm stack:up
 
 # 4. Datenbank-Migrationen anwenden (derzeit leere Baseline)
@@ -60,14 +60,14 @@ Infrastruktur stoppen: `pnpm stack:down`. Logs: `pnpm stack:logs`.
 
 ### Lokale Dienste
 
-| Dienst               | Adresse               | Hinweis                         |
-| -------------------- | --------------------- | ------------------------------- |
-| Kern (API)           | http://localhost:3000 |                                 |
-| PostgreSQL/Timescale | localhost:5432        | DB/User `rent2cool`             |
-| Redpanda (Kafka-API) | localhost:19092       |                                 |
-| Valkey (Redis-API)   | localhost:6379        | BullMQ                          |
-| MinIO (S3-API)       | http://localhost:9000 | Konsole: http://localhost:9001  |
-| Keycloak (OIDC)      | http://localhost:8080 | Realm `rent2cool` (Platzhalter) |
+| Dienst               | Adresse               | Hinweis                           |
+| -------------------- | --------------------- | --------------------------------- |
+| Kern (API)           | http://localhost:3000 |                                   |
+| PostgreSQL/Timescale | localhost:5432        | DB/User `rent2cool`               |
+| Redpanda (Kafka-API) | localhost:19092       |                                   |
+| Valkey (Redis-API)   | localhost:6379        | BullMQ                            |
+| SeaweedFS (S3-API)   | http://localhost:8333 | Bucket per `objektspeicher-setup` |
+| Keycloak (OIDC)      | http://localhost:8080 | Realm `rent2cool` (Platzhalter)   |
 
 ## Nützliche Befehle (Repo-weit)
 
@@ -396,6 +396,26 @@ der Simulator (D-015).
   Status `GET /v1/befehle/:id`.
 - Oberfläche: Mietakte „Digitaler Schlüssel“ (ausstellen, widerrufen, Befehle
   der Miete), Fahrzeugakte „Fernzugriff“, App-Konto beim Bearbeiten des Fahrers.
+
+### Übergabe- und Rückgabeprotokoll mit Foto-Check (D-014)
+
+Je Miete ein Übergabe- und ein Rückgabeprotokoll: Pflichtfotos (Front, Heck,
+beide Seiten, Laderaum, Kilometerstand/Kühlanzeige), Checkliste,
+Kilometerstand, Schäden mit Detailfotos. Pflichtfotos und Checkliste sind
+Konfiguration in `packages/shared/src/protokoll.ts`. Abgeschlossen =
+unveränderbar (Kern und Datenbank-Trigger).
+
+Fotos gehen **direkt vom Gerät in den Objektspeicher** (D-003), nie durch die
+Datenbank: `POST /v1/protokolle/:id/fotos` liefert einen signierten Upload-Link
+(15 Min., Dateityp Teil der Signatur), danach prüft
+`POST /v1/protokolle/:id/fotos/:fotoId/bestaetigung` Größe, Typ und SHA-256.
+Weitere Routen: `POST/GET /v1/mieten/:id/protokolle`, `GET/PATCH
+/v1/protokolle/:id`, `POST /v1/protokolle/:id/abschluss`. Schreiben dürfen der
+Fahrer (mit Schlüssel zur Miete) und der Betrieb; die QA liest.
+
+In der Mietakte zeigt die Karte „Übergabe- und Rückgabeprotokoll“ Fotos,
+Checkliste und Schäden; im Ausnahmeprozess mit Personal protokolliert der
+Betrieb dort selbst.
 
 ### Stammdaten bearbeiten
 

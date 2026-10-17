@@ -9,6 +9,11 @@ import { expect, test, type Page } from '@playwright/test';
 
 const PASSWORT = process.env.E2E_PASSWORT ?? 'PLACEHOLDER_dev_passwort';
 const SCREENS = 'test-results/screens';
+/** Kleinstes gültiges PNG (1×1, grau) als Testfoto – keine echten Bilder (D-015). */
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNoAAAAggCBd81ytgAAAABJRU5ErkJggg==',
+  'base64',
+);
 
 async function anmelden(page: Page, nutzer: string) {
   await page.goto('/');
@@ -160,6 +165,43 @@ test('kompletter Ablauf von Fahrzeug bis Abweichung', async ({ page, context }) 
   // Der Befehl hängt an der laufenden Miete.
   await page.goto(mieteUrl);
   await expect(schluesselKarte).toContainText('Fahrer ausgesperrt (Test)');
+
+  // --- Übergabeprotokoll mit Foto-Check (Ausnahmeprozess mit Personal) ---
+  const protokoll = page.getByRole('region', { name: 'Übergabe- und Rückgabeprotokoll' });
+  await protokoll.getByRole('button', { name: 'Übergabeprotokoll anlegen' }).click();
+  await expect(page.getByRole('status')).toContainText('Übergabeprotokoll angelegt');
+  for (const [wert, name] of [
+    ['vorne', 'Front'],
+    ['hinten', 'Heck'],
+    ['links', 'Fahrerseite links'],
+    ['rechts', 'Beifahrerseite rechts'],
+    ['laderaum', 'Laderaum innen'],
+    ['tacho', 'Kilometerstand / Kühlanzeige'],
+  ] as const) {
+    await protokoll.getByLabel('Ansicht').selectOption(wert);
+    await protokoll.locator('input[type=file]').setInputFiles({
+      name: `${wert}.png`,
+      mimeType: 'image/png',
+      buffer: PNG,
+    });
+    await protokoll.getByRole('button', { name: 'Foto hochladen' }).click();
+    await expect(page.getByRole('status')).toContainText('Foto gespeichert');
+    await expect(protokoll.getByRole('img', { name })).toBeVisible();
+  }
+  // Ohne Checkliste und Kilometerstand kein Abschluss – mit Liste, was fehlt.
+  await protokoll.getByRole('button', { name: 'Übergabeprotokoll abschließen' }).click();
+  await expect(protokoll.locator('.hinweis[role=alert]')).toContainText('Kilometerstand fehlt');
+  await protokoll.getByLabel('Kilometerstand').fill('12345');
+  for (const punkt of await protokoll.locator('select[name^="uebergabe_check_"]').all()) {
+    await punkt.selectOption('ja');
+  }
+  await protokoll.getByRole('button', { name: 'Angaben speichern' }).click();
+  await expect(page.getByRole('status')).toContainText('Änderungen gespeichert');
+  await protokoll.getByRole('button', { name: 'Übergabeprotokoll abschließen' }).click();
+  await expect(page.getByRole('status')).toContainText('Übergabeprotokoll abgeschlossen');
+  await expect(protokoll).toContainText('12.345 km');
+  await expect(protokoll.getByRole('button', { name: 'Foto hochladen' })).toHaveCount(0);
+  await protokoll.screenshot({ path: `${SCREENS}/24-uebergabeprotokoll.png` });
   await statusWechseln(page, 'Mietstatus ändern', 'beendet', 'Status');
   // Mietende widerruft den Schlüssel automatisch.
   await expect(schluesselKarte).toContainText('widerrufen – Miete beendet');

@@ -171,6 +171,23 @@ export function Feld({
   );
 }
 
+/** Datei-Auswahl (z. B. Foto); nach einem Fehler muss die Datei neu gewählt werden. */
+export function Dateifeld({ annehmen, ...basis }: FeldBasis & { annehmen?: string }) {
+  const f = useFeld(basis.name);
+  return (
+    <Rahmen {...basis} fehler={f.fehler}>
+      <input
+        id={basis.name}
+        name={basis.name}
+        type="file"
+        accept={annehmen}
+        required={basis.pflicht}
+        {...aria(basis.name, f.fehler, basis.hinweis)}
+      />
+    </Rahmen>
+  );
+}
+
 export function Textfeld({ standard, ...basis }: FeldBasis & { standard?: string }) {
   const f = useFeld(basis.name, standard);
   return (

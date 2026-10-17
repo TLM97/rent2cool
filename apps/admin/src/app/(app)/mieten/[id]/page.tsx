@@ -11,6 +11,7 @@ import {
   UebergabePlakette,
 } from '../../../../components/bausteine';
 import { SchluesselKarte } from '../../../../components/fernzugriff';
+import { ProtokollKarte } from '../../../../components/protokoll';
 import { Verlauf } from '../../../../components/verlauf';
 import { Feld, FormularRahmen } from '../../../../components/formular';
 import { apiGet, apiGetOderNull } from '../../../../lib/api';
@@ -33,6 +34,7 @@ import type {
   Kunde,
   Liste,
   Miete,
+  Protokoll,
   Rechnung,
   Schluessel,
   Standort,
@@ -77,6 +79,10 @@ export default async function MieteDetail({
         apiGet<Liste<Befehl>>(`/v1/mieten/${id}/befehle`, { limit: 10, offset: 0 }),
       ])
     : [null, [], null];
+  // Übergabe-/Rückgabeprotokoll (D-014): Betrieb und QA.
+  const protokolle = hatRolle(rollen, 'ops', 'admin', 'qa_approver')
+    ? await apiGet<Protokoll[]>(`/v1/mieten/${id}/protokolle`)
+    : null;
   const standorte = new Map(
     (
       await Promise.all(
@@ -238,6 +244,15 @@ export default async function MieteDetail({
         />
       ) : null}
 
+      {protokolle ? (
+        <ProtokollKarte
+          mieteId={miete.id}
+          mieteStatus={miete.status}
+          protokolle={protokolle}
+          darfAendern={darfAendern}
+        />
+      ) : null}
+
       <section className="karte" aria-labelledby="rechnung-titel">
         <h2 id="rechnung-titel">Rechnung</h2>
         {rechnung ? (
@@ -311,11 +326,26 @@ export default async function MieteDetail({
         </section>
       ) : null}
       <Verlauf
-        entitaetIds={[miete.id, ...(schluessel ?? []).map((s) => s.id)]}
-        typen={['miete', 'miete_status', 'schluessel', 'schluessel_status']}
-        bezeichnungen={Object.fromEntries(
-          (schluessel ?? []).map((s) => [s.id, `Schlüssel ${s.fahrerName}`]),
-        )}
+        entitaetIds={[
+          miete.id,
+          ...(schluessel ?? []).map((s) => s.id),
+          ...(protokolle ?? []).map((p) => p.id),
+        ]}
+        typen={[
+          'miete',
+          'miete_status',
+          'schluessel',
+          'schluessel_status',
+          'protokoll',
+          'protokoll_status',
+        ]}
+        bezeichnungen={Object.fromEntries([
+          ...(schluessel ?? []).map((s) => [s.id, `Schlüssel ${s.fahrerName}`]),
+          ...(protokolle ?? []).map((p) => [
+            p.id,
+            `${p.art === 'uebergabe' ? 'Übergabe' : 'Rückgabe'}protokoll`,
+          ]),
+        ])}
       />
     </>
   );

@@ -1,5 +1,11 @@
 import type {
   BefehlStatus,
+  ChecklistenAntwort,
+  FotoPerspektive,
+  FotoStatus,
+  ProtokollArt,
+  ProtokollStatus,
+  Schaden,
   FahrzeugBefehl,
   Oeffnungsregeln,
   Position,
@@ -251,4 +257,34 @@ export interface Befehl {
   abgeschlossenAm: string | null;
   /** Fahrer, falls mit dessen Schlüssel gesendet. */
   fahrerName: string | null;
+}
+
+/** Foto im Übergabeprotokoll (`url` nur bei hochgeladenen, kurzlebig). */
+export interface ProtokollFoto {
+  id: string;
+  perspektive: FotoPerspektive;
+  status: FotoStatus;
+  contentType: string;
+  groesse: number;
+  verwurfGrund: string | null;
+  angefordertAm: string;
+  hochgeladenAm: string | null;
+  url: string | null;
+}
+
+/** Übergabe-/Rückgabeprotokoll (GET /v1/mieten/:id/protokolle). */
+export interface Protokoll {
+  id: string;
+  mieteId: string;
+  art: ProtokollArt;
+  status: ProtokollStatus;
+  kmStand: number | null;
+  checkliste: Record<string, ChecklistenAntwort> | null;
+  schaeden: Schaden[] | null;
+  erstelltVon: string;
+  erstelltAm: string;
+  abgeschlossenAm: string | null;
+  version: string;
+  fotos: ProtokollFoto[];
+  fehlt: string[];
 }

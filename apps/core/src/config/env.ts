@@ -43,6 +43,9 @@ export const envSchema = z.object({
   S3_SECRET_KEY: z.string(),
   S3_BUCKET: z.string(),
   S3_FORCE_PATH_STYLE: booleanish.default('true'),
+  // Adresse des Objektspeichers für Links an Browser/App (signierte Up-/Downloads),
+  // falls sie von S3_ENDPOINT abweicht (z. B. intern vs. öffentlich).
+  S3_OEFFENTLICHER_ENDPOINT: z.string().url().optional(),
 
   OIDC_ISSUER_URL: z.string().url(),
   OIDC_CLIENT_ID: z.string(),

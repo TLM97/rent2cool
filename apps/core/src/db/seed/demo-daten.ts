@@ -7,7 +7,12 @@
  * `demo.ts` über die echten Services (Audit, Regeln, Telematik-Verarbeitung).
  * Szenarien anpassen = diese Datei ändern.
  */
-import type { FahrzeugBefehl, Oeffnungsregeln, TelemetrieNachricht } from '@rent2cool/shared';
+import type {
+  FahrzeugBefehl,
+  Oeffnungsregeln,
+  ProtokollArt,
+  TelemetrieNachricht,
+} from '@rent2cool/shared';
 
 export const DEMO_AKTEUR_ID = 'system:demo-daten';
 /** Erkennungszeichen: existiert dieser Kunde, sind die Demo-Daten schon geladen. */
@@ -226,6 +231,8 @@ export interface DemoMiete {
   rechnung?: { netto: number; status: 'entwurf' | 'gestellt' | 'bezahlt' };
   /** Digitaler Schlüssel für den Fahrer und Befehle, die er damit sendet. */
   digitalerSchluessel?: { befehle: readonly FahrzeugBefehl[] };
+  /** Übergabe-/Rückgabeprotokolle mit Platzhalterfotos (abgeschlossen). */
+  protokolle?: readonly { art: ProtokollArt; kmStand: number; schaden?: string }[];
 }
 
 export const DEMO_MIETEN: readonly DemoMiete[] = [
@@ -262,6 +269,10 @@ export const DEMO_MIETEN: readonly DemoMiete[] = [
     endeStunden: -2 * 24,
     status: 'beendet',
     rueckgabeAbstandM: 450,
+    // Rückgabe mit neuem Schaden – dokumentiert mit Detailfoto.
+    protokolle: [
+      { art: 'rueckgabe', kmStand: 48_210, schaden: 'Kratzer an der Heckklappe, ca. 10 cm (Demo)' },
+    ],
     rechnung: { netto: 219, status: 'entwurf' },
   },
   // Läuft gerade (seit gestern früh); vor zwei Stunden kurz zu warm → offene Alarme.
@@ -277,6 +288,8 @@ export const DEMO_MIETEN: readonly DemoMiete[] = [
     // Entriegeln und Verriegeln klappen; die Wegfahrsperre darf der Fahrer nicht
     // steuern – der Versuch steht abgelehnt im Protokoll.
     digitalerSchluessel: { befehle: ['entriegeln', 'verriegeln', 'wegfahrsperre_aus'] },
+    // Übergabe hat der Fahrer in der App protokolliert.
+    protokolle: [{ art: 'uebergabe', kmStand: 51_034 }],
     ausreisser: { abStunde: 28, dauerMin: 14, spitzeC: 8.7 },
   },
   // Künftige Buchungen.

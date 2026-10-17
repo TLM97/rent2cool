@@ -20,6 +20,9 @@ const config: NextConfig = {
   // Linting läuft repo-weit über `pnpm lint`.
   eslint: { ignoreDuringBuilds: true },
   poweredByHeader: false,
+  // Fotos im Übergabeprotokoll (Ausnahmeprozess mit Personal) laufen über eine
+  // Server-Aktion; Obergrenze wie im Kern (FOTO_MAX_BYTES) plus Formularanteil.
+  experimental: { serverActions: { bodySizeLimit: '16mb' } },
 };
 
 export default config;

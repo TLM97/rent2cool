@@ -701,3 +701,46 @@ table.oeffnungszeiten td {
 .felder > .tabelle-huelle.breit {
   grid-column: 1 / -1;
 }
+
+/* Übergabeprotokoll: Fotoraster und Checklistenzeilen */
+.protokoll + .protokoll {
+  border-top: 1px solid var(--rand);
+  margin-top: 1.5rem;
+  padding-top: 0.5rem;
+}
+.fotos {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+.fotos figure {
+  margin: 0;
+}
+.fotos img,
+.fotos .foto-platzhalter {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--rand);
+  background: var(--bg);
+}
+.fotos figcaption {
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+.felder > .checkpunkt {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 0 1rem;
+}
+@media (max-width: 640px) {
+  .felder > .checkpunkt {
+    grid-template-columns: 1fr;
+  }
+}
