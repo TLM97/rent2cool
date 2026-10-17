@@ -37,3 +37,6 @@ logs/
 
 # Docker volumes (bind mounts for local data)
 .docker-data/
+
+# Testberichte
+**/integration-ergebnis.json

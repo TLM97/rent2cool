@@ -87,4 +87,13 @@ jobs:
         run: pnpm --filter @rent2cool/shared build
 
       - name: Integrationstests Kern
-        run: pnpm --filter @rent2cool/core test:integration
+        run: >-
+          pnpm --filter @rent2cool/core test:integration
+          --reporter=default --reporter=json --outputFile=integration-ergebnis.json
+
+      # Schutz gegen stilles Überspringen (describe.skipIf): kein Test darf
+      # ausgelassen sein, und es müssen tatsächlich Integrationstests gelaufen sein.
+      - name: Keine übersprungenen Tests
+        run: |
+          jq '{numTotalTests, numPassedTests, numFailedTests, numPendingTests}' apps/core/integration-ergebnis.json
+          jq -e '.numPendingTests == 0 and .numFailedTests == 0 and .numPassedTests > 50' apps/core/integration-ergebnis.json
