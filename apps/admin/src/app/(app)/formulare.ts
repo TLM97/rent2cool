@@ -19,8 +19,10 @@ import {
   kundeAendernSchema,
   kundeErstellenSchema,
   mieteErstellenSchema,
-  sensorTauschSchema,
   rechnungErstellenSchema,
+  sensorTauschSchema,
+  standortAendernSchema,
+  standortErstellenSchema,
 } from '@rent2cool/shared';
 import { apiPatch, apiPost } from '../../lib/api';
 import { ApiFehler } from '../../lib/api-client';
@@ -34,6 +36,7 @@ import {
   werteAus,
   type FormularZustand,
 } from '../../lib/formular';
+import { regelnAusFormular } from '../../lib/oeffnungszeiten';
 import { istUuid } from '../../lib/seiten';
 
 const PRUEFEN = 'Bitte die markierten Felder prüfen.';
@@ -102,6 +105,7 @@ export async function erstelleFahrzeug(
   const roh = {
     kennzeichen: text(fd, 'kennzeichen') ?? '',
     vin: text(fd, 'vin'),
+    standortId: text(fd, 'standortId'),
     zulGesamtmasseKg: text(fd, 'zulGesamtmasseKg') ?? '',
     benoetigteFuehrerscheinklasse: text(fd, 'benoetigteFuehrerscheinklasse') ?? 'B',
     hatFahrtenschreiber: haken(fd, 'hatFahrtenschreiber'),
@@ -145,6 +149,7 @@ export async function aendereFahrzeug(_z: FormularZustand, fd: FormData): Promis
     benoetigteFuehrerscheinklasse: text(fd, 'benoetigteFuehrerscheinklasse') ?? '',
     hatFahrtenschreiber: haken(fd, 'hatFahrtenschreiber'),
     standardTemperaturprofil: leer(fd, 'standardTemperaturprofil'),
+    standortId: leer(fd, 'standortId'),
   };
   const p = pruefe(fahrzeugAendernSchema, roh, werte);
   if (!p.ok) return p.zustand;
@@ -226,6 +231,65 @@ export async function tauscheSensor(_z: FormularZustand, fd: FormData): Promise<
       ? 'Sensor getauscht und kalibriert.'
       : 'Sensor getauscht. Ohne Kalibrierung ist das Fahrzeug nicht buchbar.',
   );
+}
+
+// --- Standort (D-011) ---
+function standortRoh(fd: FormData) {
+  return {
+    name: text(fd, 'name') ?? '',
+    strasse: leer(fd, 'strasse'),
+    plz: leer(fd, 'plz'),
+    ort: leer(fd, 'ort'),
+    land: text(fd, 'land') ?? 'DE',
+    region: leer(fd, 'region'),
+    geofenceLat: leer(fd, 'geofenceLat'),
+    geofenceLng: leer(fd, 'geofenceLng'),
+    geofenceRadiusM: leer(fd, 'geofenceRadiusM'),
+  };
+}
+
+export async function erstelleStandort(
+  _z: FormularZustand,
+  fd: FormData,
+): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const oz = regelnAusFormular(werte);
+  if (!oz.ok) return { fehler: PRUEFEN, feldFehler: oz.feldFehler, werte };
+  const p = pruefe(
+    standortErstellenSchema,
+    { ...standortRoh(fd), oeffnungsregeln: oz.regeln },
+    werte,
+  );
+  if (!p.ok) return p.zustand;
+  let id: string;
+  try {
+    ({ id } = await apiPost<{ id: string }>('/v1/standorte', p.daten));
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(`/standorte/${id}`, 'Standort angelegt.');
+}
+
+export async function aendereStandort(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const id = text(fd, 'id') ?? '';
+  if (!istUuid(id)) return { fehler: 'Standort fehlt.', werte };
+  const oz = regelnAusFormular(werte);
+  if (!oz.ok) return { fehler: PRUEFEN, feldFehler: oz.feldFehler, werte };
+  const roh = {
+    version: text(fd, 'version') ?? '',
+    ...standortRoh(fd),
+    oeffnungsregeln: oz.regeln,
+  };
+  const p = pruefe(standortAendernSchema, roh, werte);
+  if (!p.ok) return p.zustand;
+  let r: Aenderung;
+  try {
+    r = await apiPatch<Aenderung>(`/v1/standorte/${id}`, p.daten);
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(`/standorte/${id}`, aenderungsMeldung(r));
 }
 
 // --- Kunde & Fahrer ---
@@ -337,6 +401,8 @@ export async function erstelleMiete(_z: FormularZustand, fd: FormData): Promise<
     kundeId: text(fd, 'kundeId') ?? '',
     fahrzeugId: text(fd, 'fahrzeugId') ?? '',
     fahrerId: text(fd, 'fahrerId'),
+    standortAbholId: text(fd, 'standortAbholId'),
+    standortRueckgabeId: text(fd, 'standortRueckgabeId'),
     startGeplant: berlinLokalZuIso(text(fd, 'startGeplant')) ?? '',
     endeGeplant: berlinLokalZuIso(text(fd, 'endeGeplant')) ?? '',
     auslandsfahrtGeplant: haken(fd, 'auslandsfahrtGeplant'),

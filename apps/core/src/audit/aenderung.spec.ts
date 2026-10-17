@@ -23,6 +23,21 @@ describe('ermittleAenderungen', () => {
     expect(r.neu).toEqual({ bis: '2031-01-31T22:59:00.000Z' });
   });
 
+  it('vergleicht Objekte (jsonb) inhaltlich, unabhängig von der Schlüsselreihenfolge', () => {
+    const gespeichert = {
+      woche: { di: [{ bis: '22:00', von: '06:00' }], mo: [] },
+      zeitzone: 'Europe/Berlin',
+    };
+    const eingabe = {
+      zeitzone: 'Europe/Berlin',
+      woche: { mo: [], di: [{ von: '06:00', bis: '22:00' }] },
+    };
+    expect(ermittleAenderungen({ r: gespeichert }, { r: eingabe }).felder).toEqual([]);
+    const anders = { ...eingabe, woche: { mo: [], di: [{ von: '07:00', bis: '22:00' }] } };
+    expect(ermittleAenderungen({ r: gespeichert }, { r: anders }).felder).toEqual(['r']);
+    expect(ermittleAenderungen({ r: gespeichert }, { r: null }).neu).toEqual({ r: null });
+  });
+
   it('unterscheidet Wahrheitswerte und Zahlen', () => {
     expect(ermittleAenderungen({ a: false, m: 3500 }, { a: true, m: 3500 }).felder).toEqual(['a']);
   });

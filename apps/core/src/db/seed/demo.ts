@@ -28,6 +28,7 @@ import { FahrzeugService } from '../../fahrzeug/fahrzeug.service';
 import { KundeService } from '../../kunde/kunde.service';
 import { MieteService } from '../../miete/miete.service';
 import { RechnungService } from '../../rechnung/rechnung.service';
+import { StandortService } from '../../standort/standort.service';
 import { verarbeiteNachricht } from '../../telemetry/processor';
 import { createDbClient, type Database } from '../client';
 import { alarm, kunde, mandant, miete } from '../schema';
@@ -37,6 +38,7 @@ import {
   DEMO_KUNDEN,
   DEMO_MARKER_KUNDE,
   DEMO_MIETEN,
+  DEMO_STANDORTE,
   relativ,
   temperaturVerlauf,
 } from './demo-daten';
@@ -53,6 +55,7 @@ export interface DemoErgebnis {
   messwerte: number;
   alarme: number;
   rechnungen: number;
+  standorte: number;
 }
 
 export async function ladeDemoDaten(
@@ -70,6 +73,7 @@ export async function ladeDemoDaten(
     messwerte: 0,
     alarme: 0,
     rechnungen: 0,
+    standorte: 0,
   };
 
   const [vorhanden] = await db
@@ -107,10 +111,30 @@ export async function ladeDemoDaten(
   const alarme = new AlarmService(db);
   const abweichungen = new AbweichungService(db);
 
+  // --- Standorte (D-011) ---
+  const standortIds = new Map<string, string>();
+  const standorte = new StandortService(db);
+  for (const st of DEMO_STANDORTE) {
+    const { id } = await standorte.erstelle(akteur, {
+      name: st.name,
+      strasse: st.strasse,
+      plz: st.plz,
+      ort: st.ort,
+      land: 'DE',
+      geofenceLat: st.geofence.lat,
+      geofenceLng: st.geofence.lng,
+      geofenceRadiusM: st.geofence.radiusM,
+      oeffnungsregeln: st.oeffnungsregeln,
+    });
+    standortIds.set(st.schluessel, id);
+    ergebnis.standorte++;
+  }
+
   // --- Fahrzeuge mit Kühlaufbau, Sensor und Kalibrierung ---
   const fahrzeugIds = new Map<string, string>();
   for (const f of DEMO_FAHRZEUGE) {
     const { id } = await fahrzeuge.erstelle(akteur, {
+      standortId: standortIds.get(f.standort),
       kennzeichen: f.kennzeichen,
       vin: `DEMO${f.kennzeichen.replace(/\D/g, '').padStart(13, '0')}`,
       zulGesamtmasseKg: f.zulGesamtmasseKg,
@@ -181,7 +205,10 @@ export async function ladeDemoDaten(
     const fahrzeugId = fahrzeugIds.get(m.fahrzeug)!;
     const kundeId = kundenIds.get(m.kunde)!;
     const fahrerId = fahrerIds.get(m.kunde)![m.fahrer]!;
-    const profilName = DEMO_FAHRZEUGE.find((f) => f.schluessel === m.fahrzeug)!.profil;
+    const demoFahrzeug = DEMO_FAHRZEUGE.find((f) => f.schluessel === m.fahrzeug)!;
+    const profilName = demoFahrzeug.profil;
+    // Abholung und Rückgabe am Heimatstandort des Fahrzeugs (D-011).
+    const standortId = standortIds.get(demoFahrzeug.standort)!;
     const start = relativ(jetzt, m.startStunden);
     const ende = relativ(jetzt, m.endeStunden);
 
@@ -193,6 +220,8 @@ export async function ladeDemoDaten(
         fahrerId,
         auslandsfahrtGeplant: false,
         temperaturprofil: profilName,
+        standortAbholId: standortId,
+        standortRueckgabeId: standortId,
         startGeplant: start.toISOString(),
         endeGeplant: ende.toISOString(),
       });
@@ -209,6 +238,8 @@ export async function ladeDemoDaten(
           kundeId,
           fahrzeugId,
           fahrerId,
+          standortAbholId: standortId,
+          standortRueckgabeId: standortId,
           startGeplant: start,
           endeGeplant: ende,
           startIst: start,

@@ -34,6 +34,8 @@ export const verfuegbarAbfrageSchema = z
     fahrerKlasse: z.string().max(5).optional(),
     /** `true` bei geplanter Auslandsfahrt (D-006). Bewusst kein coerce: „false“ wäre sonst wahr. */
     fahrtenschreiber: z.enum(['true', 'false']).optional(),
+    /** Abholstandort: nur Fahrzeuge mit diesem Heimatstandort. */
+    standortId: z.string().uuid().optional(),
     limit: z.coerce.number().int().min(1).max(50).default(20),
     offset: z.coerce.number().int().min(0).default(0),
   })

@@ -12,6 +12,7 @@ const GRUPPEN: { titel: string; eintraege: { href: string; text: string }[] }[] 
       { href: '/kunden', text: 'Kunden & Fahrer' },
       { href: '/mieten', text: 'Mieten' },
       { href: '/rechnungen', text: 'Rechnungen' },
+      { href: '/standorte', text: 'Standorte' },
     ],
   },
   {

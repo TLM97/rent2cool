@@ -1,4 +1,10 @@
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { and, desc, eq, inArray, max, sql } from 'drizzle-orm';
 import {
   istFahrzeugStatus,
@@ -17,9 +23,10 @@ import { protokolliereAnlage, schreibeAudit } from '../audit/audit.service';
 import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Database } from '../db/client';
 import { DB } from '../db/db.module';
-import { aggregat, fahrzeug, kalibrierung, sensor } from '../db/schema';
+import { aggregat, fahrzeug, kalibrierung, sensor, standort } from '../db/schema';
 import { istPgFehler, PG_FEHLER } from '../db/fehler';
 import { enthaeltMuster } from '../db/suche';
+import { standortNutzbar } from '../standort/standort.service';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 import { bewerteBuchbarkeit, type BuchbarkeitErgebnis, type SensorFrist } from './fristen';
 import type { FahrzeugAendern, FahrzeugErstellen, KalibrierungEingabe, SensorTausch } from './dto';
@@ -66,6 +73,10 @@ export class FahrzeugService {
   async erstelle(principal: Principal, p: FahrzeugErstellen): Promise<{ id: string }> {
     const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
     return this.db.transaction(async (tx) => {
+      if (p.standortId) {
+        const grund = await standortNutzbar(tx, mandant, p.standortId, 'Heimatstandort');
+        if (grund) throw new BadRequestException(grund);
+      }
       let fz: typeof fahrzeug.$inferSelect | undefined;
       try {
         [fz] = await tx
@@ -148,6 +159,10 @@ export class FahrzeugService {
         throw new NotFoundException('Fahrzeug nicht gefunden');
       }
       pruefeVersion(vorher.aktualisiertAm, version);
+      if (eingabe.standortId && eingabe.standortId !== vorher.standortId) {
+        const grund = await standortNutzbar(tx, mandant, eingabe.standortId, 'Heimatstandort');
+        if (grund) throw new BadRequestException(grund);
+      }
       const a = ermittleAenderungen(vorher, eingabe);
       if (a.felder.length === 0) {
         return { id, version: versionVon(vorher.aktualisiertAm), geaendert: [] };
@@ -180,17 +195,21 @@ export class FahrzeugService {
   async liste(
     mandantId: string | undefined,
     opts: { status?: FahrzeugStatus; standortId?: string; limit: number; offset: number },
-  ): Promise<{ eintraege: (typeof fahrzeug.$inferSelect)[]; gesamt: number }> {
+  ): Promise<{
+    eintraege: (typeof fahrzeug.$inferSelect & { standortName: string | null })[];
+    gesamt: number;
+  }> {
     const mandant = mandantId ?? PLACEHOLDER_MANDANT_ID;
     const filter = and(
       eq(fahrzeug.mandantId, mandant),
       opts.status ? eq(fahrzeug.status, opts.status) : undefined,
       opts.standortId ? eq(fahrzeug.standortId, opts.standortId) : undefined,
     );
-    const [eintraege, [zaehler]] = await Promise.all([
+    const [zeilen, [zaehler]] = await Promise.all([
       this.db
-        .select()
+        .select({ f: fahrzeug, standortName: standort.name })
         .from(fahrzeug)
+        .leftJoin(standort, eq(fahrzeug.standortId, standort.id))
         .where(filter)
         .orderBy(desc(fahrzeug.erstelltAm))
         .limit(opts.limit)
@@ -200,7 +219,10 @@ export class FahrzeugService {
         .from(fahrzeug)
         .where(filter),
     ]);
-    return { eintraege, gesamt: zaehler?.n ?? 0 };
+    return {
+      eintraege: zeilen.map((z) => ({ ...z.f, standortName: z.standortName })),
+      gesamt: zaehler?.n ?? 0,
+    };
   }
 
   async holeAkte(id: string): Promise<{
@@ -441,6 +463,8 @@ export class FahrzeugService {
       suche?: string;
       klassen?: readonly string[];
       fahrtenschreiber?: boolean;
+      /** Heimatstandort = Abholstandort (D-011). */
+      standortId?: string;
       limit: number;
       offset: number;
     },
@@ -475,6 +499,7 @@ export class FahrzeugService {
         ${muster ? sql`and f.kennzeichen ilike ${muster}` : sql``}
         ${o.klassen && o.klassen.length > 0 ? sql`and f.benoetigte_fuehrerscheinklasse in ${o.klassen}` : sql``}
         ${o.fahrtenschreiber ? sql`and f.hat_fahrtenschreiber` : sql``}
+        ${o.standortId ? sql`and f.standort_id = ${o.standortId}` : sql``}
         and not exists (
           select 1 from miete m
           where m.fahrzeug_id = f.id

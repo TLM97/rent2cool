@@ -74,6 +74,8 @@ export const fahrzeugAendernSchema = z.object({
   benoetigteFuehrerscheinklasse: pflicht('Klasse fehlt').optional(),
   hatFahrtenschreiber: z.boolean().optional(),
   standardTemperaturprofil: leerbar(),
+  /** Heimatstandort (D-011); `null` = keiner. */
+  standortId: z.string().uuid('Standort auswählen').nullable().optional(),
 });
 export type FahrzeugAendern = z.infer<typeof fahrzeugAendernSchema>;
 

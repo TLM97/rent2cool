@@ -7,7 +7,7 @@
  */
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { apiPost } from '../../lib/api';
+import { apiPatch, apiPost } from '../../lib/api';
 import { ApiFehler } from '../../lib/api-client';
 import { statusLabel } from '../../lib/format';
 import { istUuid } from '../../lib/seiten';
@@ -104,4 +104,23 @@ export async function aendereMieteStatus(formData: FormData): Promise<void> {
 
 export async function aendereRechnungStatus(formData: FormData): Promise<void> {
   await statusWechsel(formData, '/v1/rechnungen', '/rechnungen');
+}
+
+/** Standort aktivieren/deaktivieren (Kern prüft, ob er noch genutzt wird). */
+export async function setzeStandortAktiv(formData: FormData): Promise<void> {
+  const id = String(formData.get('id') ?? '');
+  const version = String(formData.get('version') ?? '');
+  const aktiv = formData.get('aktiv') === 'true';
+  const zurueck = istUuid(id) ? `/standorte/${id}` : '/standorte';
+  if (!istUuid(id)) redirect(mitMeldung('/standorte', 'fehler', 'Ungültige Eingabe'));
+  let ziel: string;
+  try {
+    await apiPatch(`/v1/standorte/${id}`, { version, aktiv });
+    revalidatePath('/', 'layout');
+    ziel = mitMeldung(zurueck, 'erfolg', aktiv ? 'Standort aktiviert.' : 'Standort deaktiviert.');
+  } catch (e) {
+    if (!(e instanceof ApiFehler)) throw e;
+    ziel = mitMeldung(zurueck, 'fehler', e.message);
+  }
+  redirect(ziel);
 }

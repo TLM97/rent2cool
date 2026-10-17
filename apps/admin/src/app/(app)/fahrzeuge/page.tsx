@@ -6,7 +6,7 @@ import { apiGet } from '../../../lib/api';
 import { holeSitzung } from '../../../lib/sitzung';
 import { hatRolle } from '../../../lib/token';
 import { formatDatum } from '../../../lib/format';
-import { blattAus, erster, type SuchParameter } from '../../../lib/seiten';
+import { blattAus, erster, istUuid, type SuchParameter } from '../../../lib/seiten';
 import type { Fahrzeug, Liste } from '../../../lib/typen';
 
 export const metadata: Metadata = { title: 'Fahrzeuge' };
@@ -18,9 +18,15 @@ export default async function Fahrzeuge({
 }) {
   const params = await searchParams;
   const status = erster(params.status);
+  const standortId = erster(params.standortId);
   const blatt = blattAus(params);
   const [daten, sitzung] = await Promise.all([
-    apiGet<Liste<Fahrzeug>>('/v1/fahrzeuge', { status, limit: blatt.limit, offset: blatt.offset }),
+    apiGet<Liste<Fahrzeug>>('/v1/fahrzeuge', {
+      status,
+      standortId: standortId && istUuid(standortId) ? standortId : undefined,
+      limit: blatt.limit,
+      offset: blatt.offset,
+    }),
     holeSitzung(),
   ]);
   const darfAnlegen = hatRolle(sitzung?.rollen ?? [], 'ops', 'admin');
@@ -40,6 +46,11 @@ export default async function Fahrzeuge({
       />
       <section className="karte">
         <StatusFilter pfad="/fahrzeuge" aktuell={status} optionen={FAHRZEUG_STATUS} />
+        {standortId ? (
+          <p className="hinweis info">
+            Nur Fahrzeuge eines Standorts. <Link href="/fahrzeuge">Filter entfernen</Link>
+          </p>
+        ) : null}
         {daten.eintraege.length === 0 ? (
           <Leer>Keine Fahrzeuge für diesen Filter.</Leer>
         ) : (
@@ -56,6 +67,7 @@ export default async function Fahrzeuge({
                   </th>
                   <th scope="col">Fahrtenschreiber</th>
                   <th scope="col">Profil</th>
+                  <th scope="col">Standort</th>
                   <th scope="col">angelegt</th>
                 </tr>
               </thead>
@@ -76,6 +88,13 @@ export default async function Fahrzeuge({
                     <td>
                       {f.standardTemperaturprofil ? (
                         `${f.standardTemperaturprofil} °C`
+                      ) : (
+                        <span className="leise">–</span>
+                      )}
+                    </td>
+                    <td>
+                      {f.standortId && f.standortName ? (
+                        <Link href={`/standorte/${f.standortId}`}>{f.standortName}</Link>
                       ) : (
                         <span className="leise">–</span>
                       )}

@@ -686,3 +686,18 @@ tr[aria-current="true"] td {
 .eigenschaften + .formular {
   margin-top: 16px;
 }
+
+.zeitfeld {
+  display: inline-flex;
+  flex-direction: column;
+}
+.zeitfeld input {
+  width: auto;
+}
+table.oeffnungszeiten td {
+  white-space: nowrap;
+}
+
+.felder > .tabelle-huelle.breit {
+  grid-column: 1 / -1;
+}

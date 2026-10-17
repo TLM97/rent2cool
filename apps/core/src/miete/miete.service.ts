@@ -18,10 +18,11 @@ import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Database, Transaktion } from '../db/client';
 import { DB } from '../db/db.module';
 import { fahrzeug, kunde, miete } from '../db/schema';
-import { istPgFehler, PG_FEHLER } from '../db/fehler';
+import { istPgFehler, mitWiederholung, PG_FEHLER } from '../db/fehler';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 import { FahrzeugService } from '../fahrzeug/fahrzeug.service';
 import { KundeService } from '../kunde/kunde.service';
+import { standortNutzbar } from '../standort/standort.service';
 import { BerichtService } from '../bericht/bericht.service';
 import type { MieteErstellen } from './dto';
 
@@ -49,9 +50,20 @@ export class MieteService {
       auslandsfahrtGeplant: boolean;
       startGeplant: Date;
       endeGeplant: Date;
+      standortAbholId?: string;
+      standortRueckgabeId?: string;
     },
   ): Promise<string[]> {
     const gruende: string[] = [];
+
+    // Übergabe- und Rückgabeort: Standort des Mandanten und aktiv (D-011).
+    for (const [id, rolle] of [
+      [p.standortAbholId, 'Abholung'],
+      [p.standortRueckgabeId, 'Rückgabe'],
+    ] as const) {
+      const grund = id ? await standortNutzbar(this.db, mandant, id, rolle) : undefined;
+      if (grund) gruende.push(grund);
+    }
 
     // Kunde muss freigegeben sein (D-010).
     const [k] = await this.db
@@ -126,15 +138,16 @@ export class MieteService {
     }
 
     // Idempotenz (D-003): gleicher Key -> bestehende Miete zurückgeben.
-    if (p.idempotencyKey) {
-      const [vorhanden] = await this.db
+    const vorhandene = async (ausfuehrer: Database | Transaktion = this.db) => {
+      if (!p.idempotencyKey) return undefined;
+      const [v] = await ausfuehrer
         .select({ id: miete.id, status: miete.status })
         .from(miete)
         .where(and(eq(miete.mandantId, mandant), eq(miete.idempotencyKey, p.idempotencyKey)));
-      if (vorhanden) {
-        return { id: vorhanden.id, status: vorhanden.status as MieteStatus, idempotent: true };
-      }
-    }
+      return v ? { id: v.id, status: v.status as MieteStatus, idempotent: true } : undefined;
+    };
+    const schonDa = await vorhandene();
+    if (schonDa) return schonDa;
 
     const gruende = await this.pruefeBuchung(mandant, {
       kundeId: p.kundeId,
@@ -143,49 +156,60 @@ export class MieteService {
       auslandsfahrtGeplant: p.auslandsfahrtGeplant,
       startGeplant: start,
       endeGeplant: ende,
+      standortAbholId: p.standortAbholId,
+      standortRueckgabeId: p.standortRueckgabeId,
     });
     if (gruende.length > 0) {
+      // Eine gleichzeitige Wiederholung derselben Buchung sieht die erste als
+      // „Überschneidung“ – dann die vorhandene zurückgeben statt abzulehnen.
+      const inzwischen = await vorhandene();
+      if (inzwischen) return inzwischen;
       throw new ConflictException({ fehler: 'Buchung abgelehnt', gruende });
     }
 
     try {
-      return await this.db.transaction(async (tx) => {
-        const [row] = await tx
-          .insert(miete)
-          .values({
-            mandantId: mandant,
-            kundeId: p.kundeId,
-            fahrzeugId: p.fahrzeugId,
-            fahrerId: p.fahrerId ?? null,
-            standortAbholId: p.standortAbholId ?? null,
-            standortRueckgabeId: p.standortRueckgabeId ?? null,
-            region: p.region ?? null,
-            startGeplant: start,
-            endeGeplant: ende,
-            tarif: p.tarif ?? null,
-            auslandsfahrtGeplant: p.auslandsfahrtGeplant,
-            temperaturprofil: p.temperaturprofil ?? null,
-            status: 'bestaetigt',
-            idempotencyKey: p.idempotencyKey ?? null,
-          })
-          .returning();
-        await protokolliereAnlage(tx, principal, 'miete', row!.id, row);
-        return { id: row!.id, status: 'bestaetigt' as const, idempotent: false };
-      });
+      // Mehrere Deadlock-Wiederholungen nur als Rückfall: Die Sperre je Fahrzeug
+      // unten verhindert Deadlocks gleichzeitiger Buchungen desselben Fahrzeugs.
+      return await mitWiederholung(() =>
+        this.db.transaction(async (tx) => {
+          // Buchungen desselben Fahrzeugs nacheinander (nur innerhalb der Transaktion).
+          // Ohne diese Sperre können sich gleichzeitige Prüfungen der
+          // Überschneidungs-Regel gegenseitig blockieren (Deadlock, ~1 s Wartezeit).
+          await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${p.fahrzeugId}, 0))`);
+          const innen = await vorhandene(tx);
+          if (innen) return innen;
+          const [row] = await tx
+            .insert(miete)
+            .values({
+              mandantId: mandant,
+              kundeId: p.kundeId,
+              fahrzeugId: p.fahrzeugId,
+              fahrerId: p.fahrerId ?? null,
+              standortAbholId: p.standortAbholId ?? null,
+              standortRueckgabeId: p.standortRueckgabeId ?? null,
+              region: p.region ?? null,
+              startGeplant: start,
+              endeGeplant: ende,
+              tarif: p.tarif ?? null,
+              auslandsfahrtGeplant: p.auslandsfahrtGeplant,
+              temperaturprofil: p.temperaturprofil ?? null,
+              status: 'bestaetigt',
+              idempotencyKey: p.idempotencyKey ?? null,
+            })
+            .returning();
+          await protokolliereAnlage(tx, principal, 'miete', row!.id, row);
+          return { id: row!.id, status: 'bestaetigt' as const, idempotent: false };
+        }),
+      );
     } catch (e: unknown) {
       // Gleichzeitige Buchung hat das Fahrzeug im Zeitraum zuerst bekommen (DB-Regel).
       if (istPgFehler(e, PG_FEHLER.AUSSCHLUSS, UEBERSCHNEIDUNG_REGEL)) {
         throw new ConflictException({ fehler: 'Buchung abgelehnt', gruende: [UEBERSCHNEIDUNG] });
       }
-      // Gleichzeitige Wiederholung mit demselben idempotency_key: bestehende Miete zurückgeben.
-      if (p.idempotencyKey && istPgFehler(e, PG_FEHLER.EINDEUTIG, 'uq_miete_idempotency')) {
-        const [vorhanden] = await this.db
-          .select({ id: miete.id, status: miete.status })
-          .from(miete)
-          .where(and(eq(miete.mandantId, mandant), eq(miete.idempotencyKey, p.idempotencyKey)));
-        if (vorhanden) {
-          return { id: vorhanden.id, status: vorhanden.status as MieteStatus, idempotent: true };
-        }
+      // Gleichzeitige Wiederholung mit demselben idempotency_key (anderes Fahrzeug o. Ä.).
+      if (istPgFehler(e, PG_FEHLER.EINDEUTIG, 'uq_miete_idempotency')) {
+        const inzwischen = await vorhandene();
+        if (inzwischen) return inzwischen;
       }
       throw e;
     }

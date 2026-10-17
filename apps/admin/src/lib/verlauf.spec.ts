@@ -83,6 +83,16 @@ describe('Verlauf', () => {
     expect(formatWert('hatFahrtenschreiber', true)).toBe('ja');
     expect(formatWert('zulGesamtmasseKg', 7490)).toBe('7.490');
     expect(formatWert('ort', null)).toBe('–');
+    expect(formatWert('oeffnungsregeln', null)).toBe('rund um die Uhr');
+    expect(
+      formatWert('oeffnungsregeln', {
+        zeitzone: 'Europe/Berlin',
+        woche: { mo: [{ von: '06:00', bis: '22:00' }] },
+      }),
+    ).toBe('Montag: 06:00–22:00');
+    expect(feldaenderungen({ aktiv: true }, { aktiv: false })).toEqual([
+      { feld: 'aktiv', alt: 'ja', neu: 'nein' },
+    ]);
     expect(feldaenderungen({ ort: 'A', plz: '1' }, { ort: 'B', plz: '1' })).toEqual([
       { feld: 'Ort', alt: 'A', neu: 'B' },
     ]);

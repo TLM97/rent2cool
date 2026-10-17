@@ -347,6 +347,17 @@ als eine Abfrage mit Blättern im Kern und trägt damit auch bei 4.000
 Fahrzeugen (D-003). Läuft eine Kalibrierung während der Miete ab, zeigt die
 Trefferliste einen Hinweis.
 
+### Standorte (D-011)
+
+Unter „Standorte“ pflegt die Rolle `admin` Übergabe- und Rückgabeorte: Adresse,
+Geofence (Mittelpunkt + Radius) und Öffnungszeiten als Wochenplan in
+Ortszeit (bis zu zwei Zeitfenster je Tag, „rund um die Uhr“ für kontaktlose
+Übergabe, D-014). Gelöscht wird nicht; deaktivieren geht nur, wenn kein
+Fahrzeug und keine laufende oder künftige Miete den Standort mehr nutzt.
+Fahrzeuge haben einen Heimatstandort; in der Buchung wählt man den Abhol- und
+Rückgabestandort, die Suche zeigt dann nur dessen Fahrzeuge und weist auf
+Abholung oder Rückgabe außerhalb der Öffnungszeiten hin.
+
 ### Stammdaten bearbeiten
 
 Kunde, Fahrer und Fahrzeug lassen sich ändern (`PATCH` im Kern). Anlegen und

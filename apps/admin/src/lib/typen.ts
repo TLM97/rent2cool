@@ -1,3 +1,5 @@
+import type { Oeffnungsregeln } from '@rent2cool/shared';
+
 /**
  * Antwortformen der Kern-API, wie die Oberfläche sie nutzt (JSON: Zeitpunkte
  * als ISO-Strings). Bewusst schmal – nur die angezeigten Felder.
@@ -22,6 +24,8 @@ export interface Fahrzeug {
   status: string;
   erstelltAm: string;
   aktualisiertAm: string;
+  /** Nur in Listen (Join im Kern). */
+  standortName?: string | null;
 }
 
 export interface Sensor {
@@ -88,6 +92,8 @@ export interface Miete {
   kundeId: string;
   fahrzeugId: string;
   fahrerId: string | null;
+  standortAbholId: string | null;
+  standortRueckgabeId: string | null;
   startGeplant: string;
   endeGeplant: string;
   startIst: string | null;
@@ -175,4 +181,24 @@ export interface VerfuegbaresFahrzeug {
   zulGesamtmasseKg: number;
   /** Frühestes Ablaufdatum der Kalibrierungen aller aktiven Sensoren. */
   kalibriertBis: string;
+}
+
+/** Standort (D-011). */
+export interface Standort {
+  id: string;
+  name: string;
+  strasse: string | null;
+  plz: string | null;
+  ort: string | null;
+  land: string;
+  region: string | null;
+  geofenceLat: number | null;
+  geofenceLng: number | null;
+  geofenceRadiusM: number | null;
+  oeffnungsregeln: Oeffnungsregeln | null;
+  aktiv: boolean;
+  erstelltAm: string;
+  aktualisiertAm: string;
+  /** Nur in der Liste. */
+  fahrzeugAnzahl?: number;
 }

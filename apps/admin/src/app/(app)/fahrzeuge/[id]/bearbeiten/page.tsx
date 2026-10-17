@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { Leer, Seitenkopf } from '../../../../../components/bausteine';
 import { FormularRahmen } from '../../../../../components/formular';
 import { FahrzeugFelder } from '../../../../../components/stammdaten';
+import { standorteFuerAuswahl } from '../../../../../lib/standorte';
 import { apiGetOderNull } from '../../../../../lib/api';
 import { istUuid } from '../../../../../lib/seiten';
 import { holeSitzung } from '../../../../../lib/sitzung';
@@ -23,6 +24,7 @@ export default async function FahrzeugBearbeiten({ params }: { params: Promise<{
   ]);
   if (!akte) notFound();
   const f = akte.fahrzeug;
+  const standorte = await standorteFuerAuswahl(f.standortId);
   const pfad = `/fahrzeuge/${f.id}`;
 
   return (
@@ -49,7 +51,7 @@ export default async function FahrzeugBearbeiten({ params }: { params: Promise<{
               abbrechenHref={pfad}
               versteckt={{ id: f.id, version: f.aktualisiertAm }}
             >
-              <FahrzeugFelder werte={f} />
+              <FahrzeugFelder werte={f} standorte={standorte} />
             </FormularRahmen>
           </>
         )}

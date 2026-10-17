@@ -13,6 +13,7 @@ import { RechnungModule } from './rechnung/rechnung.module';
 import { AlarmModule } from './alarm/alarm.module';
 import { HealthModule } from './health/health.module';
 import { TelemetryModule } from './telemetry/telemetry.module';
+import { StandortModule } from './standort/standort.module';
 
 /**
  * Wurzelmodul des Kerns. Als modularer Monolith (D-002) kommen fachliche
@@ -48,6 +49,7 @@ import { TelemetryModule } from './telemetry/telemetry.module';
     AuditModule,
     AdminModule,
     BerichtModule,
+    StandortModule,
     FahrzeugModule,
     KundeModule,
     MieteModule,

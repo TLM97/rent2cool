@@ -2,11 +2,13 @@ import type { Metadata } from 'next';
 import { Seitenkopf } from '../../../../components/bausteine';
 import { Feld, FormularRahmen, Gruppe, Haken } from '../../../../components/formular';
 import { FahrzeugFelder } from '../../../../components/stammdaten';
+import { standorteFuerAuswahl } from '../../../../lib/standorte';
 import { erstelleFahrzeug } from '../../formulare';
 
 export const metadata: Metadata = { title: 'Fahrzeug anlegen' };
 
-export default function FahrzeugNeu() {
+export default async function FahrzeugNeu() {
+  const standorte = await standorteFuerAuswahl();
   return (
     <>
       <Seitenkopf
@@ -20,7 +22,7 @@ export default function FahrzeugNeu() {
           sendenText="Fahrzeug anlegen"
           abbrechenHref="/fahrzeuge"
         >
-          <FahrzeugFelder />
+          <FahrzeugFelder standorte={standorte} />
           <Haken
             name="mitAufbau"
             label="Kühlaufbau mit Laderaum-Temperatursensor erfassen"

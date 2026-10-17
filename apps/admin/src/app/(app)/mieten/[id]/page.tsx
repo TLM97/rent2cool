@@ -24,7 +24,7 @@ import { naechsteStatus } from '../../../../lib/formular';
 import { istUuid, type SuchParameter } from '../../../../lib/seiten';
 import { holeSitzung } from '../../../../lib/sitzung';
 import { hatRolle } from '../../../../lib/token';
-import type { Fahrzeug, Kunde, Liste, Miete, Rechnung } from '../../../../lib/typen';
+import type { Fahrzeug, Kunde, Liste, Miete, Rechnung, Standort } from '../../../../lib/typen';
 import { aendereMieteStatus } from '../../aktionen';
 import { erstelleRechnung } from '../../formulare';
 
@@ -56,6 +56,22 @@ export default async function MieteDetail({
   const naechsteMiete = naechsteStatus(MIETE_STATUS, miete.status, istMieteUebergangErlaubt);
   const darfAbweichung = hatRolle(rollen, 'ops', 'admin', 'qa_approver');
   const rechnung = rechnungen.eintraege[0];
+  const standorte = new Map(
+    (
+      await Promise.all(
+        [
+          ...new Set(
+            [miete.standortAbholId, miete.standortRueckgabeId].filter((x): x is string =>
+              Boolean(x),
+            ),
+          ),
+        ].map((sid) => apiGetOderNull<Standort>(`/v1/standorte/${sid}`)),
+      )
+    )
+      .filter((x): x is Standort => x !== null)
+      .map((x) => [x.id, x.name]),
+  );
+  const standortName = (sid: string | null) => (sid ? (standorte.get(sid) ?? '–') : '–');
 
   return (
     <>
@@ -91,6 +107,10 @@ export default async function MieteDetail({
               <Link href={`/fahrzeuge/${miete.fahrzeugId}`}>
                 {fahrzeug?.fahrzeug.kennzeichen ?? kurzeId(miete.fahrzeugId)}
               </Link>
+            </dd>
+            <dt>Abholung / Rückgabe</dt>
+            <dd>
+              {standortName(miete.standortAbholId)} / {standortName(miete.standortRueckgabeId)}
             </dd>
             <dt>geplant</dt>
             <dd>

@@ -13,6 +13,74 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Standortverwaltung
+
+**Standortverwaltung – erledigt.** (Auf Toms Auftrag; Planung möge die
+Aufgabe in `TASKS.md` nachziehen.)
+
+Erledigt:
+- **Öffnungsregeln** (D-011) als Wochenplan in Ortszeit (Europe/Berlin,
+  Sommer-/Winterzeit getestet), bis zu vier Zeitfenster je Tag im Kern, zwei
+  im Formular; `null` = rund um die Uhr (kontaktlos, D-014). Geteilte Logik
+  in `packages/shared/src/standort.ts` (`istGeoeffnet`, Texte, Schemas).
+- **Kern:** Modul `standort` – `GET/POST /v1/standorte`, `GET/PATCH
+  /v1/standorte/:id`. Pflegen nur `admin`, lesen alle internen Rollen und
+  `kunde_dispo`. Audit beim Anlegen (vollständig) und Ändern (alt/neu),
+  Versionsschutz (D-016), Name je Mandant eindeutig, Mandantentrennung.
+  Kein Löschen; **Deaktivieren nur ohne Fahrzeuge und ohne
+  laufende/künftige Mieten** (sonst Ablehnung mit Gründen).
+  Migration `0011_standort_verwaltung`.
+- **Fahrzeug:** Heimatstandort beim Anlegen und Bearbeiten (nur aktive
+  Standorte des Mandanten); Liste mit Standort-Spalte und Filter
+  (`?standortId=`), Akte zeigt den Heimatstandort.
+- **Buchung:** Abhol- und Rückgabestandort wählbar; die Fahrzeugsuche
+  filtert nach Heimatstandort; gespeichert werden Abhol- und
+  Rückgabestandort; die Buchungsprüfung lehnt unbekannte oder deaktivierte
+  Standorte ab. **Hinweis** (keine Ablehnung), wenn Abholung oder Rückgabe
+  außerhalb der Öffnungszeiten liegt → F-35. Mietakte zeigt die Standorte.
+- **Demo-Daten:** zwei Standorte („Nord“ mit Öffnungszeiten, „Süd“ rund um
+  die Uhr), Fahrzeuge und Mieten zugeordnet.
+- **Oberfläche:** Menüpunkt „Standorte“ mit Liste (aktiv/deaktiviert),
+  Detail (Öffnungszeiten, Geofence, Verlauf, (De-)Aktivieren), Anlegen und
+  Bearbeiten mit Öffnungszeiten-Tabelle.
+
+Behobene Fehler (gefunden beim Testen):
+- **Deadlock bei gleichzeitigen Buchungen:** Der Doppelbuchungs-Test
+  schlug sporadisch fehl (2 von 6 Läufen). Ursache: Gleichzeitige Prüfungen
+  der Überschneidungs-Regel blockierten sich gegenseitig; PostgreSQL brach
+  nach ~1 s eine Buchung mit „deadlock detected“ ab → Serverfehler statt
+  sauberer Ablehnung. Jetzt laufen Buchungen desselben Fahrzeugs kurz
+  nacheinander (Sperre je Fahrzeug), mit Wiederholung als Rückfall. Danach
+  25 von 25 Stressläufen grün (Nachtrag in D-017).
+- **Gleichzeitige Wiederholung derselben Buchung** (gleicher
+  Idempotency-Key) konnte als „bereits gebucht“ abgelehnt werden, statt die
+  vorhandene Buchung zurückzugeben. Behoben und abgedeckt.
+- **Änderungserkennung bei JSON-Feldern:** Objekte (z. B. Öffnungszeiten)
+  galten bei jedem Speichern als geändert; PostgreSQL sortiert zudem
+  jsonb-Schlüssel um. Jetzt inhaltlicher Vergleich – kein Schein-Eintrag im
+  Audit Trail.
+
+Tests: shared 50, admin 51, Kern 58 Unit + 63 Integration (121/121, dreimal
+in Folge); neuer Browser-Test Standorte; alle 9 Browser-Tests grün.
+
+Offen / Hinweise:
+- Geofence wird gespeichert, aber noch nicht gegen Telematik-Positionen
+  geprüft (z. B. „Rückgabe im Übergabebereich?“) – eigener Schritt, PostGIS
+  optional (F-10).
+- Rückgabe an einem anderen Standort (Einwegmiete) ist im Modell möglich,
+  in der Oberfläche aber nicht vorgesehen; der Heimatstandort ändert sich
+  dadurch nicht → F-36.
+
+Fragen an Planung:
+- **F-35:** Soll eine Buchung abgelehnt werden, wenn Abholung oder Rückgabe
+  außerhalb der Öffnungszeiten liegt? Heute nur ein Hinweis. (Bei
+  kontaktloser Übergabe, D-014, evtl. nur für Standorte mit Öffnungszeiten.)
+- **F-36:** Einwegmieten (Rückgabe an anderem Standort): erlaubt? Und wird
+  der Heimatstandort dann zum neuen Standort des Fahrzeugs?
+- F-24, F-26 bis F-34 weiter offen (siehe unten).
+
+---
+
 ### 2026-10-17 – Suche für die Buchung
 
 **Buchung mit Suche statt Auswahllisten – erledigt.** (Auf Toms Auftrag;

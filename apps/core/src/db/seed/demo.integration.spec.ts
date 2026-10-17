@@ -67,6 +67,7 @@ describe.skipIf(!RUN)('Demo-Daten (Integration, braucht DB)', () => {
       fahrer: 3,
       mieten: 6,
       rechnungen: 3,
+      standorte: 2,
     });
     expect(ergebnis.messwerte).toBeGreaterThan(5000);
     expect(ergebnis.alarme).toBeGreaterThan(0);

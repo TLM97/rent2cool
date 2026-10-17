@@ -18,6 +18,25 @@ function normal(wert: unknown): unknown {
 }
 
 /**
+ * Vergleichbare Darstellung: Objekte (z. B. jsonb) mit sortierten Schlüsseln –
+ * PostgreSQL ordnet jsonb-Schlüssel um, gleiche Inhalte sollen gleich sein.
+ */
+function vergleichswert(wert: unknown): unknown {
+  if (wert === null || typeof wert !== 'object') return wert;
+  const sortiert = (x: unknown): unknown =>
+    Array.isArray(x)
+      ? x.map(sortiert)
+      : x && typeof x === 'object'
+        ? Object.fromEntries(
+            Object.keys(x as object)
+              .sort()
+              .map((k) => [k, sortiert((x as Record<string, unknown>)[k])]),
+          )
+        : x;
+  return JSON.stringify(sortiert(wert));
+}
+
+/**
  * Vergleicht die Eingabe mit dem gespeicherten Datensatz. Felder, die in der
  * Eingabe fehlen (`undefined`), bleiben unberührt; `null` leert ein Feld.
  * Zeitpunkte werden als ISO-Text verglichen und protokolliert.
@@ -31,7 +50,7 @@ export function ermittleAenderungen(
     if (wert === undefined) continue;
     const a = normal(vorher[feld]);
     const n = normal(wert);
-    if (a === n) continue;
+    if (vergleichswert(a) === vergleichswert(n)) continue;
     ergebnis.felder.push(feld);
     ergebnis.alt[feld] = a;
     ergebnis.neu[feld] = n;

@@ -1,18 +1,20 @@
 import { randomUUID } from 'node:crypto';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { STANDARD_TEMPERATURPROFILE } from '@rent2cool/shared';
+import { istGeoeffnet, oeffnungszeitenText, STANDARD_TEMPERATURPROFILE } from '@rent2cool/shared';
 import { Blaettern, Leer, Seitenkopf } from '../../../../components/bausteine';
 import { Auswahl, FormularRahmen } from '../../../../components/formular';
 import { apiGet, apiGetOderNull } from '../../../../lib/api';
 import { formatDatum, formatDatumZeit } from '../../../../lib/format';
 import { berlinLokalZuIso, isoZuBerlinLokal } from '../../../../lib/formular';
 import { blattAus, erster, istUuid, linkMit, type SuchParameter } from '../../../../lib/seiten';
+import { standorteFuerAuswahl } from '../../../../lib/standorte';
 import type {
   Fahrer,
   FahrzeugAkte,
   Kunde,
   Liste,
+  Standort,
   VerfuegbaresFahrzeug,
 } from '../../../../lib/typen';
 import { erstelleMiete } from '../../formulare';
@@ -134,9 +136,14 @@ function KundeGewaehlt({ kunde }: { kunde: Kunde }) {
 }
 
 async function ZeitraumUndFahrzeug({ kunde, params }: { kunde: Kunde; params: SuchParameter }) {
-  const fahrerListe = (await apiGet<Fahrer[]>(`/v1/kunden/${kunde.id}/fahrer`)).filter(
-    (f) => f.status === 'freigegeben',
-  );
+  const [alleFahrer, standorte] = await Promise.all([
+    apiGet<Fahrer[]>(`/v1/kunden/${kunde.id}/fahrer`),
+    standorteFuerAuswahl(),
+  ]);
+  const fahrerListe = alleFahrer.filter((f) => f.status === 'freigegeben');
+  // Ein einziger Standort ist automatisch gewählt; „alle“ nur bei mehreren.
+  const standortId = erster(params.standortId) ?? (standorte.length === 1 ? standorte[0]!.id : '');
+  const standort = standorte.find((s) => s.id === standortId);
   const naechsteStunde = new Date(Math.ceil(Date.now() / STUNDE) * STUNDE);
   const start = erster(params.start) ?? isoZuBerlinLokal(naechsteStunde);
   const ende =
@@ -179,6 +186,18 @@ async function ZeitraumUndFahrzeug({ kunde, params }: { kunde: Kunde; params: Su
               <p className="feldhinweis">Mit Fahrer: nur Fahrzeuge, die er fahren darf (R-22).</p>
             </div>
             <div className="feld">
+              <label htmlFor="standortId">Abhol- und Rückgabestandort</label>
+              <select id="standortId" name="standortId" defaultValue={standortId}>
+                <option value="">alle Standorte</option>
+                {standorte.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              <p className="feldhinweis">Nur Fahrzeuge mit diesem Heimatstandort (D-011).</p>
+            </div>
+            <div className="feld">
               <label htmlFor="suche">Kennzeichen enthält</label>
               <input id="suche" name="suche" defaultValue={suche} placeholder="optional" />
             </div>
@@ -213,6 +232,7 @@ async function ZeitraumUndFahrzeug({ kunde, params }: { kunde: Kunde; params: Su
           fahrer={fahrer}
           ausland={ausland}
           suche={suche}
+          standort={standort}
         />
       )}
     </>
@@ -229,6 +249,7 @@ async function Fahrzeugwahl(p: {
   fahrer: Fahrer | undefined;
   ausland: boolean;
   suche: string;
+  standort: Standort | undefined;
 }) {
   const fahrzeugId = erster(p.params.fahrzeugId);
   const blatt = blattAus(p.params, SEITE);
@@ -238,6 +259,7 @@ async function Fahrzeugwahl(p: {
     suche: p.suche || undefined,
     fahrerKlasse: p.fahrer?.fuehrerscheinKlasse,
     fahrtenschreiber: p.ausland ? 'true' : undefined,
+    standortId: p.standort?.id,
     limit: blatt.limit,
     offset: blatt.offset,
   });
@@ -246,6 +268,17 @@ async function Fahrzeugwahl(p: {
       ? await apiGetOderNull<FahrzeugAkte>(`/v1/fahrzeuge/${fahrzeugId}`)
       : null;
   const endeMs = new Date(p.bisIso).getTime();
+  // Übergabeort: gewählter Standort, sonst Heimatstandort des Fahrzeugs.
+  const uebergabeId = p.standort?.id ?? gewaehlt?.fahrzeug.standortId ?? undefined;
+  const uebergabe =
+    p.standort ??
+    (uebergabeId ? await apiGetOderNull<Standort>(`/v1/standorte/${uebergabeId}`) : null);
+  const ausserhalb = uebergabe
+    ? [
+        istGeoeffnet(uebergabe.oeffnungsregeln, new Date(p.vonIso)) ? null : 'Abholung',
+        istGeoeffnet(uebergabe.oeffnungsregeln, new Date(p.bisIso)) ? null : 'Rückgabe',
+      ].filter((x): x is string => x !== null)
+    : [];
 
   return (
     <>
@@ -341,7 +374,19 @@ async function Fahrzeugwahl(p: {
             </dd>
             <dt>Auslandsfahrt</dt>
             <dd>{p.ausland ? 'ja' : 'nein'}</dd>
+            <dt>Abholung und Rückgabe</dt>
+            <dd>{uebergabe?.name ?? 'kein Standort hinterlegt'}</dd>
           </dl>
+          {uebergabe && ausserhalb.length > 0 ? (
+            <div className="hinweis warn">
+              {ausserhalb.join(' und ')} außerhalb der Öffnungszeiten von {uebergabe.name}:
+              <ul>
+                {oeffnungszeitenText(uebergabe.oeffnungsregeln).map((z) => (
+                  <li key={z}>{z}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <FormularRahmen
             aktion={erstelleMiete}
             sendenText="Buchung bestätigen"
@@ -351,6 +396,8 @@ async function Fahrzeugwahl(p: {
               kundeId: p.kunde.id,
               fahrzeugId: gewaehlt.fahrzeug.id,
               fahrerId: p.fahrer?.id ?? '',
+              standortAbholId: uebergabeId ?? '',
+              standortRueckgabeId: uebergabeId ?? '',
               startGeplant: p.start,
               endeGeplant: p.ende,
               ...(p.ausland ? { auslandsfahrtGeplant: 'on' } : {}),

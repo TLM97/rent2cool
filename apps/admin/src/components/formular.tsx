@@ -148,7 +148,7 @@ export function Feld({
   min,
   ...basis
 }: FeldBasis & {
-  typ?: 'text' | 'number' | 'date' | 'datetime-local' | 'email';
+  typ?: 'text' | 'number' | 'date' | 'datetime-local' | 'email' | 'time';
   standard?: string;
   schritt?: string;
   min?: string;
@@ -252,5 +252,38 @@ export function Gruppe({ titel, children }: { titel: string; children: ReactNode
       <legend>{titel}</legend>
       <div className="felder">{children}</div>
     </fieldset>
+  );
+}
+
+/**
+ * Kompaktes Uhrzeitfeld ohne eigene Beschriftung (für Tabellen, z. B.
+ * Öffnungszeiten); die Beschriftung kommt per `label` als aria-label.
+ */
+export function Zeitfeld({
+  name,
+  label,
+  standard,
+}: {
+  name: string;
+  label: string;
+  standard?: string;
+}) {
+  const f = useFeld(name, standard);
+  return (
+    <span className="zeitfeld">
+      <input
+        id={name}
+        name={name}
+        type="time"
+        aria-label={label}
+        defaultValue={f.wert}
+        {...aria(name, f.fehler)}
+      />
+      {f.fehler ? (
+        <span className="feldfehler" id={`${name}-fehler`}>
+          {f.fehler}
+        </span>
+      ) : null}
+    </span>
   );
 }

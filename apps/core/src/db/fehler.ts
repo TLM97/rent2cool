@@ -33,3 +33,29 @@ export function istPgFehler(e: unknown, code: string, constraint?: string): bool
   if (!f || f.code !== code) return false;
   return constraint === undefined || f.constraint_name === constraint;
 }
+
+/** Abbrüche, nach denen eine Wiederholung derselben Transaktion gelingen kann. */
+const WIEDERHOLBAR = ['40P01' /* deadlock_detected */, '40001' /* serialization_failure */];
+
+/**
+ * Führt `fn` aus und wiederholt bei Deadlock/Serialisierungsfehler (kurze,
+ * zufällige Pause). Typisch bei gleichzeitigen Schreibvorgängen gegen
+ * Exclusion-Constraints: beim nächsten Versuch ist die andere Transaktion
+ * fertig und es kommt die eigentliche Antwort (z. B. „bereits gebucht“).
+ * Nur für ganze Transaktionen verwenden, nicht innerhalb einer laufenden.
+ */
+export async function mitWiederholung<T>(
+  fn: () => Promise<T>,
+  versuche = 4,
+  warte: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+): Promise<T> {
+  for (let versuch = 1; ; versuch++) {
+    try {
+      return await fn();
+    } catch (e) {
+      const wiederholbar = WIEDERHOLBAR.some((code) => istPgFehler(e, code));
+      if (!wiederholbar || versuch >= versuche) throw e;
+      await warte(10 * versuch + Math.floor(Math.random() * 40));
+    }
+  }
+}

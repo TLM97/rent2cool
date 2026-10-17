@@ -12,7 +12,7 @@ import { kalibrierungFrist } from '../../../../lib/fristen';
 import { istUuid, type SuchParameter } from '../../../../lib/seiten';
 import { holeSitzung } from '../../../../lib/sitzung';
 import { hatRolle } from '../../../../lib/token';
-import type { FahrzeugAkte, Pruefergebnis } from '../../../../lib/typen';
+import type { FahrzeugAkte, Pruefergebnis, Standort } from '../../../../lib/typen';
 import { aendereFahrzeugStatus } from '../../aktionen';
 import { erfasseKalibrierung } from '../../formulare';
 
@@ -36,6 +36,9 @@ export default async function FahrzeugDetail({
     holeSitzung(),
   ]);
   const f = akte.fahrzeug;
+  const standortName = f.standortId
+    ? (await apiGetOderNull<Standort>(`/v1/standorte/${f.standortId}`))?.name
+    : undefined;
   const rollen = sitzung?.rollen ?? [];
   const darfAendern = hatRolle(rollen, 'ops', 'admin');
   const darfAbweichung = hatRolle(rollen, 'ops', 'admin', 'qa_approver');
@@ -83,6 +86,14 @@ export default async function FahrzeugDetail({
             <dd>{f.benoetigteFuehrerscheinklasse}</dd>
             <dt>Fahrtenschreiber</dt>
             <dd>{f.hatFahrtenschreiber ? 'ja (auslandstauglich, D-006)' : 'nein (nur Inland)'}</dd>
+            <dt>Heimatstandort</dt>
+            <dd>
+              {standortName && f.standortId ? (
+                <Link href={`/standorte/${f.standortId}`}>{standortName}</Link>
+              ) : (
+                'keiner'
+              )}
+            </dd>
             <dt>Temperaturprofil</dt>
             <dd>{f.standardTemperaturprofil ? `${f.standardTemperaturprofil} °C` : '–'}</dd>
             <dt>angelegt</dt>

@@ -2,6 +2,7 @@
  * Audit-Einträge lesbar machen: was ist passiert, welche Felder haben sich wie
  * geändert. Beschriftungen und Formate liegen hier an einer Stelle.
  */
+import { oeffnungszeitenText, type Oeffnungsregeln } from '@rent2cool/shared';
 import { formatDatumZeit, formatEuro, statusLabel } from './format';
 
 export interface AuditEintrag {
@@ -73,6 +74,13 @@ const FELDER: Record<string, string> = {
   seriennummer: 'Seriennummer',
   modell: 'Modell',
   grund: 'Grund',
+  aktiv: 'aktiv',
+  geofenceLat: 'Geofence Breite',
+  geofenceLng: 'Geofence Länge',
+  geofenceRadiusM: 'Geofence-Radius (m)',
+  oeffnungsregeln: 'Öffnungszeiten',
+  standortId: 'Heimatstandort (ID)',
+  region: 'Region',
 };
 
 const ISO_ZEIT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
@@ -82,6 +90,14 @@ function istObjekt(x: unknown): x is Record<string, unknown> {
 }
 
 export function formatWert(feld: string, wert: unknown): string {
+  // Öffnungszeiten: null bedeutet „rund um die Uhr“, nicht „leer“.
+  if (feld === 'oeffnungsregeln') {
+    return (
+      oeffnungszeitenText(wert as Oeffnungsregeln | null)
+        .filter((z) => !z.endsWith('geschlossen'))
+        .join('; ') || 'überall geschlossen'
+    );
+  }
   if (wert === null || wert === undefined || wert === '') return '–';
   if (feld === 'status' && typeof wert === 'string') return statusLabel(wert);
   if (typeof wert === 'boolean') return wert ? 'ja' : 'nein';

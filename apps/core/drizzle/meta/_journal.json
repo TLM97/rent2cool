@@ -78,6 +78,13 @@
       "when": 1760634000000,
       "tag": "0010_miete_keine_ueberschneidung",
       "breakpoints": false
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1760637600000,
+      "tag": "0011_standort_verwaltung",
+      "breakpoints": false
     }
   ]
 }

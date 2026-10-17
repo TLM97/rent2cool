@@ -7,7 +7,7 @@
  * `demo.ts` über die echten Services (Audit, Regeln, Telematik-Verarbeitung).
  * Szenarien anpassen = diese Datei ändern.
  */
-import type { TelemetrieNachricht } from '@rent2cool/shared';
+import type { Oeffnungsregeln, TelemetrieNachricht } from '@rent2cool/shared';
 
 export const DEMO_AKTEUR_ID = 'system:demo-daten';
 /** Erkennungszeichen: existiert dieser Kunde, sind die Demo-Daten schon geladen. */
@@ -15,6 +15,51 @@ export const DEMO_MARKER_KUNDE = 'Nordlicht Arzneimittel GmbH (Demo)';
 
 const TAG = 86_400_000;
 const STUNDE = 3_600_000;
+
+export interface DemoStandort {
+  schluessel: string;
+  name: string;
+  strasse: string;
+  plz: string;
+  ort: string;
+  geofence: { lat: number; lng: number; radiusM: number };
+  /** null = rund um die Uhr (kontaktlos, D-014). */
+  oeffnungsregeln: Oeffnungsregeln | null;
+}
+
+const WERKTAGS_6_22 = [{ von: '06:00', bis: '22:00' }];
+
+export const DEMO_STANDORTE: readonly DemoStandort[] = [
+  {
+    schluessel: 's1',
+    name: 'Standort Nord (Demo)',
+    strasse: 'Kühlweg 1',
+    plz: '12345',
+    ort: 'Musterstadt',
+    // Fantasie-Koordinaten (D-015)
+    geofence: { lat: 51.2, lng: 10.4, radiusM: 300 },
+    oeffnungsregeln: {
+      zeitzone: 'Europe/Berlin',
+      woche: {
+        mo: WERKTAGS_6_22,
+        di: WERKTAGS_6_22,
+        mi: WERKTAGS_6_22,
+        do: WERKTAGS_6_22,
+        fr: WERKTAGS_6_22,
+        sa: [{ von: '08:00', bis: '14:00' }],
+      },
+    },
+  },
+  {
+    schluessel: 's2',
+    name: 'Standort Süd (Demo)',
+    strasse: 'Frischeallee 9',
+    plz: '54321',
+    ort: 'Beispielstadt',
+    geofence: { lat: 48.8, lng: 9.2, radiusM: 250 },
+    oeffnungsregeln: null,
+  },
+];
 
 export interface DemoFahrzeug {
   schluessel: string;
@@ -24,6 +69,8 @@ export interface DemoFahrzeug {
   hatFahrtenschreiber: boolean;
   profil: '2-8' | '15-25';
   sensorSeriennummer: string;
+  /** Heimatstandort (Schlüssel aus DEMO_STANDORTE). */
+  standort: string;
   /** Kalibrierung gültig für so viele Tage ab heute (kurz = Frist-Warnung). */
   kalibrierungTage: number;
   /** Endstatus nach dem Laden. */
@@ -39,6 +86,7 @@ export const DEMO_FAHRZEUGE: readonly DemoFahrzeug[] = [
     hatFahrtenschreiber: false,
     profil: '2-8',
     sensorSeriennummer: 'DEMO-TS-1001',
+    standort: 's1',
     kalibrierungTage: 300,
     status: 'verfuegbar',
   },
@@ -50,6 +98,7 @@ export const DEMO_FAHRZEUGE: readonly DemoFahrzeug[] = [
     hatFahrtenschreiber: true,
     profil: '2-8',
     sensorSeriennummer: 'DEMO-TS-1002',
+    standort: 's1',
     kalibrierungTage: 280,
     status: 'verfuegbar',
   },
@@ -61,6 +110,7 @@ export const DEMO_FAHRZEUGE: readonly DemoFahrzeug[] = [
     hatFahrtenschreiber: false,
     profil: '15-25',
     sensorSeriennummer: 'DEMO-TS-1003',
+    standort: 's2',
     kalibrierungTage: 12,
     status: 'verfuegbar',
   },
@@ -72,6 +122,7 @@ export const DEMO_FAHRZEUGE: readonly DemoFahrzeug[] = [
     hatFahrtenschreiber: true,
     profil: '2-8',
     sensorSeriennummer: 'DEMO-TS-1004',
+    standort: 's1',
     kalibrierungTage: 200,
     status: 'verfuegbar',
   },
@@ -83,6 +134,7 @@ export const DEMO_FAHRZEUGE: readonly DemoFahrzeug[] = [
     hatFahrtenschreiber: false,
     profil: '2-8',
     sensorSeriennummer: 'DEMO-TS-1005',
+    standort: 's2',
     kalibrierungTage: 150,
     status: 'wartung',
   },

@@ -65,6 +65,7 @@ export class FahrzeugController {
       suche: a.suche,
       klassen: a.fahrerKlasse ? abgedeckteKlassen(a.fahrerKlasse) : undefined,
       fahrtenschreiber: a.fahrtenschreiber === 'true',
+      standortId: a.standortId,
       limit: a.limit,
       offset: a.offset,
     });
