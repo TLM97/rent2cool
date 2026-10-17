@@ -19,7 +19,6 @@ import { Zugriff } from '../auth/zugriff';
 import { AuditImService } from '../audit/audited.decorator';
 import { AlarmService } from './alarm.service';
 import { AbweichungService } from './abweichung.service';
-import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 
 function parse<S extends z.ZodTypeAny>(schema: S, wert: unknown): z.infer<S> {
   const r = schema.safeParse(wert);
