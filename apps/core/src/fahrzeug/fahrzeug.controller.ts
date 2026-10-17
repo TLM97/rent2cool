@@ -12,6 +12,7 @@ import {
 import { z } from 'zod';
 import { abgedeckteKlassen, type Principal } from '@rent2cool/shared';
 import { CurrentUser, Roles } from '../auth/decorators';
+import { Zugriff } from '../auth/zugriff';
 import { AuditImService } from '../audit/audited.decorator';
 import {
   fahrzeugAendernSchema,
@@ -36,7 +37,10 @@ function parse<S extends z.ZodTypeAny>(schema: S, wert: unknown): z.infer<S> {
 
 @Controller('v1/fahrzeuge')
 export class FahrzeugController {
-  constructor(private readonly service: FahrzeugService) {}
+  constructor(
+    private readonly service: FahrzeugService,
+    private readonly zugriff: Zugriff,
+  ) {}
 
   @Post()
   @Roles('ops', 'admin')
@@ -46,8 +50,9 @@ export class FahrzeugController {
     return this.service.erstelle(user, parse(fahrzeugErstellenSchema, body));
   }
 
+  /** Flottenliste – intern. Kunden finden Fahrzeuge über die Buchungssuche (F-41). */
   @Get()
-  @Roles('ops', 'admin', 'kunde_dispo', 'kunde_qa')
+  @Roles('ops', 'admin', 'qa_approver')
   async liste(@CurrentUser() user: Principal, @Query() q: unknown) {
     const a = parse(listeAbfrageSchema, q);
     const res = await this.service.liste(user.mandantId, a);
@@ -59,7 +64,8 @@ export class FahrzeugController {
   @Roles('ops', 'admin', 'kunde_dispo')
   async verfuegbar(@CurrentUser() user: Principal, @Query() q: unknown) {
     const a = parse(verfuegbarAbfrageSchema, q);
-    const res = await this.service.sucheVerfuegbare(user.mandantId, {
+    const s = await this.zugriff.sicht(user);
+    const res = await this.service.sucheVerfuegbare(s.mandantId, {
       von: new Date(a.von),
       bis: new Date(a.bis),
       suche: a.suche,
@@ -85,14 +91,16 @@ export class FahrzeugController {
 
   @Get(':id')
   @Roles('ops', 'admin', 'kunde_dispo', 'kunde_qa')
-  holeAkte(@Param('id') id: string) {
+  async holeAkte(@CurrentUser() user: Principal, @Param('id') id: string) {
+    // Kunden: nur Fahrzeuge ihrer Mieten (z. B. Kalibriernachweise für die QA).
+    await this.zugriff.fahrzeug(user, id);
     return this.service.holeAkte(id);
   }
 
   /** Letzte Position und Übergabebereich (Heimatstandort oder `?standortId=`). */
   @Get(':id/position')
   @Roles('ops', 'admin', 'qa_approver', 'kunde_dispo')
-  position(
+  async position(
     @CurrentUser() user: Principal,
     @Param('id') id: string,
     @Query('standortId') standortId?: string,
@@ -100,16 +108,23 @@ export class FahrzeugController {
     if (standortId !== undefined && !/^[0-9a-f-]{36}$/i.test(standortId)) {
       throw new BadRequestException('standortId ist keine UUID');
     }
-    return this.service.positionUndBereich(user.mandantId, id, standortId);
+    // Kunden sehen die Position nur während ihrer laufenden Miete.
+    const s = await this.zugriff.fahrzeug(user, id, { nurLaufend: true });
+    return this.service.positionUndBereich(s.mandantId, id, standortId);
   }
 
   @Get(':id/buchbarkeit')
   @Roles('ops', 'admin', 'kunde_dispo', 'kunde_qa')
-  buchbarkeit(@Param('id') id: string, @Query('stichtag') stichtag?: string) {
+  async buchbarkeit(
+    @CurrentUser() user: Principal,
+    @Param('id') id: string,
+    @Query('stichtag') stichtag?: string,
+  ) {
     const t = stichtag ? new Date(stichtag) : new Date();
     if (Number.isNaN(t.getTime())) {
       throw new BadRequestException('Ungültiges Datum in "stichtag"');
     }
+    await this.zugriff.fahrzeug(user, id, { nurMandant: true });
     return this.service.buchbarkeit(id, t);
   }
 

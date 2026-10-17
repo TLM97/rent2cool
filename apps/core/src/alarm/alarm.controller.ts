@@ -15,6 +15,7 @@ import {
   type Principal,
 } from '@rent2cool/shared';
 import { CurrentUser, Roles } from '../auth/decorators';
+import { Zugriff } from '../auth/zugriff';
 import { AuditImService } from '../audit/audited.decorator';
 import { AlarmService } from './alarm.service';
 import { AbweichungService } from './abweichung.service';
@@ -40,19 +41,24 @@ const alarmListeSchema = z.object({
 
 @Controller('v1/alarme')
 export class AlarmController {
-  constructor(private readonly service: AlarmService) {}
+  constructor(
+    private readonly service: AlarmService,
+    private readonly zugriff: Zugriff,
+  ) {}
 
   @Get()
   @Roles('ops', 'admin', 'qa_approver', 'kunde_qa')
   async liste(@CurrentUser() user: Principal, @Query() q: unknown) {
     const a = parse(alarmListeSchema, q);
-    const res = await this.service.liste(user.mandantId ?? PLACEHOLDER_MANDANT_ID, a);
+    const s = await this.zugriff.sicht(user);
+    const res = await this.service.liste(s.mandantId, { ...a, kundeId: s.kundeId ?? undefined });
     return { ...res, limit: a.limit, offset: a.offset };
   }
 
   @Get(':id')
   @Roles('ops', 'admin', 'qa_approver', 'kunde_qa')
-  hole(@Param('id') id: string) {
+  async hole(@CurrentUser() user: Principal, @Param('id') id: string) {
+    await this.zugriff.alarm(user, id);
     return this.service.hole(id);
   }
 
@@ -81,7 +87,10 @@ const abwListeSchema = z.object({
 
 @Controller('v1/abweichungen')
 export class AbweichungController {
-  constructor(private readonly service: AbweichungService) {}
+  constructor(
+    private readonly service: AbweichungService,
+    private readonly zugriff: Zugriff,
+  ) {}
 
   @Post()
   @Roles('ops', 'admin', 'qa_approver')
@@ -95,13 +104,15 @@ export class AbweichungController {
   @Roles('ops', 'admin', 'qa_approver', 'kunde_qa')
   async liste(@CurrentUser() user: Principal, @Query() q: unknown) {
     const a = parse(abwListeSchema, q);
-    const res = await this.service.liste(user.mandantId, a);
+    const s = await this.zugriff.sicht(user);
+    const res = await this.service.liste(s.mandantId, { ...a, kundeId: s.kundeId ?? undefined });
     return { ...res, limit: a.limit, offset: a.offset };
   }
 
   @Get(':id')
   @Roles('ops', 'admin', 'qa_approver', 'kunde_qa')
-  hole(@Param('id') id: string) {
+  async hole(@CurrentUser() user: Principal, @Param('id') id: string) {
+    await this.zugriff.abweichung(user, id);
     return this.service.hole(id);
   }
 

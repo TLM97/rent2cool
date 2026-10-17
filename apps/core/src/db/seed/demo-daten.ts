@@ -18,6 +18,13 @@ export const DEMO_AKTEUR_ID = 'system:demo-daten';
 /** Erkennungszeichen: existiert dieser Kunde, sind die Demo-Daten schon geladen. */
 export const DEMO_MARKER_KUNDE = 'Nordlicht Arzneimittel GmbH (Demo)';
 
+/**
+ * Keycloak-Benutzer-ID des Test-Logins `kunde.dev` (feste ID im Realm-Import,
+ * infra/keycloak/rent2cool-realm.json). Die Demo ordnet ihn „Nordlicht“ zu,
+ * damit das Kundenportal lokal mit echten Demo-Daten läuft (F-41).
+ */
+export const DEMO_KUNDE_LOGIN = '5f0c2c1e-6b1a-4c1e-9a6e-000000000d01';
+
 const TAG = 86_400_000;
 const STUNDE = 3_600_000;
 

@@ -48,6 +48,18 @@ describe('erstelleApiClient', () => {
     expect((merke.init?.headers as Record<string, string>).authorization).toBe('Bearer abc');
   });
 
+  it('löscht per DELETE', async () => {
+    const merke: { url?: string; init?: RequestInit } = {};
+    const client = erstelleApiClient({
+      basisUrl: 'http://core',
+      token: async () => 'abc',
+      fetcher: fakeFetch(200, {}, merke),
+    });
+    await client.entferne('/v1/kunden/k1/konten/abc');
+    expect(merke.init?.method).toBe('DELETE');
+    expect(merke.init?.body).toBeUndefined();
+  });
+
   it('wirft ApiFehler mit Status und Meldung', async () => {
     const client = erstelleApiClient({
       basisUrl: 'http://core',

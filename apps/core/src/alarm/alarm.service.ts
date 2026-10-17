@@ -54,7 +54,15 @@ export class AlarmService {
 
   async liste(
     mandantId: string,
-    opts: { status?: string; fahrzeugId?: string; mieteId?: string; limit: number; offset: number },
+    opts: {
+      status?: string;
+      fahrzeugId?: string;
+      mieteId?: string;
+      /** Kundensicht (F-41): nur Alarme der Mieten dieses Kunden. */
+      kundeId?: string;
+      limit: number;
+      offset: number;
+    },
   ): Promise<{
     eintraege: (typeof alarm.$inferSelect & { fahrzeugKennzeichen: string })[];
     gesamt: number;
@@ -64,6 +72,9 @@ export class AlarmService {
       opts.status ? eq(alarm.status, opts.status) : undefined,
       opts.fahrzeugId ? eq(alarm.fahrzeugId, opts.fahrzeugId) : undefined,
       opts.mieteId ? eq(alarm.mieteId, opts.mieteId) : undefined,
+      opts.kundeId
+        ? sql`exists (select 1 from miete m where m.id = ${alarm.mieteId} and m.kunde_id = ${opts.kundeId})`
+        : undefined,
     );
     const [zeilen, [zaehler]] = await Promise.all([
       this.db

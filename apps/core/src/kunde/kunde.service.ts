@@ -24,9 +24,15 @@ import type { Database } from '../db/client';
 import { DB } from '../db/db.module';
 import { istPgFehler, PG_FEHLER } from '../db/fehler';
 import { enthaeltMuster } from '../db/suche';
-import { fahrer, fahrzeug, kunde } from '../db/schema';
+import { fahrer, fahrzeug, kunde, kundeKonto } from '../db/schema';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
-import type { FahrerAendern, FahrerErstellen, KundeAendern, KundeErstellen } from './dto';
+import type {
+  FahrerAendern,
+  FahrerErstellen,
+  KundeAendern,
+  KundeErstellen,
+  KundeKontoEingabe,
+} from './dto';
 
 @Injectable()
 export class KundeService {
@@ -56,7 +62,7 @@ export class KundeService {
 
   async listeKunden(
     mandantId: string | undefined,
-    opts: { status?: string; suche?: string; limit: number; offset: number },
+    opts: { status?: string; suche?: string; nurKundeId?: string; limit: number; offset: number },
   ): Promise<{ eintraege: (typeof kunde.$inferSelect)[]; gesamt: number }> {
     const mandant = mandantId ?? PLACEHOLDER_MANDANT_ID;
     const muster = enthaeltMuster(opts.suche);
@@ -64,6 +70,8 @@ export class KundeService {
       eq(kunde.mandantId, mandant),
       opts.status ? eq(kunde.status, opts.status) : undefined,
       muster ? ilike(kunde.firmenname, muster) : undefined,
+      // Kundensicht (F-41): nur der eigene Kunde.
+      opts.nurKundeId ? eq(kunde.id, opts.nurKundeId) : undefined,
     );
     const [eintraege, [zaehler]] = await Promise.all([
       this.db
@@ -256,6 +264,70 @@ export class KundeService {
         neuWert: a.neu,
       });
       return { id, version: versionVon(jetzt), geaendert: a.felder };
+    });
+  }
+
+  // --- Logins der Kunden (F-41) ---
+
+  /** Logins, die als dieser Kunde sehen (Kundenportal). */
+  async listeKonten(kundeId: string) {
+    return this.db
+      .select()
+      .from(kundeKonto)
+      .where(eq(kundeKonto.kundeId, kundeId))
+      .orderBy(asc(kundeKonto.erstelltAm))
+      .limit(100);
+  }
+
+  /** Login zuordnen; ein Login gehört genau einem Kunden. */
+  async ordneKontoZu(
+    principal: Principal,
+    kundeId: string,
+    p: KundeKontoEingabe,
+  ): Promise<{ kontoId: string }> {
+    const [k] = await this.db
+      .select({ mandantId: kunde.mandantId })
+      .from(kunde)
+      .where(eq(kunde.id, kundeId));
+    if (!k) throw new NotFoundException('Kunde nicht gefunden');
+    try {
+      return await this.db.transaction(async (tx) => {
+        const [row] = await tx
+          .insert(kundeKonto)
+          .values({
+            kontoId: p.kontoId,
+            mandantId: k.mandantId,
+            kundeId,
+            bezeichnung: p.bezeichnung ?? null,
+            erstelltVon: principal.akteurId,
+          })
+          .returning();
+        await protokolliereAnlage(tx, principal, 'kunde_konto', kundeId, row);
+        return { kontoId: p.kontoId };
+      });
+    } catch (e: unknown) {
+      if (istPgFehler(e, PG_FEHLER.EINDEUTIG)) {
+        throw new ConflictException('Dieser Login ist bereits einem Kunden zugeordnet');
+      }
+      throw e;
+    }
+  }
+
+  /** Zuordnung lösen (z. B. Mitarbeiter hat den Kunden verlassen). */
+  async entferneKonto(principal: Principal, kundeId: string, kontoId: string): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const [weg] = await tx
+        .delete(kundeKonto)
+        .where(and(eq(kundeKonto.kundeId, kundeId), eq(kundeKonto.kontoId, kontoId)))
+        .returning();
+      if (!weg) throw new NotFoundException('Zuordnung nicht gefunden');
+      await schreibeAudit(tx, principal, {
+        aktion: 'DELETE',
+        entitaetTyp: 'kunde_konto',
+        entitaetId: kundeId,
+        altWert: weg,
+        neuWert: null,
+      });
     });
   }
 

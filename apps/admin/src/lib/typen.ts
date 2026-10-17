@@ -317,3 +317,12 @@ export interface NachweisArchivEintrag {
   jsonUrl: string;
   pdfUrl: string;
 }
+
+/** Login, der als Kunde sieht (F-41). */
+export interface KundeKonto {
+  kontoId: string;
+  kundeId: string;
+  bezeichnung: string | null;
+  erstelltVon: string;
+  erstelltAm: string;
+}

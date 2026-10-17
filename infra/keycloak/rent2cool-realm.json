@@ -119,6 +119,7 @@
       "realmRoles": ["qa_approver"]
     },
     {
+      "id": "5f0c2c1e-6b1a-4c1e-9a6e-000000000d01",
       "username": "kunde.dev",
       "enabled": true,
       "emailVerified": true,

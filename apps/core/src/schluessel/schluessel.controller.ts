@@ -25,6 +25,7 @@ import {
   type Principal,
 } from '@rent2cool/shared';
 import { CurrentUser, Roles } from '../auth/decorators';
+import { Zugriff } from '../auth/zugriff';
 import { AuditImService } from '../audit/audited.decorator';
 import { SchluesselService } from './schluessel.service';
 
@@ -47,21 +48,30 @@ const UUID = new ParseUUIDPipe();
 
 @Controller('v1/mieten')
 export class MieteSchluesselController {
-  constructor(private readonly service: SchluesselService) {}
+  constructor(
+    private readonly service: SchluesselService,
+    private readonly zugriff: Zugriff,
+  ) {}
 
   /** Schlüssel für einen Fahrer des Mietkunden ausstellen (idempotent je Miete und Fahrer). */
   @Post(':id/schluessel')
   @Roles('ops', 'admin', 'kunde_dispo')
   @AuditImService('schluessel')
   @HttpCode(201)
-  stelleAus(@CurrentUser() user: Principal, @Param('id', UUID) id: string, @Body() body: unknown) {
+  async stelleAus(
+    @CurrentUser() user: Principal,
+    @Param('id', UUID) id: string,
+    @Body() body: unknown,
+  ) {
+    await this.zugriff.miete(user, id);
     return this.service.stelleAus(user, id, parse(schluesselAusstellenSchema, body).fahrerId);
   }
 
   @Get(':id/schluessel')
   @Roles('ops', 'admin', 'kunde_dispo')
-  schluessel(@CurrentUser() user: Principal, @Param('id', UUID) id: string) {
-    return this.service.listeZurMiete(user.mandantId, id);
+  async schluessel(@CurrentUser() user: Principal, @Param('id', UUID) id: string) {
+    const s = await this.zugriff.miete(user, id);
+    return this.service.listeZurMiete(s.mandantId, id);
   }
 
   @Get(':id/befehle')
@@ -71,14 +81,18 @@ export class MieteSchluesselController {
     @Param('id', UUID) id: string,
     @Query() q: unknown,
   ) {
+    const sicht = await this.zugriff.miete(user, id);
     const s = parse(seiteSchema, q);
-    return { ...(await this.service.liste(user.mandantId, { mieteId: id }, s)), ...s };
+    return { ...(await this.service.liste(sicht.mandantId, { mieteId: id }, s)), ...s };
   }
 }
 
 @Controller('v1/schluessel')
 export class SchluesselController {
-  constructor(private readonly service: SchluesselService) {}
+  constructor(
+    private readonly service: SchluesselService,
+    private readonly zugriff: Zugriff,
+  ) {}
 
   /** Aktive Schlüssel des angemeldeten Fahrers (App). */
   @Get('meine')
@@ -100,7 +114,12 @@ export class SchluesselController {
   @Roles('ops', 'admin', 'kunde_dispo')
   @AuditImService('schluessel_status')
   @HttpCode(200)
-  widerrufe(@CurrentUser() user: Principal, @Param('id', UUID) id: string, @Body() body: unknown) {
+  async widerrufe(
+    @CurrentUser() user: Principal,
+    @Param('id', UUID) id: string,
+    @Body() body: unknown,
+  ) {
+    await this.zugriff.schluessel(user, id);
     return this.service.widerrufe(user, id, parse(schluesselWiderrufenSchema, body));
   }
 }

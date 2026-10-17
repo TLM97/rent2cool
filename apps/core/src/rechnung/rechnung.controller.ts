@@ -11,6 +11,7 @@ import {
 import { z } from 'zod';
 import { istRechnungStatus, type Principal } from '@rent2cool/shared';
 import { CurrentUser, Roles } from '../auth/decorators';
+import { Zugriff } from '../auth/zugriff';
 import { AuditImService } from '../audit/audited.decorator';
 import { listeAbfrageSchema, rechnungErstellenSchema, rechnungStatusSchema } from './dto';
 import { RechnungService } from './rechnung.service';
@@ -27,7 +28,10 @@ function parse<S extends z.ZodTypeAny>(schema: S, wert: unknown): z.infer<S> {
 
 @Controller('v1/rechnungen')
 export class RechnungController {
-  constructor(private readonly service: RechnungService) {}
+  constructor(
+    private readonly service: RechnungService,
+    private readonly zugriff: Zugriff,
+  ) {}
 
   @Post()
   @Roles('ops', 'admin')
@@ -41,13 +45,15 @@ export class RechnungController {
   @Roles('ops', 'admin', 'kunde_dispo', 'kunde_qa')
   async liste(@CurrentUser() user: Principal, @Query() q: unknown) {
     const a = parse(listeAbfrageSchema, q);
-    const res = await this.service.liste(user.mandantId, a);
+    const s = await this.zugriff.sicht(user);
+    const res = await this.service.liste(s.mandantId, { ...a, kundeId: s.kundeId ?? a.kundeId });
     return { ...res, limit: a.limit, offset: a.offset };
   }
 
   @Get(':id')
   @Roles('ops', 'admin', 'kunde_dispo', 'kunde_qa')
-  hole(@Param('id') id: string) {
+  async hole(@CurrentUser() user: Principal, @Param('id') id: string) {
+    await this.zugriff.rechnung(user, id);
     return this.service.holeRechnung(id);
   }
 

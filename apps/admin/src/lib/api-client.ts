@@ -63,13 +63,14 @@ export interface ApiClient {
   get<T>(pfad: string, abfrage?: Abfrage): Promise<T>;
   post<T>(pfad: string, body?: unknown): Promise<T>;
   patch<T>(pfad: string, body: unknown): Promise<T>;
+  entferne<T>(pfad: string): Promise<T>;
 }
 
 export function erstelleApiClient(optionen: ApiClientOptionen): ApiClient {
   const f = optionen.fetcher ?? fetch;
 
   async function anfrage<T>(
-    methode: 'GET' | 'POST' | 'PATCH',
+    methode: 'GET' | 'POST' | 'PATCH' | 'DELETE',
     pfad: string,
     abfrage?: Abfrage,
     body?: unknown,
@@ -103,5 +104,6 @@ export function erstelleApiClient(optionen: ApiClientOptionen): ApiClient {
     get: <T>(pfad: string, abfrage?: Abfrage) => anfrage<T>('GET', pfad, abfrage),
     post: <T>(pfad: string, body?: unknown) => anfrage<T>('POST', pfad, undefined, body ?? {}),
     patch: <T>(pfad: string, body: unknown) => anfrage<T>('PATCH', pfad, undefined, body),
+    entferne: <T>(pfad: string) => anfrage<T>('DELETE', pfad),
   };
 }

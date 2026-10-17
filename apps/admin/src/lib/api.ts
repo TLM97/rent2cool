@@ -44,6 +44,14 @@ export async function apiPatch<T>(pfad: string, body: unknown): Promise<T> {
   }
 }
 
+export async function apiDelete<T>(pfad: string): Promise<T> {
+  try {
+    return await client().entferne<T>(pfad);
+  } catch (e) {
+    beiNichtAngemeldet(e);
+  }
+}
+
 /** Wie apiGet, liefert aber `null` bei fehlender Berechtigung (403) oder 404. */
 export async function apiGetOderNull<T>(pfad: string, abfrage?: Abfrage): Promise<T | null> {
   try {

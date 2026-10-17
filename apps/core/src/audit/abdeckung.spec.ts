@@ -26,6 +26,7 @@ import {
   SchluesselController,
 } from '../schluessel/schluessel.controller';
 import { StandortController } from '../standort/standort.controller';
+import { IchController } from '../auth/ich.controller';
 import { AuditController } from './audit.controller';
 import { AUDITED_KEY } from './audited.decorator';
 
@@ -51,6 +52,7 @@ const CONTROLLER = [
   ProtokollController,
   MieteNachweisController,
   NachweisPruefungController,
+  IchController,
 ];
 const LESEND = new Set([RequestMethod.GET, RequestMethod.HEAD, RequestMethod.OPTIONS]);
 

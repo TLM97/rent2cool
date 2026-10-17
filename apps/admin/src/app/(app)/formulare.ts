@@ -28,6 +28,7 @@ import {
   kalibrierungSchema,
   kundeAendernSchema,
   kundeErstellenSchema,
+  kundeKontoSchema,
   mieteErstellenSchema,
   rechnungErstellenSchema,
   schluesselAusstellenSchema,
@@ -437,6 +438,28 @@ export async function erstelleMiete(_z: FormularZustand, fd: FormData): Promise<
     `/mieten/${ergebnis.id}`,
     ergebnis.idempotent ? 'Diese Buchung war bereits angelegt.' : 'Buchung bestätigt.',
   );
+}
+
+// --- Logins des Kunden (F-41) ---
+export async function ordneKundenLoginZu(
+  _z: FormularZustand,
+  fd: FormData,
+): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const kundeId = text(fd, 'kundeId') ?? '';
+  if (!istUuid(kundeId)) return { fehler: 'Kunde fehlt.', werte };
+  const p = pruefe(
+    kundeKontoSchema,
+    { kontoId: text(fd, 'kontoId') ?? '', bezeichnung: text(fd, 'bezeichnung') },
+    werte,
+  );
+  if (!p.ok) return p.zustand;
+  try {
+    await apiPost(`/v1/kunden/${kundeId}/konten`, p.daten);
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(`/kunden/${kundeId}`, 'Login zugeordnet – er sieht ab sofort die Daten dieses Kunden.');
 }
 
 // --- Digitaler Schlüssel und Fernzugriff (D-014) ---

@@ -127,6 +127,13 @@
       "when": 1760659200000,
       "tag": "0017_nachweis_zustellung",
       "breakpoints": false
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1760662800000,
+      "tag": "0018_kunde_konto",
+      "breakpoints": false
     }
   ]
 }

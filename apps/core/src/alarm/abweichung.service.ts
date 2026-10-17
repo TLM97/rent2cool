@@ -55,12 +55,16 @@ export class AbweichungService {
 
   async liste(
     mandantId: string | undefined,
-    opts: { status?: string; limit: number; offset: number },
+    opts: { status?: string; kundeId?: string; limit: number; offset: number },
   ): Promise<{ eintraege: AbweichungMitBezug[]; gesamt: number }> {
     const mandant = mandantId ?? PLACEHOLDER_MANDANT_ID;
     const filter = and(
       eq(abweichung.mandantId, mandant),
       opts.status ? eq(abweichung.status, opts.status) : undefined,
+      // Kundensicht (F-41): nur Abweichungen zu Mieten dieses Kunden.
+      opts.kundeId
+        ? sql`${abweichung.bezugTyp} = 'miete' and exists (select 1 from miete m where m.id = ${abweichung.bezugId} and m.kunde_id = ${opts.kundeId})`
+        : undefined,
     );
     const [zeilen, [zaehler]] = await Promise.all([
       this.mitBezug()

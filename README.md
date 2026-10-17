@@ -162,6 +162,23 @@ Ein geschützter, auditierter Demo-Endpunkt (`POST /v1/admin/audit-demo`,
 Rolle `admin`) weist die Kette Guard → Rolle → Audit nach; er wird ersetzt,
 sobald echte GDP-Module existieren.
 
+## Datensichtbarkeit je Kunde (F-41)
+
+Kunden-Logins (`kunde_dispo`, `kunde_qa`) sehen **nur Daten ihres eigenen
+Kunden**; interne Rollen sehen ihren Mandanten. Welcher Login zu welchem
+Kunden gehört, steht im Kern (`kunde_konto`, gepflegt unter „Kunden → Logins
+fürs Kundenportal“, nur `admin`, auditiert) – Keycloak meldet nur an. Ohne
+Zuordnung wird abgelehnt, nie „alles“ gezeigt; fremde Datensätze sind „nicht
+gefunden“. Zentral in `apps/core/src/auth/zugriff.ts`, von jedem Controller
+genutzt, den Kunden erreichen.
+
+- Kunden: eigene Mieten, Rechnungen, Alarme, Abweichungen, Nachweise,
+  Schlüssel, Fahrer; Fahrzeugakte nur für Fahrzeuge ihrer Mieten, Position nur
+  während der laufenden Miete; buchen nur für sich, als Status nur „storniert“.
+- Flottenliste und der freie Nachweis über beliebige Fahrzeuge sind intern.
+- `GET /v1/ich` zeigt Rollen und den zugeordneten Kunden.
+- Lokal ist `kunde.dev` dem Demo-Kunden „Nordlicht“ zugeordnet.
+
 ## Temperaturnachweis v1
 
 Das zentrale Verkaufsargument: ein lückenloser, fälschungssicherer

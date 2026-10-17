@@ -54,6 +54,7 @@ import { alarm, kunde, mandant, miete } from '../schema';
 import {
   DEMO_AKTEUR_ID,
   DEMO_FAHRZEUGE,
+  DEMO_KUNDE_LOGIN,
   DEMO_KUNDEN,
   DEMO_MARKER_KUNDE,
   DEMO_MIETEN,
@@ -244,6 +245,13 @@ export async function ladeDemoDaten(
       ergebnis.fahrer++;
     }
     kundenIds.set(k.schluessel, id);
+    if (k.firmenname === DEMO_MARKER_KUNDE) {
+      // Login kunde.dev sieht als „Nordlicht“ (im Platzhalter-Mandanten mit fester ID).
+      await kunden.ordneKontoZu(akteur, id, {
+        kontoId: mandantId === PLACEHOLDER_MANDANT_ID ? DEMO_KUNDE_LOGIN : demoKonto('demo-login'),
+        bezeichnung: 'kunde.dev (Demo-Login)',
+      });
+    }
     fahrerIds.set(k.schluessel, ids);
     ergebnis.kunden++;
   }

@@ -135,6 +135,13 @@ export const kundeAendernSchema = z.object({
 });
 export type KundeAendern = z.infer<typeof kundeAendernSchema>;
 
+/** Login (Keycloak-Benutzer-ID) einem Kunden zuordnen (F-41). */
+export const kundeKontoSchema = z.object({
+  kontoId: pflicht('Benutzer-ID fehlt').pipe(z.string().max(200)),
+  bezeichnung: z.string().trim().max(200).optional(),
+});
+export type KundeKontoEingabe = z.infer<typeof kundeKontoSchema>;
+
 export const fahrerErstellenSchema = z.object({
   name: pflicht('Name fehlt'),
   fuehrerscheinKlasse: pflicht('Klasse fehlt'),

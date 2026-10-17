@@ -5,6 +5,8 @@ import type { Env } from '../config/env';
 import { JWT_VERIFIER, JwtAuthGuard } from './jwt-auth.guard';
 import { JwtVerifier, erzeugeJwksKeyResolver } from './jwt.service';
 import { RolesGuard } from './roles.guard';
+import { IchController } from './ich.controller';
+import { Zugriff } from './zugriff';
 
 /**
  * Authentifizierung und Rollenprüfung (T-004), global erzwungen.
@@ -12,6 +14,7 @@ import { RolesGuard } from './roles.guard';
  */
 @Global()
 @Module({
+  controllers: [IchController],
   providers: [
     {
       provide: JWT_VERIFIER,
@@ -23,7 +26,8 @@ import { RolesGuard } from './roles.guard';
     },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    Zugriff,
   ],
-  exports: [JWT_VERIFIER],
+  exports: [JWT_VERIFIER, Zugriff],
 })
 export class AuthModule {}

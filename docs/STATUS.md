@@ -13,6 +13,52 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – F-41: Kunden sehen nur ihre eigenen Daten
+
+**Datensichtbarkeit je Kunde – erledigt.** (Toms „Ja bitte“ zum Vorschlag;
+Voraussetzung für das Kundenportal und den Portal-Teil von F-46. Planung möge
+die Aufgabe in `TASKS.md` nachziehen und D-020 prüfen.)
+
+Erledigt:
+- **Zuordnung Login → Kunde im Kern** (`kunde_konto`, Migration `0018`):
+  pflegen nur `admin` (Kundenseite „Logins fürs Kundenportal“), auditiert
+  („Login zugeordnet/entfernt“), ein Login gehört genau einem Kunden.
+  Vorschlag **D-020**.
+- **Zentrale Prüfung** `apps/core/src/auth/zugriff.ts`: interne Rollen =
+  eigener Mandant, Kundenrollen = eigener Kunde, ohne Zuordnung abgelehnt.
+  Fremde Datensätze „nicht gefunden“; ungültige IDs ebenfalls (statt
+  Datenbankfehler).
+- **Alle Routen der Kundenrollen umgestellt:** Kunden, Fahrer, Mieten,
+  Rechnungen, Alarme, Abweichungen, Nachweise (Liste, Prüfung), Schlüssel.
+  Listen werden auf den Kunden gefiltert – ein mitgegebener fremder Filter
+  wird ignoriert. Fahrzeugakte nur für Fahrzeuge eigener Mieten, Position
+  nur während der laufenden Miete. Kunden buchen nur für sich und dürfen als
+  Status nur „storniert“ setzen. Flottenliste und der freie Nachweis über
+  beliebige Fahrzeuge/Zeiträume sind jetzt intern.
+- **Mandantenlücke geschlossen:** Einzelabrufe (`GET /v1/mieten/:id` usw.)
+  prüfen jetzt auch für interne Rollen den Mandanten.
+- `GET /v1/ich`: Rollen und zugeordneter Kunde (für Portal und App).
+- Lokal: `kunde.dev` hat eine feste Keycloak-ID und ist in den Demo-Daten
+  „Nordlicht“ zugeordnet. Über die echte API geprüft: sieht 4 statt 6
+  Mieten, Flottenliste 403, fremde Miete 404.
+
+Tests: Kern 161/161 Integration (neu: Sichtbarkeit je Art, Controller-
+Listen inkl. Umgehungsversuch, Buchen/Status, Logins, „Wer bin ich?“),
+Audit-Abdeckung um DELETE-Route und `IchController` erweitert; alle 9
+Browser-Tests grün.
+
+Abkürzungen:
+- Benutzer-IDs werden von Hand aus Keycloak übernommen; Einladung per
+  E-Mail (Konto anlegen + zuordnen in einem Schritt) folgt mit dem Portal.
+
+Fragen an Planung:
+- **F-51:** Wer legt Kunden-Logins an – nur wir, oder bekommt der Kunde
+  eine eigene Admin-Rolle (`kunde_admin`), die Logins für seine Leute selbst
+  verwaltet?
+- F-24, F-26 bis F-37, F-42 bis F-45, F-49, F-50 weiter offen.
+
+---
+
 ### 2026-10-17 – Nachweis: elektronisches Siegel und Zustellung per E-Mail
 
 Tom hat F-46 bis F-48 direkt beantwortet: **F-46** Kundenportal und E-Mail,

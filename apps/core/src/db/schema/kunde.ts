@@ -55,3 +55,21 @@ export const fahrer = pgTable(
     index('idx_fahrer_fs_gueltig').on(t.fuehrerscheinGueltigBis),
   ],
 );
+
+/** Login eines Kunden-Mitarbeiters → Kunde (F-41, Migration 0018). */
+export const kundeKonto = pgTable(
+  'kunde_konto',
+  {
+    kontoId: text('konto_id').primaryKey(),
+    mandantId: uuid('mandant_id')
+      .notNull()
+      .references(() => mandant.id),
+    kundeId: uuid('kunde_id')
+      .notNull()
+      .references(() => kunde.id),
+    bezeichnung: text('bezeichnung'),
+    erstelltVon: text('erstellt_von').notNull(),
+    erstelltAm: timestamp('erstellt_am', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('idx_kunde_konto_kunde').on(t.kundeId)],
+);

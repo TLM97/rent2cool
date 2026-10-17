@@ -15,7 +15,7 @@ import {
   StatusFormular,
 } from '../../../../components/bausteine';
 import { Verlauf } from '../../../../components/verlauf';
-import { FormularRahmen } from '../../../../components/formular';
+import { Feld, FormularRahmen } from '../../../../components/formular';
 import { FahrerFelder } from '../../../../components/stammdaten';
 import { apiGet, apiGetOderNull } from '../../../../lib/api';
 import { formatDatum } from '../../../../lib/format';
@@ -24,9 +24,9 @@ import { fuehrerscheinFrist } from '../../../../lib/fristen';
 import { istUuid, type SuchParameter } from '../../../../lib/seiten';
 import { holeSitzung } from '../../../../lib/sitzung';
 import { hatRolle } from '../../../../lib/token';
-import type { Fahrer, Kunde } from '../../../../lib/typen';
-import { aendereFahrerStatus, aendereKundeStatus } from '../../aktionen';
-import { erstelleFahrer } from '../../formulare';
+import type { Fahrer, Kunde, KundeKonto } from '../../../../lib/typen';
+import { aendereFahrerStatus, aendereKundeStatus, entferneKundenLogin } from '../../aktionen';
+import { erstelleFahrer, ordneKundenLoginZu } from '../../formulare';
 
 export const metadata: Metadata = { title: 'Kunde' };
 
@@ -47,6 +47,8 @@ export default async function KundeDetail({
     holeSitzung(),
   ]);
   const darfAendern = hatRolle(sitzung?.rollen ?? [], 'ops', 'admin');
+  const darfLogins = hatRolle(sitzung?.rollen ?? [], 'admin');
+  const konten = darfAendern ? await apiGet<KundeKonto[]>(`/v1/kunden/${id}/konten`) : null;
   // Ohne erlaubten Folgestatus (z. B. Endzustand) kein leeres Statusfeld.
   const naechsteKunde = naechsteStatus(KUNDE_STATUS, kunde.status, istKundeUebergangErlaubt);
   const pfad = `/kunden/${id}`;
@@ -166,6 +168,66 @@ export default async function KundeDetail({
         )}
       </section>
 
+      {konten ? (
+        <section className="karte" aria-labelledby="logins-titel">
+          <h2 id="logins-titel">Logins fürs Kundenportal</h2>
+          <p className="leise">
+            Diese Logins sehen ausschließlich Daten dieses Kunden (Mieten, Nachweise, Rechnungen,
+            Alarme). Die Benutzer-ID stammt aus der Anmeldung (Keycloak).
+          </p>
+          {konten.length === 0 ? (
+            <Leer>Noch kein Login zugeordnet.</Leer>
+          ) : (
+            <div className="tabelle-huelle">
+              <table aria-labelledby="logins-titel">
+                <thead>
+                  <tr>
+                    <th scope="col">Bezeichnung</th>
+                    <th scope="col">Benutzer-ID</th>
+                    <th scope="col">seit</th>
+                    {darfLogins ? <th scope="col">Aktion</th> : null}
+                  </tr>
+                </thead>
+                <tbody>
+                  {konten.map((k) => (
+                    <tr key={k.kontoId}>
+                      <td>{k.bezeichnung ?? '–'}</td>
+                      <td className="mono">{k.kontoId}</td>
+                      <td>{formatDatum(k.erstelltAm)}</td>
+                      {darfLogins ? (
+                        <td>
+                          <form action={entferneKundenLogin}>
+                            <input type="hidden" name="kundeId" value={kunde.id} />
+                            <input type="hidden" name="kontoId" value={k.kontoId} />
+                            <button type="submit" className="knopf zweitrangig klein">
+                              Entfernen
+                            </button>
+                          </form>
+                        </td>
+                      ) : null}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {darfLogins ? (
+            <FormularRahmen
+              aktion={ordneKundenLoginZu}
+              sendenText="Login zuordnen"
+              versteckt={{ kundeId: kunde.id }}
+            >
+              <Feld name="kontoId" label="Benutzer-ID (Keycloak)" pflicht />
+              <Feld
+                name="bezeichnung"
+                label="Bezeichnung"
+                hinweis="z. B. „Disposition, Frau Muster“"
+              />
+            </FormularRahmen>
+          ) : null}
+        </section>
+      ) : null}
+
       {darfAendern ? (
         <section className="karte" aria-labelledby="fahrer-neu-titel">
           <h2 id="fahrer-neu-titel">Fahrer anlegen</h2>
@@ -184,7 +246,7 @@ export default async function KundeDetail({
       ) : null}
       <Verlauf
         entitaetIds={[kunde.id, ...fahrer.map((f) => f.id)]}
-        typen={['kunde', 'kunde_status', 'fahrer', 'fahrer_status']}
+        typen={['kunde', 'kunde_status', 'fahrer', 'fahrer_status', 'kunde_konto']}
         bezeichnungen={Object.fromEntries(fahrer.map((f) => [f.id, `Fahrer ${f.name}`]))}
       />
     </>

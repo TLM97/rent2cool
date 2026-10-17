@@ -7,7 +7,7 @@
  */
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { apiGet, apiPatch, apiPost } from '../../lib/api';
+import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api';
 import { ApiFehler } from '../../lib/api-client';
 import { statusLabel } from '../../lib/format';
 import { pruefungsText } from '../../lib/nachweis';
@@ -152,6 +152,24 @@ export async function pruefeNachweis(formData: FormData): Promise<void> {
     }>(`/v1/temperaturnachweise/${id}/pruefung`);
     const text = pruefungsText(String(formData.get('version') ?? ''), p);
     ziel = mitMeldung(zurueck, p.ergebnis === 'echt' ? 'erfolg' : 'fehler', text);
+  } catch (e) {
+    if (!(e instanceof ApiFehler)) throw e;
+    ziel = mitMeldung(zurueck, 'fehler', e.message);
+  }
+  redirect(ziel);
+}
+
+/** Zuordnung eines Logins zum Kunden lösen (F-41). */
+export async function entferneKundenLogin(formData: FormData): Promise<void> {
+  const kundeId = String(formData.get('kundeId') ?? '');
+  const kontoId = String(formData.get('kontoId') ?? '');
+  const zurueck = istUuid(kundeId) ? `/kunden/${kundeId}` : '/kunden';
+  if (!istUuid(kundeId) || !kontoId) redirect(mitMeldung(zurueck, 'fehler', 'Ungültige Eingabe'));
+  let ziel: string;
+  try {
+    await apiDelete(`/v1/kunden/${kundeId}/konten/${encodeURIComponent(kontoId)}`);
+    revalidatePath('/', 'layout');
+    ziel = mitMeldung(zurueck, 'erfolg', 'Login entfernt – er sieht keine Kundendaten mehr.');
   } catch (e) {
     if (!(e instanceof ApiFehler)) throw e;
     ziel = mitMeldung(zurueck, 'fehler', e.message);

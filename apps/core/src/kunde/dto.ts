@@ -7,11 +7,13 @@ export {
   fahrerStatusSchema,
   kundeAendernSchema,
   kundeErstellenSchema,
+  kundeKontoSchema,
   kundeStatusSchema,
   type FahrerAendern,
   type FahrerErstellen,
   type KundeAendern,
   type KundeErstellen,
+  type KundeKontoEingabe,
 } from '@rent2cool/shared';
 
 export const listeAbfrageSchema = z.object({

@@ -11,6 +11,7 @@ import {
 import { z } from 'zod';
 import type { Principal, TemperaturNachweis } from '@rent2cool/shared';
 import { CurrentUser, Roles } from '../auth/decorators';
+import { Zugriff } from '../auth/zugriff';
 import { Audited, AuditImService } from '../audit/audited.decorator';
 import { NachweisArchiv } from './archiv.service';
 import { Berichtsdienst } from './berichtsdienst';
@@ -54,9 +55,12 @@ function zuParams(q: z.infer<typeof anfrageSchema>): ErzeugeParams {
 export class BerichtController {
   constructor(private readonly service: BerichtService) {}
 
-  /** Nachweis berechnen und direkt zurückgeben (JSON). */
+  /**
+   * Nachweis für beliebiges Fahrzeug und Zeitraum – intern. Kunden erhalten
+   * Nachweise nur zu ihren Mieten (F-41).
+   */
   @Get()
-  @Roles('ops', 'admin', 'kunde_qa', 'kunde_dispo')
+  @Roles('ops', 'admin', 'qa_approver')
   abrufen(@Query() q: unknown): Promise<TemperaturNachweis> {
     return this.service.erzeuge(zuParams(parse(q)));
   }
@@ -94,11 +98,14 @@ export class MieteNachweisController {
   constructor(
     private readonly archiv: NachweisArchiv,
     private readonly dienst: Berichtsdienst,
+    private readonly zugriff: Zugriff,
   ) {}
 
+  /** Nachweise einer Miete – auch für die Kunden (Download im Portal, F-46). */
   @Get(':id/temperaturnachweise')
   @Roles('ops', 'admin', 'qa_approver', 'kunde_qa', 'kunde_dispo')
-  liste(@CurrentUser() user: Principal, @Param('id', new ParseUUIDPipe()) id: string) {
+  async liste(@CurrentUser() user: Principal, @Param('id', new ParseUUIDPipe()) id: string) {
+    await this.zugriff.miete(user, id);
     return this.archiv.liste(user, id);
   }
 
@@ -115,12 +122,16 @@ export class MieteNachweisController {
 
 @Controller('v1/temperaturnachweise')
 export class NachweisPruefungController {
-  constructor(private readonly archiv: NachweisArchiv) {}
+  constructor(
+    private readonly archiv: NachweisArchiv,
+    private readonly zugriff: Zugriff,
+  ) {}
 
   /** Echtheitsprüfung: Dateien, Signaturen und Messdaten gegen das Archiv. */
   @Get(':id/pruefung')
   @Roles('ops', 'admin', 'qa_approver', 'kunde_qa')
-  pruefe(@CurrentUser() user: Principal, @Param('id', new ParseUUIDPipe()) id: string) {
+  async pruefe(@CurrentUser() user: Principal, @Param('id', new ParseUUIDPipe()) id: string) {
+    await this.zugriff.nachweis(user, id);
     return this.archiv.pruefe(user, id);
   }
 }
