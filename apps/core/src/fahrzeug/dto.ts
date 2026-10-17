@@ -9,9 +9,11 @@ export {
   fahrzeugStatusSchema as statusAendernSchema,
   kalibrierungSchema,
   sensorEingabeSchema,
+  sensorTauschSchema,
   type FahrzeugAendern,
   type FahrzeugErstellen,
   type KalibrierungEingabe,
+  type SensorTausch,
 } from '@rent2cool/shared';
 
 export const listeAbfrageSchema = z.object({

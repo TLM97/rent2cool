@@ -13,6 +13,63 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Sensortausch
+
+**Sensortausch – erledigt.** (Auf Toms Auftrag; Planung möge die Aufgabe in
+`TASKS.md` nachziehen.)
+
+Erledigt:
+- **Einbau-Historie für Sensoren** (Migration `0008_sensor_tausch`):
+  eingebaut/ausgebaut, Ausbaugrund, Vorgänger. Messwerte hängen am Fahrzeug,
+  nicht am Sensor – erst damit ist nachvollziehbar, welcher Sensor (und
+  welche Kalibrierung) wann gemessen hat. Die Datenbank erzwingt
+  „aktiv ⇔ nicht ausgebaut“ und höchstens einen Nachfolger je Sensor.
+  Bestand wird übernommen (eingebaut = angelegt).
+- **Kern:** `POST /v1/sensoren/:id/tausch` (Rollen `ops`/`admin`). In einer
+  Transaktion: alter Sensor ausgebaut (bleibt mit Kalibrierungen erhalten),
+  neuer mit gleicher Messgröße eingebaut (lückenlos, gleicher Zeitpunkt),
+  optional gleich kalibriert, Audit mit altem und neuem Sensor.
+  - Wiederholung derselben Anfrage (gleiche Seriennummer) liefert das
+    vorhandene Ergebnis (`idempotent: true`, D-003); gleichzeitige Anfragen
+    erzeugen genau einen neuen Sensor.
+  - Eine Seriennummer kann nicht in zwei Fahrzeugen zugleich eingebaut sein.
+  - Fremde Mandanten bekommen 404.
+- Ohne Kalibrierung des neuen Sensors ist das Fahrzeug **nicht buchbar**
+  (bestehende Regel R-08/R-09 greift automatisch); ausgebaute Sensoren
+  verschwinden aus den fälligen Kalibrierungen.
+- Die Akte liefert je Sensor „kalibriert bis“ mit einer einzigen Abfrage;
+  die Buchbarkeitsprüfung nutzt das jetzt auch (vorher eine Abfrage je
+  Sensor).
+- **Oberfläche:** Sensortabelle der Fahrzeugakte mit Seriennummer,
+  Ein-/Ausbau, Grund und Kalibrierfrist; „Tauschen“ je eingebautem Sensor;
+  Tauschseite mit optionaler Kalibrierung (gemeinsame Kalibrierfelder mit der
+  Akte); Hinweis, wenn das Fahrzeug gerade vermietet ist.
+- **Tests:** shared 41, admin 38, Kern 34 Unit + 34 Integration (68/68 gegen
+  den lokalen Stack, u. a. Gleichzeitigkeit, Idempotenz, DB-Regel). Neuer
+  Browser-Test: Tausch ohne Kalibrierung → nicht buchbar → nachkalibriert →
+  buchbar; Doppel-Einbau abgelehnt; Tausch mit Kalibrierung. Alle 8
+  Browser-Tests grün.
+
+Offen / Abkürzungen:
+- Tauschzeitpunkt ist immer „jetzt“ (Serverzeit, UTC). Nachträgliches Erfassen
+  eines früheren Tauschs ist nicht möglich → F-29.
+- Kühlaufbau (Aggregat) selbst tauschen oder nachträglich erfassen geht noch
+  nicht; nur Sensoren.
+
+Fragen an Planung:
+- **F-28:** Soll der Temperaturnachweis einer Miete die Sensoren mit
+  Seriennummer und gültiger Kalibrierung im Mietzeitraum ausweisen (inkl.
+  Tausch während der Miete)? Das ändert das Nachweis-Format
+  (`schemaVersion` 2) und gehört deshalb in die Planung. Die Daten dafür
+  liegen jetzt vor.
+- **F-29:** Darf ein Sensortausch rückdatiert erfasst werden (Techniker trägt
+  später ein)? Wenn ja: nur mit Begründung und nicht vor dem Einbau des alten
+  Sensors?
+- **F-30:** Soll ein Sensortausch während einer laufenden Miete automatisch
+  eine Abweichung anlegen? Heute nur ein Hinweis in der Oberfläche.
+
+---
+
 ### 2026-10-17 – Stammdaten-Bearbeitung
 
 **Stammdaten bearbeiten – erledigt.** (Auf Toms Auftrag; Planung möge die

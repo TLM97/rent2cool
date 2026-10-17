@@ -31,6 +31,12 @@ export interface Sensor {
   modell: string | null;
   seriennummer: string | null;
   aktiv: boolean;
+  eingebautAm: string;
+  ausgebautAm: string | null;
+  ausbauGrund: string | null;
+  vorgaengerId: string | null;
+  /** Jüngstes „gültig bis“ aller Kalibrierungen. */
+  kalibriertBis: string | null;
 }
 
 export interface Aggregat {

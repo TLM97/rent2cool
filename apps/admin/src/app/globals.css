@@ -658,3 +658,7 @@ label {
 .mehrzeilig {
   white-space: pre-wrap;
 }
+
+tr.ausgebaut td {
+  color: var(--text-leise);
+}

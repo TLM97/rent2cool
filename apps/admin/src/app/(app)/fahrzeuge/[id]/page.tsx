@@ -3,10 +3,11 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { erlaubteUebergaenge, istFahrzeugStatus } from '@rent2cool/shared';
 import { Leer, Meldungen, Plakette, Seitenkopf } from '../../../../components/bausteine';
-import { Auswahl, Feld, FormularRahmen } from '../../../../components/formular';
+import { Auswahl, FormularRahmen } from '../../../../components/formular';
+import { KalibrierungFelder } from '../../../../components/stammdaten';
 import { apiGet, apiGetOderNull } from '../../../../lib/api';
-import { formatDatum, kurzeId, statusLabel } from '../../../../lib/format';
-import { isoZuBerlinLokal } from '../../../../lib/formular';
+import { formatDatum, formatDatumZeit, kurzeId, statusLabel } from '../../../../lib/format';
+import { kalibrierungFrist } from '../../../../lib/fristen';
 import { istUuid, type SuchParameter } from '../../../../lib/seiten';
 import { holeSitzung } from '../../../../lib/sitzung';
 import { hatRolle } from '../../../../lib/token';
@@ -39,8 +40,6 @@ export default async function FahrzeugDetail({
   const darfAbweichung = hatRolle(rollen, 'ops', 'admin', 'qa_approver');
   const naechste = istFahrzeugStatus(f.status) ? erlaubteUebergaenge(f.status) : [];
   const sensoren = akte.aggregate.flatMap((a) => a.sensoren.filter((s) => s.aktiv));
-  const heute = new Date();
-  const inEinemJahr = new Date(heute.getTime() + 365 * 86_400_000);
 
   return (
     <>
@@ -137,21 +136,68 @@ export default async function FahrzeugDetail({
                   <tr>
                     <th scope="col">Sensor</th>
                     <th scope="col">Messgröße</th>
-                    <th scope="col">Einheit</th>
-                    <th scope="col">Modell</th>
-                    <th scope="col">aktiv</th>
+                    <th scope="col">Seriennummer / Modell</th>
+                    <th scope="col">eingebaut</th>
+                    <th scope="col">ausgebaut</th>
+                    <th scope="col">Kalibrierung</th>
+                    {darfAendern ? (
+                      <th scope="col">
+                        <span className="leise">Aktion</span>
+                      </th>
+                    ) : null}
                   </tr>
                 </thead>
                 <tbody>
-                  {a.sensoren.map((s) => (
-                    <tr key={s.id}>
-                      <td className="mono">{kurzeId(s.id)}</td>
-                      <td>{s.messgroesse}</td>
-                      <td>{s.einheit}</td>
-                      <td>{s.modell ?? '–'}</td>
-                      <td>{s.aktiv ? 'ja' : 'nein'}</td>
-                    </tr>
-                  ))}
+                  {a.sensoren.map((s) => {
+                    const frist = kalibrierungFrist(s.kalibriertBis);
+                    return (
+                      <tr key={s.id} className={s.aktiv ? undefined : 'ausgebaut'}>
+                        <td className="mono">{kurzeId(s.id)}</td>
+                        <td>
+                          {s.messgroesse} ({s.einheit})
+                        </td>
+                        <td>
+                          <span className="mono">{s.seriennummer ?? '–'}</span>
+                          {s.modell ? <span className="leise"> · {s.modell}</span> : null}
+                        </td>
+                        <td>{formatDatumZeit(s.eingebautAm)}</td>
+                        <td>
+                          {s.ausgebautAm ? (
+                            <>
+                              {formatDatumZeit(s.ausgebautAm)}
+                              {s.ausbauGrund ? <div className="leise">{s.ausbauGrund}</div> : null}
+                            </>
+                          ) : (
+                            <span className="plakette ok">eingebaut</span>
+                          )}
+                        </td>
+                        <td>
+                          {s.aktiv ? (
+                            <span className={`plakette ${frist.ton}`}>
+                              {frist.text}
+                              {s.kalibriertBis ? ` · bis ${formatDatum(s.kalibriertBis)}` : ''}
+                            </span>
+                          ) : s.kalibriertBis ? (
+                            <span className="leise">bis {formatDatum(s.kalibriertBis)}</span>
+                          ) : (
+                            '–'
+                          )}
+                        </td>
+                        {darfAendern ? (
+                          <td>
+                            {s.aktiv ? (
+                              <Link
+                                className="knopf zweitrangig klein"
+                                href={`/fahrzeuge/${f.id}/sensoren/${s.id}/tausch`}
+                              >
+                                Tauschen
+                              </Link>
+                            ) : null}
+                          </td>
+                        ) : null}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -180,23 +226,7 @@ export default async function FahrzeugDetail({
                 text: `${s.messgroesse} · ${kurzeId(s.id)}${s.seriennummer ? ` · SN ${s.seriennummer}` : ''}`,
               }))}
             />
-            <Feld name="pruefstelle" label="Prüfstelle" />
-            <Feld
-              name="durchgefuehrtAm"
-              label="Geprüft am"
-              typ="date"
-              pflicht
-              standard={isoZuBerlinLokal(heute, true)}
-            />
-            <Feld
-              name="gueltigBis"
-              label="Gültig bis (einschließlich)"
-              typ="date"
-              pflicht
-              standard={isoZuBerlinLokal(inEinemJahr, true)}
-            />
-            <Feld name="zertifikatRef" label="Zertifikat-Nr. / Referenz" />
-            <Feld name="ergebnis" label="Ergebnis" standard="bestanden" />
+            <KalibrierungFelder />
           </FormularRahmen>
         </section>
       ) : null}

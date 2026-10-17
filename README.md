@@ -314,6 +314,14 @@ Gespeichert werden nur geänderte Felder, jeweils mit altem und neuem Wert im
 Audit Trail. Hat zwischenzeitlich jemand anderes gespeichert, lehnt der Kern ab,
 statt zu überschreiben (Vorschlag D-016).
 
+### Sensortausch
+
+In der Fahrzeugakte je eingebautem Sensor „Tauschen“: Der alte Sensor wird
+ausgebaut und bleibt mit Kalibrierungen in der Akte, der neue misst ab dem
+gleichen Zeitpunkt weiter (`POST /v1/sensoren/:id/tausch`). Die Kalibrierung
+des neuen Sensors kann gleich mit erfasst werden – ohne sie ist das Fahrzeug
+nicht buchbar. Wiederholte Anfragen sind idempotent.
+
 ## Betrieb und Cloud
 
 Lokal mit Docker Compose; der Umzug in die Cloud ist reine Konfiguration

@@ -18,6 +18,7 @@ import {
   fahrzeugErstellenSchema,
   kalibrierungSchema,
   listeAbfrageSchema,
+  sensorTauschSchema,
   statusAendernSchema,
 } from './dto';
 import { FahrzeugService } from './fahrzeug.service';
@@ -109,5 +110,14 @@ export class SensorController {
     @Body() body: unknown,
   ): Promise<{ id: string }> {
     return this.service.fuegeKalibrierungHinzu(sensorId, user.akteurId, parse(kalibrierungSchema, body));
+  }
+
+  /** Sensor tauschen (Ausbau + Einbau, optional mit Kalibrierung). Audit mit alt/neu im Service. */
+  @Post(':sensorId/tausch')
+  @Roles('ops', 'admin')
+  @AuditImService('sensor_tausch')
+  @HttpCode(201)
+  tausche(@CurrentUser() user: Principal, @Param('sensorId') sensorId: string, @Body() body: unknown) {
+    return this.service.tauscheSensor(user, sensorId, parse(sensorTauschSchema, body));
   }
 }

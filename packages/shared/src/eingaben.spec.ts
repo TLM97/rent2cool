@@ -4,6 +4,7 @@ import {
   fahrerAendernSchema,
   fahrzeugAendernSchema,
   kundeAendernSchema,
+  sensorTauschSchema,
   fahrzeugErstellenSchema,
   kalibrierungSchema,
   mieteErstellenSchema,
@@ -76,5 +77,19 @@ describe('Geteilte Eingabe-Schemas', () => {
     expect(feldMeldung(fahrerAendernSchema.safeParse({ version: v, fuehrerscheinGueltigBis: 'morgen' }), 'fuehrerscheinGueltigBis')).toBe(
       'Ungültiges Datum',
     );
+  });
+
+  it('Sensortausch: Seriennummer und Grund sind Pflicht, Kalibrierung optional und geprüft', () => {
+    const r = sensorTauschSchema.safeParse({ seriennummer: ' ', grund: '' });
+    expect(feldMeldung(r, 'seriennummer')).toBe('Seriennummer des neuen Sensors fehlt');
+    expect(feldMeldung(r, 'grund')).toBe('Grund für den Tausch fehlt');
+    expect(sensorTauschSchema.parse({ seriennummer: 'SN-2', grund: 'defekt' }).kalibrierung).toBeUndefined();
+    const k = sensorTauschSchema.safeParse({
+      seriennummer: 'SN-2',
+      grund: 'defekt',
+      kalibrierung: { durchgefuehrtAm: '2026-10-17T08:00:00Z', gueltigBis: '2026-10-01T08:00:00Z' },
+    });
+    expect(k.success).toBe(false);
+    expect(k.error?.issues[0]?.path).toEqual(['kalibrierung', 'gueltigBis']);
   });
 });

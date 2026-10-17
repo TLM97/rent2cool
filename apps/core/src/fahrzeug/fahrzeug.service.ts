@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, max, sql } from 'drizzle-orm';
 import { istUebergangErlaubt, type FahrzeugStatus, type Principal } from '@rent2cool/shared';
 import { ermittleAenderungen, neueWerte, pruefeVersion, versionVon, type StammdatenErgebnis } from '../audit/aenderung';
 import { schreibeAudit } from '../audit/audit.service';
@@ -14,7 +14,30 @@ import { DB } from '../db/db.module';
 import { aggregat, fahrzeug, kalibrierung, sensor } from '../db/schema';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 import { bewerteBuchbarkeit, type BuchbarkeitErgebnis, type SensorFrist } from './fristen';
-import type { FahrzeugAendern, FahrzeugErstellen, KalibrierungEingabe } from './dto';
+import type { FahrzeugAendern, FahrzeugErstellen, KalibrierungEingabe, SensorTausch } from './dto';
+
+export type AkteSensor = typeof sensor.$inferSelect & { kalibriertBis: Date | null };
+
+export interface SensorTauschErgebnis {
+  alterSensorId: string;
+  neuerSensorId: string;
+  fahrzeugId: string;
+  kalibrierungId?: string;
+  /** true: Wiederholung einer bereits ausgeführten Anfrage, nichts Neues angelegt. */
+  idempotent: boolean;
+}
+
+function kalibrierungsWerte(sensorId: string, erfasstVon: string, k: KalibrierungEingabe) {
+  return {
+    sensorId,
+    durchgefuehrtAm: new Date(k.durchgefuehrtAm),
+    gueltigBis: new Date(k.gueltigBis),
+    pruefstelle: k.pruefstelle ?? null,
+    zertifikatRef: k.zertifikatRef ?? null,
+    ergebnis: k.ergebnis ?? null,
+    erfasstVon,
+  };
+}
 
 @Injectable()
 export class FahrzeugService {
@@ -147,7 +170,7 @@ export class FahrzeugService {
 
   async holeAkte(id: string): Promise<{
     fahrzeug: typeof fahrzeug.$inferSelect;
-    aggregate: (typeof aggregat.$inferSelect & { sensoren: (typeof sensor.$inferSelect)[] })[];
+    aggregate: (typeof aggregat.$inferSelect & { sensoren: AkteSensor[] })[];
   }> {
     const [fz] = await this.db.select().from(fahrzeug).where(eq(fahrzeug.id, id));
     if (!fz) {
@@ -156,15 +179,120 @@ export class FahrzeugService {
     const aggregate = await this.db.select().from(aggregat).where(eq(aggregat.fahrzeugId, id));
     const aggIds = aggregate.map((a) => a.id);
     const sensoren = aggIds.length
-      ? await this.db.select().from(sensor).where(inArray(sensor.aggregatId, aggIds))
+      ? await this.db
+          .select()
+          .from(sensor)
+          .where(inArray(sensor.aggregatId, aggIds))
+          .orderBy(desc(sensor.eingebautAm))
       : [];
+    const bis = await this.kalibriertBis(sensoren.map((s) => s.id));
     return {
       fahrzeug: fz,
       aggregate: aggregate.map((a) => ({
         ...a,
-        sensoren: sensoren.filter((s) => s.aggregatId === a.id),
+        sensoren: sensoren
+          .filter((s) => s.aggregatId === a.id)
+          .map((s) => ({ ...s, kalibriertBis: bis.get(s.id) ?? null })),
       })),
     };
+  }
+
+  /** Jüngstes „gültig bis“ je Sensor – eine Abfrage statt einer je Sensor. */
+  private async kalibriertBis(sensorIds: string[]): Promise<Map<string, Date>> {
+    if (sensorIds.length === 0) return new Map();
+    const rows = await this.db
+      .select({ sensorId: kalibrierung.sensorId, bis: max(kalibrierung.gueltigBis) })
+      .from(kalibrierung)
+      .where(inArray(kalibrierung.sensorId, sensorIds))
+      .groupBy(kalibrierung.sensorId);
+    return new Map(rows.filter((r) => r.bis).map((r) => [r.sensorId, r.bis!]));
+  }
+
+  /**
+   * Sensor tauschen (eine Transaktion): alten Sensor ausbauen, neuen mit
+   * gleicher Messgröße einbauen, optional gleich kalibrieren, Audit mit altem
+   * und neuem Sensor. Wiederholt die App dieselbe Anfrage (gleiche
+   * Seriennummer), kommt das vorhandene Ergebnis zurück (D-003).
+   */
+  async tauscheSensor(principal: Principal, sensorId: string, p: SensorTausch): Promise<SensorTauschErgebnis> {
+    const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
+    return this.db.transaction(async (tx) => {
+      const [alt] = await tx
+        .select({ s: sensor, fahrzeugId: fahrzeug.id, mandantId: fahrzeug.mandantId })
+        .from(sensor)
+        .innerJoin(aggregat, eq(sensor.aggregatId, aggregat.id))
+        .innerJoin(fahrzeug, eq(aggregat.fahrzeugId, fahrzeug.id))
+        .where(eq(sensor.id, sensorId))
+        .for('update', { of: sensor });
+      if (!alt || alt.mandantId !== mandant) {
+        throw new NotFoundException('Sensor nicht gefunden');
+      }
+
+      if (!alt.s.aktiv) {
+        const [nachfolger] = await tx.select().from(sensor).where(eq(sensor.vorgaengerId, sensorId));
+        if (nachfolger && nachfolger.seriennummer === p.seriennummer) {
+          return { alterSensorId: sensorId, neuerSensorId: nachfolger.id, fahrzeugId: alt.fahrzeugId, idempotent: true };
+        }
+        throw new ConflictException(
+          nachfolger
+            ? `Sensor wurde bereits ersetzt (neuer Sensor SN ${nachfolger.seriennummer ?? '–'}).`
+            : 'Sensor ist bereits ausgebaut.',
+        );
+      }
+
+      // Ein physischer Sensor kann nicht in zwei Fahrzeugen gleichzeitig stecken.
+      const [doppelt] = await tx
+        .select({ kennzeichen: fahrzeug.kennzeichen })
+        .from(sensor)
+        .innerJoin(aggregat, eq(sensor.aggregatId, aggregat.id))
+        .innerJoin(fahrzeug, eq(aggregat.fahrzeugId, fahrzeug.id))
+        .where(and(eq(sensor.seriennummer, p.seriennummer), eq(sensor.aktiv, true), eq(fahrzeug.mandantId, mandant)))
+        .limit(1);
+      if (doppelt) {
+        throw new ConflictException(`Sensor SN ${p.seriennummer} ist bereits in ${doppelt.kennzeichen} eingebaut.`);
+      }
+
+      const jetzt = new Date();
+      await tx
+        .update(sensor)
+        .set({ aktiv: false, ausgebautAm: jetzt, ausbauGrund: p.grund })
+        .where(eq(sensor.id, sensorId));
+      const [neu] = await tx
+        .insert(sensor)
+        .values({
+          aggregatId: alt.s.aggregatId,
+          messgroesse: alt.s.messgroesse,
+          einheit: alt.s.einheit,
+          modell: p.modell || alt.s.modell,
+          seriennummer: p.seriennummer,
+          eingebautAm: jetzt,
+          vorgaengerId: sensorId,
+        })
+        .returning();
+      let kalibrierungId: string | undefined;
+      if (p.kalibrierung) {
+        const [k] = await tx
+          .insert(kalibrierung)
+          .values(kalibrierungsWerte(neu!.id, principal.akteurId, p.kalibrierung))
+          .returning({ id: kalibrierung.id });
+        kalibrierungId = k!.id;
+      }
+      await schreibeAudit(tx, principal, {
+        aktion: 'POST',
+        entitaetTyp: 'sensor_tausch',
+        entitaetId: sensorId,
+        altWert: { sensorId, seriennummer: alt.s.seriennummer, modell: alt.s.modell, aktiv: true },
+        neuWert: {
+          sensorId: neu!.id,
+          seriennummer: neu!.seriennummer,
+          modell: neu!.modell,
+          grund: p.grund,
+          ausgebautAm: jetzt.toISOString(),
+          kalibrierung: p.kalibrierung ? { id: kalibrierungId, ...p.kalibrierung } : null,
+        },
+      });
+      return { alterSensorId: sensorId, neuerSensorId: neu!.id, fahrzeugId: alt.fahrzeugId, kalibrierungId, idempotent: false };
+    });
   }
 
   async aendereStatus(id: string, nach: FahrzeugStatus): Promise<{ id: string; status: FahrzeugStatus }> {
@@ -200,32 +328,17 @@ export class FahrzeugService {
     }
     const [row] = await this.db
       .insert(kalibrierung)
-      .values({
-        sensorId,
-        durchgefuehrtAm: new Date(k.durchgefuehrtAm),
-        gueltigBis: new Date(k.gueltigBis),
-        pruefstelle: k.pruefstelle ?? null,
-        zertifikatRef: k.zertifikatRef ?? null,
-        ergebnis: k.ergebnis ?? null,
-        erfasstVon,
-      })
+      .values(kalibrierungsWerte(sensorId, erfasstVon, k))
       .returning({ id: kalibrierung.id });
     return { id: row!.id };
   }
 
   async buchbarkeit(id: string, stichtag: Date): Promise<BuchbarkeitErgebnis> {
     const akte = await this.holeAkte(id);
-    const sensoren = akte.aggregate.flatMap((a) => a.sensoren).filter((s) => s.aktiv);
-    const fristen: SensorFrist[] = [];
-    for (const s of sensoren) {
-      const [k] = await this.db
-        .select({ gueltigBis: kalibrierung.gueltigBis })
-        .from(kalibrierung)
-        .where(eq(kalibrierung.sensorId, s.id))
-        .orderBy(desc(kalibrierung.gueltigBis))
-        .limit(1);
-      fristen.push({ sensorId: s.id, gueltigBis: k?.gueltigBis ?? null });
-    }
+    const fristen: SensorFrist[] = akte.aggregate
+      .flatMap((a) => a.sensoren)
+      .filter((s) => s.aktiv)
+      .map((s) => ({ sensorId: s.id, gueltigBis: s.kalibriertBis }));
     return bewerteBuchbarkeit(akte.fahrzeug.status, fristen, stichtag);
   }
 

@@ -19,6 +19,7 @@ import {
   kundeAendernSchema,
   kundeErstellenSchema,
   mieteErstellenSchema,
+  sensorTauschSchema,
   rechnungErstellenSchema,
 } from '@rent2cool/shared';
 import { apiPatch, apiPost } from '../../lib/api';
@@ -170,6 +171,47 @@ export async function erfasseKalibrierung(_z: FormularZustand, fd: FormData): Pr
     return kernFehler(e, werte);
   }
   weiter(istUuid(fahrzeugId) ? `/fahrzeuge/${fahrzeugId}` : '/fahrzeuge', 'Kalibrierung erfasst.');
+}
+
+export async function tauscheSensor(_z: FormularZustand, fd: FormData): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const fahrzeugId = text(fd, 'fahrzeugId') ?? '';
+  const sensorId = text(fd, 'sensorId') ?? '';
+  if (!istUuid(fahrzeugId) || !istUuid(sensorId)) return { fehler: 'Sensor fehlt.', werte };
+  const kalibrierung = haken(fd, 'mitKalibrierung')
+    ? {
+        durchgefuehrtAm: berlinLokalZuIso(text(fd, 'durchgefuehrtAm')) ?? '',
+        gueltigBis: berlinTagesendeZuIso(text(fd, 'gueltigBis')) ?? '',
+        pruefstelle: text(fd, 'pruefstelle'),
+        zertifikatRef: text(fd, 'zertifikatRef'),
+        ergebnis: text(fd, 'ergebnis'),
+      }
+    : undefined;
+  const roh = {
+    seriennummer: text(fd, 'seriennummer') ?? '',
+    modell: text(fd, 'modell'),
+    grund: text(fd, 'grund') ?? '',
+    kalibrierung,
+  };
+  const p = pruefe(sensorTauschSchema, roh, werte);
+  if (!p.ok) {
+    // Fehler der Kalibrierung („kalibrierung.gueltigBis“) dem Formularfeld zuordnen.
+    const feldFehler = Object.fromEntries(
+      Object.entries(p.zustand.feldFehler ?? {}).map(([k, v]) => [k.replace(/^kalibrierung\./, ''), v]),
+    );
+    return { ...p.zustand, feldFehler };
+  }
+  try {
+    await apiPost(`/v1/sensoren/${sensorId}/tausch`, p.daten);
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(
+    `/fahrzeuge/${fahrzeugId}`,
+    p.daten.kalibrierung
+      ? 'Sensor getauscht und kalibriert.'
+      : 'Sensor getauscht. Ohne Kalibrierung ist das Fahrzeug nicht buchbar.',
+  );
 }
 
 // --- Kunde & Fahrer ---

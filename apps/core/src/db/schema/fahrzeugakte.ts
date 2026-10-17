@@ -2,7 +2,18 @@
  * Fahrzeugakte: Fahrzeug, Aggregat (Kühlaufbau), Sensor, Kalibrierung.
  * Arbeitsgrundlage nach T-002 / D-006..D-012. GDP-relevant.
  */
-import { boolean, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import {
+  boolean,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  type AnyPgColumn,
+} from 'drizzle-orm/pg-core';
 import { mandant, standort } from './stammdaten';
 
 export const fahrzeug = pgTable(
@@ -65,9 +76,18 @@ export const sensor = pgTable(
     modell: text('modell'),
     seriennummer: text('seriennummer'),
     aktiv: boolean('aktiv').notNull().default(true),
+    eingebautAm: timestamp('eingebaut_am', { withTimezone: true }).notNull().defaultNow(),
+    ausgebautAm: timestamp('ausgebaut_am', { withTimezone: true }),
+    ausbauGrund: text('ausbau_grund'),
+    /** Ersetzter Sensor (Tausch-Kette); höchstens ein Nachfolger je Sensor. */
+    vorgaengerId: uuid('vorgaenger_id').references((): AnyPgColumn => sensor.id),
     erstelltAm: timestamp('erstellt_am', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('idx_sensor_aggregat').on(t.aggregatId)],
+  (t) => [
+    index('idx_sensor_aggregat').on(t.aggregatId),
+    uniqueIndex('uq_sensor_vorgaenger').on(t.vorgaengerId).where(sql`vorgaenger_id IS NOT NULL`),
+    index('idx_sensor_seriennummer_aktiv').on(t.seriennummer).where(sql`aktiv`),
+  ],
 );
 
 export const kalibrierung = pgTable(

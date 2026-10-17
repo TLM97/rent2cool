@@ -87,3 +87,24 @@ export function FahrerFelder({ werte }: { werte?: Fahrer }) {
     </>
   );
 }
+
+const TAG_MS = 86_400_000;
+
+/** Kalibriernachweis nach EN 12830 – in der Fahrzeugakte und beim Sensortausch. */
+export function KalibrierungFelder({ heute = new Date() }: { heute?: Date }) {
+  return (
+    <>
+      <Feld name="pruefstelle" label="Prüfstelle" />
+      <Feld name="durchgefuehrtAm" label="Geprüft am" typ="date" pflicht standard={isoZuBerlinLokal(heute, true)} />
+      <Feld
+        name="gueltigBis"
+        label="Gültig bis (einschließlich)"
+        typ="date"
+        pflicht
+        standard={isoZuBerlinLokal(new Date(heute.getTime() + 365 * TAG_MS), true)}
+      />
+      <Feld name="zertifikatRef" label="Zertifikat-Nr. / Referenz" />
+      <Feld name="ergebnis" label="Ergebnis" standard="bestanden" />
+    </>
+  );
+}

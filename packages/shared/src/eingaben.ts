@@ -90,6 +90,19 @@ export const kalibrierungSchema = z
   });
 export type KalibrierungEingabe = z.infer<typeof kalibrierungSchema>;
 
+/**
+ * Sensor tauschen: alter Sensor wird ausgebaut (bleibt mit Historie erhalten),
+ * der neue übernimmt Messgröße und Einheit. Ohne Kalibrierung ist das Fahrzeug
+ * danach nicht buchbar (R-08/R-09) – sie kann gleich mit erfasst werden.
+ */
+export const sensorTauschSchema = z.object({
+  seriennummer: pflicht('Seriennummer des neuen Sensors fehlt'),
+  modell: z.string().trim().optional(),
+  grund: pflicht('Grund für den Tausch fehlt'),
+  kalibrierung: kalibrierungSchema.optional(),
+});
+export type SensorTausch = z.infer<typeof sensorTauschSchema>;
+
 // --- Kunde & Fahrer ---
 export const kundeErstellenSchema = z.object({
   firmenname: pflicht('Firmenname fehlt'),
