@@ -19,9 +19,11 @@ import {
 import { and, desc, eq, sql } from 'drizzle-orm';
 import {
   hatRolle,
+  pruefeBetriebsBefehl,
   pruefeSchluesselBefehl,
   schluesselAusstellbar,
   schluesselGueltigAb,
+  startetMiete,
   type FahrzeugBefehl,
   type FahrzeugBefehlEingabe,
   type Principal,
@@ -34,7 +36,8 @@ import { istPgFehler, PG_FEHLER } from '../db/fehler';
 import { fahrer, fahrzeug, fahrzeugBefehl, miete, schluessel } from '../db/schema';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 import { KundeService } from '../kunde/kunde.service';
-import { KEY_PROVIDER, type BefehlErgebnis, type KeyProvider } from './key-provider';
+import { MieteService } from '../miete/miete.service';
+import { KEY_PROVIDER, meldeWiderruf, type BefehlErgebnis, type KeyProvider } from './key-provider';
 
 export type BefehlZeile = typeof fahrzeugBefehl.$inferSelect;
 export type SchluesselZeile = typeof schluessel.$inferSelect;
@@ -42,42 +45,6 @@ export type SchluesselZeile = typeof schluessel.$inferSelect;
 /** Rückmeldungen des Anbieters schreibt der Kern im Namen des Anbieters. */
 function anbieterPrincipal(provider: KeyProvider, mandantId: string): Principal {
   return { akteurId: `system:key-provider`, name: provider.name, rollen: [], mandantId };
-}
-
-/**
- * Aktive Schlüssel einer Miete widerrufen (Mietende, Storno) – in der
- * Transaktion des Statuswechsels, damit kein Schlüssel eine beendete Miete
- * überlebt. Liefert die Anbieter-Referenzen; dem Anbieter meldet der Aufrufer
- * den Widerruf nach dem Commit.
- */
-export async function widerrufeSchluesselDerMiete(
-  tx: Transaktion,
-  principal: Principal,
-  mieteId: string,
-  grund: string,
-): Promise<string[]> {
-  const jetzt = new Date();
-  const widerrufen = await tx
-    .update(schluessel)
-    .set({
-      status: 'widerrufen',
-      widerrufenAm: jetzt,
-      widerrufenVon: principal.akteurId,
-      widerrufGrund: grund,
-      aktualisiertAm: jetzt,
-    })
-    .where(and(eq(schluessel.mieteId, mieteId), eq(schluessel.status, 'aktiv')))
-    .returning({ id: schluessel.id, anbieterRef: schluessel.anbieterRef });
-  for (const s of widerrufen) {
-    await schreibeAudit(tx, principal, {
-      aktion: 'POST',
-      entitaetTyp: 'schluessel_status',
-      entitaetId: s.id,
-      altWert: { status: 'aktiv' },
-      neuWert: { status: 'widerrufen', widerrufGrund: grund },
-    });
-  }
-  return widerrufen.flatMap((s) => (s.anbieterRef ? [s.anbieterRef] : []));
 }
 
 @Injectable()
@@ -88,6 +55,7 @@ export class SchluesselService {
     @Inject(DB) private readonly db: Database,
     @Inject(KEY_PROVIDER) private readonly provider: KeyProvider,
     private readonly kunden: KundeService,
+    private readonly mieten: MieteService,
   ) {}
 
   // --- Schlüssel ---
@@ -243,20 +211,8 @@ export class SchluesselService {
     return { id, status: 'widerrufen', geaendert: ergebnis.geaendert };
   }
 
-  /**
-   * Widerruf beim Anbieter nachziehen. Im Kern ist der Schlüssel bereits
-   * gesperrt (jeder Befehl läuft über den Kern); scheitert der Anbieter, wird
-   * das geloggt. TODO(D-015): Wiederholung als Hintergrundjob, sobald ein
-   * echter Anbieter Offline-Schlüssel (Bluetooth) ausgibt.
-   */
   async meldeWiderruf(anbieterRefs: string[]): Promise<void> {
-    for (const ref of anbieterRefs) {
-      try {
-        await this.provider.widerrufe(ref);
-      } catch (e: unknown) {
-        this.log.error({ anbieterRef: ref, err: e }, 'Widerruf beim Anbieter fehlgeschlagen');
-      }
-    }
+    await meldeWiderruf(this.provider, anbieterRefs, this.log);
   }
 
   /** Schlüssel einer Miete mit Fahrername (eine Abfrage). */
@@ -319,7 +275,12 @@ export class SchluesselService {
     if (wiederholt) return this.wiederholung(wiederholt, { schluesselId });
 
     const [s] = await this.db
-      .select({ s: schluessel, kontoId: fahrer.kontoId, mieteStatus: miete.status })
+      .select({
+        s: schluessel,
+        kontoId: fahrer.kontoId,
+        mieteStatus: miete.status,
+        endeGeplant: miete.endeGeplant,
+      })
       .from(schluessel)
       .innerJoin(fahrer, eq(schluessel.fahrerId, fahrer.id))
       .innerJoin(miete, eq(schluessel.mieteId, miete.id))
@@ -331,6 +292,7 @@ export class SchluesselService {
     const gruende = pruefeSchluesselBefehl({
       schluessel: s.s,
       mieteStatus: s.mieteStatus,
+      endeGeplant: s.endeGeplant,
       befehl: p.befehl,
       jetzt: new Date(),
     });
@@ -346,7 +308,10 @@ export class SchluesselService {
     });
   }
 
-  /** Befehl durch Ops/Admin direkt an das Fahrzeug (Hilfe, Notfall) – immer mit Grund. */
+  /**
+   * Befehl durch Ops/Admin direkt an das Fahrzeug (Hilfe, Notfall) – immer mit
+   * Grund. Die Wegfahrsperre steuern nur Administratoren (F-38).
+   */
   async befehlDurchBetrieb(
     principal: Principal,
     fahrzeugId: string,
@@ -375,7 +340,7 @@ export class SchluesselService {
       befehl: p.befehl,
       grund: p.grund,
       idempotencyKey: p.idempotencyKey,
-      gruende: [],
+      gruende: pruefeBetriebsBefehl(principal.rollen, p.befehl),
     });
   }
 
@@ -410,8 +375,38 @@ export class SchluesselService {
         neuWert: { status: neu.status, ...(neu.gruende ? { gruende: neu.gruende } : {}) },
         quelle: `key-provider:${this.provider.name}`,
       });
+      if (row!.status === 'ausgefuehrt') await this.starteMieteBeiUebergabe(tx, row!);
       return row!;
     });
+  }
+
+  /**
+   * Kontaktlose Übergabe (D-014, F-39): Das erste erfolgreiche Entriegeln mit
+   * dem Fahrerschlüssel setzt eine bestätigte Miete auf `aktiv` – mit
+   * Übergabebereich-Prüfung und Audit, als Akteur der Fahrer. Scheitert das
+   * (z. B. gleichzeitig storniert), bleibt der Befehl trotzdem ausgeführt.
+   */
+  private async starteMieteBeiUebergabe(tx: Transaktion, b: BefehlZeile): Promise<void> {
+    if (!b.schluesselId || !b.mieteId) return;
+    const [m] = await tx
+      .select({ status: miete.status, fahrerName: fahrer.name })
+      .from(schluessel)
+      .innerJoin(miete, eq(schluessel.mieteId, miete.id))
+      .innerJoin(fahrer, eq(schluessel.fahrerId, fahrer.id))
+      .where(eq(schluessel.id, b.schluesselId));
+    if (!m || !startetMiete(b.befehl as FahrzeugBefehl, m.status)) return;
+    const fahrerLogin: Principal = {
+      akteurId: b.angefordertVon,
+      name: m.fahrerName,
+      rollen: ['fahrer'],
+      mandantId: b.mandantId,
+    };
+    try {
+      // Savepoint: ein Fehler hier rollt nur den Statuswechsel zurück.
+      await this.mieten.aendereStatus(fahrerLogin, b.mieteId, 'aktiv', tx);
+    } catch (e: unknown) {
+      this.log.warn({ mieteId: b.mieteId, err: e }, 'Miete beim Entriegeln nicht gestartet');
+    }
   }
 
   /** Einzelner Befehl (Statusabfrage der App). Fahrer sehen nur Befehle ihrer Schlüssel. */

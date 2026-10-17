@@ -132,7 +132,6 @@ describe.skipIf(!RUN)('Digitaler Schlüssel und Fernzugriff (Integration, brauch
     client = createDbClient(url);
     fahrzeuge = new FahrzeugService(client.db);
     kunden = new KundeService(client.db);
-    dienst = new SchluesselService(client.db, sim, kunden);
     mieten = new MieteService(
       client.db,
       fahrzeuge,
@@ -144,8 +143,9 @@ describe.skipIf(!RUN)('Digitaler Schlüssel und Fernzugriff (Integration, brauch
         new RendererRegistry([new JsonNachweisRenderer()]),
         new InMemoryBerichtSpeicher(),
       ),
-      dienst,
+      sim,
     );
+    dienst = new SchluesselService(client.db, sim, kunden, mieten);
     await client.db.insert(mandant).values({ id: mandantId, name: 'Test-Mandant Schlüssel' });
   });
   afterAll(async () => {
@@ -318,7 +318,7 @@ describe.skipIf(!RUN)('Digitaler Schlüssel und Fernzugriff (Integration, brauch
         anbieterRef: `async-${b.befehlId}`,
       }),
     };
-    const asynchron = new SchluesselService(client.db, offen, kunden);
+    const asynchron = new SchluesselService(client.db, offen, kunden, mieten);
     const { fahrzeugId } = await miete(await kunde());
     const b = await asynchron.befehlDurchBetrieb(ops, fahrzeugId, {
       befehl: 'verriegeln',
@@ -384,6 +384,98 @@ describe.skipIf(!RUN)('Digitaler Schlüssel und Fernzugriff (Integration, brauch
     expect(a!.neuWert).toEqual({ status: 'widerrufen', widerrufGrund: 'Handy verloren' });
     const neu = await dienst.stelleAus(ops, mieteId, f);
     expect(neu.id).not.toBe(id);
+  });
+
+  it('Wegfahrsperre nur durch Administratoren (F-38); Türen auch durch Ops', async () => {
+    const { fahrzeugId } = await miete(await kunde());
+    const nurOps: Principal = { ...ops, rollen: ['ops'] };
+    const gruende = await grundeVon(
+      dienst.befehlDurchBetrieb(nurOps, fahrzeugId, {
+        befehl: 'wegfahrsperre_ein',
+        grund: 'Test',
+        idempotencyKey: key(),
+      }),
+    );
+    expect(gruende).toEqual(['Die Wegfahrsperre steuern nur Administratoren']);
+    const tuer = await dienst.befehlDurchBetrieb(nurOps, fahrzeugId, {
+      befehl: 'entriegeln',
+      grund: 'Test',
+      idempotencyKey: key(),
+    });
+    expect(tuer.status).toBe('ausgefuehrt');
+    const protokoll = await dienst.liste(mandantId, { fahrzeugId }, { limit: 10, offset: 0 });
+    expect(protokoll.eintraege.map((b) => b.status)).toEqual(['ausgefuehrt', 'abgelehnt']);
+  });
+
+  it('erstes Entriegeln startet die bestätigte Miete (F-39) – mit Übergabeprüfung und Audit', async () => {
+    const k = await kunde();
+    const { mieteId } = await miete(k, 0, false);
+    const konto = `konto-${randomUUID()}`;
+    const f = await fahrer(k, konto);
+    const { id } = await dienst.stelleAus(ops, mieteId, f);
+    const ich = fahrerKonto(konto);
+
+    // Verriegeln startet nichts.
+    await dienst.befehlMitSchluessel(ich, id, { befehl: 'verriegeln', idempotencyKey: key() });
+    expect((await mieten.holeMiete(mieteId)).status).toBe('bestaetigt');
+
+    await dienst.befehlMitSchluessel(ich, id, { befehl: 'entriegeln', idempotencyKey: key() });
+    const m = await mieten.holeMiete(mieteId);
+    expect(m.status).toBe('aktiv');
+    expect(m.startIst).not.toBeNull();
+    expect(m.uebergabePruefung).toMatchObject({ ergebnis: 'unbekannt' });
+    const [eintrag] = await audit(mieteId, 'miete_status');
+    expect(eintrag).toMatchObject({
+      akteurId: konto,
+      akteurRolle: 'fahrer',
+      altWert: { status: 'bestaetigt' },
+      neuWert: { status: 'aktiv' },
+    });
+    expect(eintrag!.akteurName).toMatch(/^Fahrer /);
+
+    // Weiteres Entriegeln ändert nichts mehr.
+    await dienst.befehlMitSchluessel(ich, id, { befehl: 'entriegeln', idempotencyKey: key() });
+    expect(await audit(mieteId, 'miete_status')).toHaveLength(1);
+  });
+
+  it('asynchroner Anbieter: Miete startet erst mit der Bestätigung des Entriegelns', async () => {
+    const offen: KeyProvider = {
+      name: 'test-async',
+      stelleAus: async () => ({ anbieterRef: `k-${randomUUID()}` }),
+      widerrufe: async () => undefined,
+      sendeBefehl: async (b: { befehlId: string }) => ({ anbieterRef: `async-${b.befehlId}` }),
+    };
+    const asynchron = new SchluesselService(client.db, offen, kunden, mieten);
+    const k = await kunde();
+    const { mieteId } = await miete(k, 0, false);
+    const konto = `konto-${randomUUID()}`;
+    const { id } = await asynchron.stelleAus(ops, mieteId, await fahrer(k, konto));
+    const b = await asynchron.befehlMitSchluessel(fahrerKonto(konto), id, {
+      befehl: 'entriegeln',
+      idempotencyKey: key(),
+    });
+    expect(b.status).toBe('gesendet');
+    expect((await mieten.holeMiete(mieteId)).status).toBe('bestaetigt');
+    await asynchron.schliesseAb(b.id, { ok: true });
+    expect((await mieten.holeMiete(mieteId)).status).toBe('aktiv');
+  });
+
+  it('No-Show: nicht begonnene Miete – Schlüssel endet mit dem geplanten Ende', async () => {
+    const k = await kunde();
+    // Geplant von vor 30 h bis vor 6 h, nie begonnen.
+    const { mieteId } = await miete(k, -30, false);
+    const konto = `konto-${randomUUID()}`;
+    const { id } = await dienst.stelleAus(ops, mieteId, await fahrer(k, konto));
+    const gruende = await grundeVon(
+      dienst.befehlMitSchluessel(fahrerKonto(konto), id, {
+        befehl: 'entriegeln',
+        idempotencyKey: key(),
+      }),
+    );
+    expect(gruende).toEqual([
+      'Geplantes Mietende ist überschritten, ohne dass die Miete begonnen hat',
+    ]);
+    expect((await mieten.holeMiete(mieteId)).status).toBe('bestaetigt');
   });
 
   it('ein App-Konto gehört genau einem Fahrer', async () => {

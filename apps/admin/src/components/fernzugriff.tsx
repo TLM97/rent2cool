@@ -4,7 +4,7 @@
  * Kern; hier wird nur angezeigt und angefragt.
  */
 import { randomUUID } from 'node:crypto';
-import { BEFEHL_NAME } from '@rent2cool/shared';
+import { BEFEHL_NAME, WEGFAHRSPERRE_BEFEHLE } from '@rent2cool/shared';
 import {
   sendeFahrzeugBefehl,
   stelleSchluesselAus,
@@ -59,10 +59,13 @@ export function FernzugriffKarte({
   fahrzeugId,
   befehle,
   darfSenden,
+  darfWegfahrsperre,
 }: {
   fahrzeugId: string;
   befehle: Liste<Befehl>;
   darfSenden: boolean;
+  /** Wegfahrsperre nur für Administratoren (F-38). */
+  darfWegfahrsperre: boolean;
 }) {
   return (
     <section className="karte" aria-labelledby="fernzugriff-titel">
@@ -78,7 +81,17 @@ export function FernzugriffKarte({
           sendenText="Befehl senden"
           versteckt={{ fahrzeugId, idempotencyKey: randomUUID() }}
         >
-          <Auswahl name="befehl" label="Befehl" pflicht optionen={BEFEHL_OPTIONEN} />
+          <Auswahl
+            name="befehl"
+            label="Befehl"
+            pflicht
+            optionen={BEFEHL_OPTIONEN.filter(
+              (o) => darfWegfahrsperre || !WEGFAHRSPERRE_BEFEHLE.includes(o.wert),
+            )}
+            hinweis={
+              darfWegfahrsperre ? undefined : 'Die Wegfahrsperre steuern nur Administratoren.'
+            }
+          />
           <Feld
             name="grund"
             label="Grund"

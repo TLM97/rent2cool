@@ -13,6 +13,42 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Schlüssel: Antworten zu F-38 bis F-40 umgesetzt
+
+Tom hat F-38 bis F-40 direkt beantwortet; umgesetzt und in D-018 als
+Nachtrag festgehalten (Status setzt die Planung).
+
+Erledigt:
+- **F-38 – Wegfahrsperre nur Administratoren:** Rolle `admin`; Ops darf
+  weiter Türen öffnen/schließen. Ein Versuch von Ops wird mit Grund
+  abgelehnt und protokolliert; die Oberfläche bietet Ops die Wegfahrsperre
+  gar nicht erst an. („Administratoren“ = Rolle `admin` gelesen – sollen
+  auch Ops dürfen, ist das eine Zeile in `packages/shared/src/schluessel.ts`.)
+- **F-39 – erstes Entriegeln startet die Miete:** Bestätigte Miete → `aktiv`
+  in derselben Transaktion wie die Bestätigung des Befehls (inkl.
+  Übergabebereich-Prüfung und `startIst`); Akteur im Audit ist der Fahrer.
+  Bei asynchronem Anbieter erst mit dessen Bestätigung. Schlägt der Wechsel
+  fehl, bleibt der Befehl ausgeführt (Savepoint, Log).
+- **F-40 – bestätigt (1 h Vorlauf, bis tatsächliches Mietende)**, ergänzt
+  um **No-Show-Schutz:** Hat die Miete nie begonnen, gilt der Schlüssel nur
+  bis zum geplanten Mietende statt unbegrenzt.
+- Technisch: Anbieter in eigenes `KeyProviderModule`, Widerruf in
+  `schluessel/widerruf.ts` – so braucht der Schlüssel-Dienst den Miet-Dienst
+  ohne Kreisbezug.
+
+Tests: shared 63, Kern +4 Integrationstests (Wegfahrsperre/Rollen,
+automatischer Mietstart, asynchroner Anbieter, No-Show), Browser-Test prüft
+die Auswahl für Ops; alle 9 Browser-Tests grün.
+
+Offen / Fragen an Planung:
+- Rest von F-38: Soll „Wegfahrsperre ein“ nur bei stehendem Fahrzeug wirken?
+  Hängt vom Anbieter ab (D-012, Frage 2) – bleibt offen.
+- F-39 mit Foto-Check: Sobald der Foto-Check existiert, soll der Mietstart
+  dann erst nach Foto-Check erfolgen? Heute startet das Entriegeln allein.
+- F-24, F-26 bis F-37, F-41 weiter offen.
+
+---
+
 ### 2026-10-17 – Digitaler Schlüssel und Fernzugriff
 
 **Digitaler Schlüssel und Fernzugriff – erledigt** (Simulator-Stufe). Nächster

@@ -175,7 +175,12 @@ export default async function FahrzeugDetail({
       ) : null}
 
       {befehle ? (
-        <FernzugriffKarte fahrzeugId={f.id} befehle={befehle} darfSenden={darfAendern} />
+        <FernzugriffKarte
+          fahrzeugId={f.id}
+          befehle={befehle}
+          darfSenden={darfAendern}
+          darfWegfahrsperre={hatRolle(rollen, 'admin')}
+        />
       ) : null}
 
       <section className="karte" aria-labelledby="aufbau-titel">

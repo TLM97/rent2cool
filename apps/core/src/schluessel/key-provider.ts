@@ -35,6 +35,26 @@ export interface KeyProvider {
   }): Promise<{ anbieterRef: string; ergebnis?: BefehlErgebnis }>;
 }
 
+/**
+ * Widerruf beim Anbieter nachziehen. Im Kern ist der Schlüssel bereits
+ * gesperrt (jeder Befehl läuft über den Kern); scheitert der Anbieter, wird
+ * das geloggt. TODO(D-015): Wiederholung als Hintergrundjob, sobald ein
+ * echter Anbieter Offline-Schlüssel (Bluetooth) ausgibt.
+ */
+export async function meldeWiderruf(
+  provider: KeyProvider,
+  anbieterRefs: string[],
+  log: { error: (obj: unknown, msg: string) => void },
+): Promise<void> {
+  for (const ref of anbieterRefs) {
+    try {
+      await provider.widerrufe(ref);
+    } catch (e: unknown) {
+      log.error({ anbieterRef: ref, err: e }, 'Widerruf beim Anbieter fehlgeschlagen');
+    }
+  }
+}
+
 export interface SimulierterZustand {
   verriegelt: boolean;
   wegfahrsperre: boolean;

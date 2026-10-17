@@ -384,13 +384,15 @@ der Simulator (D-015).
 
 - **Schlüssel** je Miete und Fahrer des Mietkunden (Fahrerlaubnis geprüft,
   R-22), gültig ab 1 h vor Mietbeginn bis Mietende; Mietende oder Storno
-  widerrufen ihn automatisch. `POST/GET /v1/mieten/:id/schluessel`,
+  widerrufen ihn automatisch; beginnt die Miete nie, endet er mit dem geplanten
+  Mietende. `POST/GET /v1/mieten/:id/schluessel`,
   `POST /v1/schluessel/:id/widerruf`.
 - **Fahrer (App):** `GET /v1/schluessel/meine`, `POST /v1/schluessel/:id/befehle`
   (Entriegeln, Verriegeln; Pflicht-`idempotencyKey`). Zuordnung des Logins über
-  das App-Konto am Fahrer (`kontoId`).
-- **Betrieb:** `POST /v1/fahrzeuge/:id/befehle` (auch Wegfahrsperre, Grund
-  Pflicht), Protokolle `GET /v1/fahrzeuge/:id/befehle`, `GET /v1/mieten/:id/befehle`,
+  das App-Konto am Fahrer (`kontoId`). Das erste Entriegeln startet die
+  bestätigte Miete (kontaktlose Übergabe).
+- **Betrieb:** `POST /v1/fahrzeuge/:id/befehle` (Grund Pflicht; Türen Ops und
+  Admin, Wegfahrsperre nur Admin), Protokolle `GET /v1/fahrzeuge/:id/befehle`, `GET /v1/mieten/:id/befehle`,
   Status `GET /v1/befehle/:id`.
 - Oberfläche: Mietakte „Digitaler Schlüssel“ (ausstellen, widerrufen, Befehle
   der Miete), Fahrzeugakte „Fernzugriff“, App-Konto beim Bearbeiten des Fahrers.

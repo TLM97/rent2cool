@@ -117,8 +117,9 @@ export async function ladeDemoDaten(
     new RendererRegistry([new JsonNachweisRenderer()]),
     new InMemoryBerichtSpeicher(),
   );
-  const schluesselDienst = new SchluesselService(db, new SimulatorKeyProvider(), kunden);
-  const mieten = new MieteService(db, fahrzeuge, kunden, berichte, schluesselDienst);
+  const simulator = new SimulatorKeyProvider();
+  const mieten = new MieteService(db, fahrzeuge, kunden, berichte, simulator);
+  const schluesselDienst = new SchluesselService(db, simulator, kunden, mieten);
   const rechnungen = new RechnungService(db, config, mieten);
   const alarme = new AlarmService(db);
   const abweichungen = new AbweichungService(db);

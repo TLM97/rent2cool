@@ -30,6 +30,10 @@ test('Sensor tauschen mit und ohne Kalibrierung', async ({ page }) => {
   await page.getByRole('button', { name: 'Fahrzeug anlegen' }).click();
   await expect(page.getByRole('heading', { level: 1, name: kennzeichen })).toBeVisible();
   const akte = page.url().split('?')[0]!;
+  // Ops steuert Türen, die Wegfahrsperre nur Administratoren (F-38).
+  await expect(
+    page.getByRole('region', { name: 'Fernzugriff' }).getByLabel('Befehl').locator('option'),
+  ).toHaveText(['Entriegeln', 'Verriegeln']);
   await page.getByLabel('Status ändern').selectOption('verfuegbar');
   await page.getByRole('button', { name: 'Übernehmen' }).click();
   await page.waitForURL(/Status/);

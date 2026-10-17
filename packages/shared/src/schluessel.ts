@@ -24,8 +24,31 @@ export const BEFEHL_NAME: Record<FahrzeugBefehl, string> = {
   wegfahrsperre_aus: 'Wegfahrsperre aus',
 };
 
-/** Befehle, die der Fahrer mit seinem Schlüssel senden darf. Die Wegfahrsperre steuert nur Ops. */
+/** Befehle, die der Fahrer mit seinem Schlüssel senden darf. */
 export const FAHRER_BEFEHLE: readonly FahrzeugBefehl[] = ['entriegeln', 'verriegeln'];
+
+/** Die Wegfahrsperre steuern nur Administratoren (F-38, Tom 2026-10-17). */
+export const WEGFAHRSPERRE_BEFEHLE: readonly FahrzeugBefehl[] = [
+  'wegfahrsperre_ein',
+  'wegfahrsperre_aus',
+];
+export const WEGFAHRSPERRE_ROLLE = 'admin';
+
+/** Befehl durch den Betrieb: Türen Ops und Admin, Wegfahrsperre nur Admin. */
+export function pruefeBetriebsBefehl(rollen: readonly string[], befehl: FahrzeugBefehl): string[] {
+  return WEGFAHRSPERRE_BEFEHLE.includes(befehl) && !rollen.includes(WEGFAHRSPERRE_ROLLE)
+    ? ['Die Wegfahrsperre steuern nur Administratoren']
+    : [];
+}
+
+/**
+ * Löst dieser Befehl die Übergabe aus? Das erste erfolgreiche Entriegeln mit
+ * dem Fahrerschlüssel startet eine bestätigte Miete (F-39, Tom 2026-10-17;
+ * kontaktlose Übergabe, D-014).
+ */
+export function startetMiete(befehl: FahrzeugBefehl, mieteStatus: string): boolean {
+  return befehl === 'entriegeln' && mieteStatus === 'bestaetigt';
+}
 
 /**
  * - `gesendet`: an den Anbieter übergeben, Bestätigung steht aus
@@ -70,6 +93,8 @@ export interface SchluesselPruefdaten {
 export function pruefeSchluesselBefehl(o: {
   schluessel: SchluesselPruefdaten;
   mieteStatus: string;
+  /** Geplantes Mietende: Begonnen hat die Miete nicht → Schlüssel nur bis dahin (No-Show). */
+  endeGeplant: Date;
   befehl: FahrzeugBefehl;
   jetzt: Date;
 }): string[] {
@@ -87,6 +112,11 @@ export function pruefeSchluesselBefehl(o: {
     gruende.push('Schlüssel ist abgelaufen');
   }
   gruende.push(...schluesselAusstellbar(o.mieteStatus));
+  // Gültig bis zum tatsächlichen Mietende (F-40) – hat die Miete nie begonnen,
+  // endet der Schlüssel mit dem geplanten Ende, statt ewig zu gelten.
+  if (o.mieteStatus === 'bestaetigt' && o.jetzt.getTime() > o.endeGeplant.getTime()) {
+    gruende.push('Geplantes Mietende ist überschritten, ohne dass die Miete begonnen hat');
+  }
   return gruende;
 }
 

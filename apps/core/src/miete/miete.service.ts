@@ -3,6 +3,7 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   Optional,
 } from '@nestjs/common';
@@ -26,7 +27,8 @@ import { KundeService } from '../kunde/kunde.service';
 import { standortNutzbar } from '../standort/standort.service';
 import { pruefeUebergabe } from '../standort/uebergabe';
 import { BerichtService } from '../bericht/bericht.service';
-import { SchluesselService, widerrufeSchluesselDerMiete } from '../schluessel/schluessel.service';
+import { KEY_PROVIDER, meldeWiderruf, type KeyProvider } from '../schluessel/key-provider';
+import { widerrufeSchluesselDerMiete } from '../schluessel/widerruf';
 import type { MieteErstellen } from './dto';
 
 /** Ablehnungsgrund bei Überschneidung – gleich, ob Vorabprüfung oder DB-Regel greift. */
@@ -36,13 +38,15 @@ const UEBERSCHNEIDUNG_REGEL = 'ex_miete_fahrzeug_zeitraum';
 
 @Injectable()
 export class MieteService {
+  private readonly log = new Logger(MieteService.name);
+
   constructor(
     @Inject(DB) private readonly db: Database,
     private readonly fahrzeuge: FahrzeugService,
     private readonly kunden: KundeService,
     private readonly berichte: BerichtService,
     // Meldet Widerrufe an den Schlüssel-Anbieter; gesperrt wird immer im Kern (s. u.).
-    @Optional() private readonly schluessel?: SchluesselService,
+    @Optional() @Inject(KEY_PROVIDER) private readonly keyProvider?: KeyProvider,
   ) {}
 
   /** Prüft die Buchungsregeln und liefert die Ablehnungsgründe (leer = ok). */
@@ -353,7 +357,9 @@ export class MieteService {
       },
     });
     // Dem Anbieter erst nach dem Commit melden (keine Netzwerkaufrufe in der Transaktion).
-    if (widerrufen.length > 0) await this.schluessel?.meldeWiderruf(widerrufen);
+    if (widerrufen.length > 0 && this.keyProvider) {
+      await meldeWiderruf(this.keyProvider, widerrufen, this.log);
+    }
     return ergebnis;
   }
 

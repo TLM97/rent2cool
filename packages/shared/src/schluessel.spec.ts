@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
   fahrzeugBefehlSchema,
+  pruefeBetriebsBefehl,
   pruefeSchluesselBefehl,
   schluesselAusstellbar,
   schluesselBefehlSchema,
   schluesselGueltigAb,
+  startetMiete,
 } from './schluessel';
 
 const jetzt = new Date('2026-10-17T12:00:00Z');
+const endeGeplant = new Date('2026-10-18T12:00:00Z');
 const gueltig = { status: 'aktiv', gueltigVon: new Date('2026-10-17T10:00:00Z'), gueltigBis: null };
 
 describe('Digitaler Schlüssel', () => {
@@ -28,16 +31,23 @@ describe('Digitaler Schlüssel', () => {
   it('Fahrer darf mit gültigem Schlüssel ent- und verriegeln', () => {
     for (const befehl of ['entriegeln', 'verriegeln'] as const) {
       expect(
-        pruefeSchluesselBefehl({ schluessel: gueltig, mieteStatus: 'aktiv', befehl, jetzt }),
+        pruefeSchluesselBefehl({
+          schluessel: gueltig,
+          mieteStatus: 'aktiv',
+          endeGeplant,
+          befehl,
+          jetzt,
+        }),
       ).toEqual([]);
     }
   });
 
-  it('Wegfahrsperre nur durch Ops, nicht mit dem Fahrerschlüssel', () => {
+  it('Wegfahrsperre nicht mit dem Fahrerschlüssel', () => {
     expect(
       pruefeSchluesselBefehl({
         schluessel: gueltig,
         mieteStatus: 'aktiv',
+        endeGeplant,
         befehl: 'wegfahrsperre_aus',
         jetzt,
       }),
@@ -49,6 +59,7 @@ describe('Digitaler Schlüssel', () => {
       pruefeSchluesselBefehl({
         schluessel: { ...gueltig, status: 'widerrufen' },
         mieteStatus: 'beendet',
+        endeGeplant,
         befehl: 'entriegeln',
         jetzt,
       }),
@@ -60,6 +71,7 @@ describe('Digitaler Schlüssel', () => {
       pruefeSchluesselBefehl({
         schluessel: { ...gueltig, gueltigVon: new Date('2026-10-17T13:00:00Z') },
         mieteStatus: 'bestaetigt',
+        endeGeplant,
         befehl: 'entriegeln',
         jetzt,
       }),
@@ -68,10 +80,48 @@ describe('Digitaler Schlüssel', () => {
       pruefeSchluesselBefehl({
         schluessel: { ...gueltig, gueltigBis: new Date('2026-10-17T11:59:00Z') },
         mieteStatus: 'aktiv',
+        endeGeplant,
         befehl: 'verriegeln',
         jetzt,
       }),
     ).toEqual(['Schlüssel ist abgelaufen']);
+  });
+
+  it('No-Show: nicht begonnene Miete – Schlüssel nur bis zum geplanten Ende', () => {
+    const danach = new Date('2026-10-18T12:01:00Z');
+    expect(
+      pruefeSchluesselBefehl({
+        schluessel: gueltig,
+        mieteStatus: 'bestaetigt',
+        endeGeplant,
+        befehl: 'entriegeln',
+        jetzt: danach,
+      }),
+    ).toEqual(['Geplantes Mietende ist überschritten, ohne dass die Miete begonnen hat']);
+    // Läuft die Miete, gilt der Schlüssel bis zum tatsächlichen Ende (Verspätung).
+    expect(
+      pruefeSchluesselBefehl({
+        schluessel: gueltig,
+        mieteStatus: 'aktiv',
+        endeGeplant,
+        befehl: 'verriegeln',
+        jetzt: danach,
+      }),
+    ).toEqual([]);
+  });
+
+  it('Wegfahrsperre nur Administratoren; Türen auch Ops', () => {
+    expect(pruefeBetriebsBefehl(['ops'], 'wegfahrsperre_ein')).toEqual([
+      'Die Wegfahrsperre steuern nur Administratoren',
+    ]);
+    expect(pruefeBetriebsBefehl(['ops'], 'entriegeln')).toEqual([]);
+    expect(pruefeBetriebsBefehl(['admin'], 'wegfahrsperre_aus')).toEqual([]);
+  });
+
+  it('erstes Entriegeln startet eine bestätigte Miete', () => {
+    expect(startetMiete('entriegeln', 'bestaetigt')).toBe(true);
+    expect(startetMiete('entriegeln', 'aktiv')).toBe(false);
+    expect(startetMiete('verriegeln', 'bestaetigt')).toBe(false);
   });
 
   it('Eingaben: Befehl bekannt, Idempotency-Key Pflicht, Ops nur mit Grund', () => {
