@@ -38,7 +38,7 @@ describe('Audit-Abdeckung', () => {
     const fehlend: string[] = [];
     let schreibend = 0;
     for (const c of CONTROLLER) {
-      const proto = c.prototype as Record<string, unknown>;
+      const proto = c.prototype as unknown as Record<string, unknown>;
       for (const name of Object.getOwnPropertyNames(proto)) {
         const handler = proto[name];
         if (name === 'constructor' || typeof handler !== 'function') continue;

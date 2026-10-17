@@ -11,7 +11,6 @@ import { generateKeyPairSync } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
-import type { FastifyInstance } from 'fastify';
 import type { Database } from '../db/client';
 
 const RUN = process.env.RUN_INTEGRATION === '1';
@@ -48,7 +47,6 @@ type SqlFn = (strings: TemplateStringsArray, ...args: unknown[]) => Promise<unkn
 
 describe.skipIf(!RUN)('Auth + Audit (Integration, braucht DB)', () => {
   let app: NestFastifyApplication;
-  let server: FastifyInstance;
 
   beforeAll(async () => {
     const { Test } = await import('@nestjs/testing');
@@ -64,8 +62,7 @@ describe.skipIf(!RUN)('Auth + Audit (Integration, braucht DB)', () => {
 
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
     await app.init();
-    server = app.getHttpAdapter().getInstance() as FastifyInstance;
-    await server.ready();
+    await app.getHttpAdapter().getInstance().ready();
   });
 
   afterAll(async () => {
@@ -73,17 +70,17 @@ describe.skipIf(!RUN)('Auth + Audit (Integration, braucht DB)', () => {
   });
 
   it('hält /health trotz globaler Guards öffentlich (200 ohne Token)', async () => {
-    const res = await server.inject({ method: 'GET', url: '/health' });
+    const res = await app.inject({ method: 'GET', url: '/health' });
     expect(res.statusCode).toBe(200);
   });
 
   it('weist ohne Token 401 zurück', async () => {
-    const res = await server.inject({ method: 'POST', url: '/v1/admin/audit-demo', payload: {} });
+    const res = await app.inject({ method: 'POST', url: '/v1/admin/audit-demo', payload: {} });
     expect(res.statusCode).toBe(401);
   });
 
   it('weist falsche Rolle mit 403 zurück', async () => {
-    const res = await server.inject({
+    const res = await app.inject({
       method: 'POST',
       url: '/v1/admin/audit-demo',
       headers: { authorization: `Bearer ${token('user-ops', ['ops'])}` },
@@ -94,7 +91,7 @@ describe.skipIf(!RUN)('Auth + Audit (Integration, braucht DB)', () => {
 
   it('erlaubt admin (202) und schreibt eine Audit-Zeile', async () => {
     const sub = `user-${Date.now()}`;
-    const res = await server.inject({
+    const res = await app.inject({
       method: 'POST',
       url: '/v1/admin/audit-demo',
       headers: { authorization: `Bearer ${token(sub, ['admin'])}` },
