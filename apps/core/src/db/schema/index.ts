@@ -20,3 +20,4 @@ export * from './rechnung';
 export * from './alarm';
 export * from './schluessel';
 export * from './protokoll';
+export * from './bericht';

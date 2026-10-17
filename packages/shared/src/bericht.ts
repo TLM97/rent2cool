@@ -66,3 +66,60 @@ export interface TemperaturNachweis {
   readonly bewertung: NachweisBewertung;
   readonly integritaet: Integritaet;
 }
+
+/** Bezug des Nachweises zur Miete – lesbare Angaben für Kunde und Auditor. */
+export interface NachweisMieteBezug {
+  readonly mieteId: string;
+  readonly kunde: string;
+  readonly kennzeichen: string;
+  readonly startIst: string;
+  readonly endeIst: string;
+}
+
+/** Punkt der Temperaturkurve (für die Grafik verdichtet: Minimum und Maximum je Abschnitt). */
+export interface KurvenPunkt {
+  readonly zeit: string;
+  readonly wert: number;
+}
+
+/**
+ * Das archivierte Dokument einer Miete (JSON und PDF aus denselben Daten).
+ * `nachweis.integritaet` sichert die Messdaten; die Dateien selbst sichert das
+ * Archiv mit SHA-256 und einer Dokumentsignatur.
+ */
+export interface NachweisDokument {
+  readonly schemaVersion: 1;
+  readonly titel: string;
+  readonly version: number;
+  readonly ausloeser: NachweisAusloeser;
+  /** `null` beim Nachweis über Fahrzeug und Zeitraum ohne Miete. */
+  readonly miete: NachweisMieteBezug | null;
+  readonly nachweis: TemperaturNachweis;
+  readonly kurve: readonly KurvenPunkt[];
+}
+
+export type NachweisAusloeser = 'automatisch' | 'manuell';
+
+/**
+ * Kurve für die Grafik verdichten: je Abschnitt Minimum und Maximum behalten,
+ * damit kurze Grenzverletzungen sichtbar bleiben (nicht wegmitteln, GDP).
+ */
+export function verdichteKurve(punkte: readonly KurvenPunkt[], abschnitte = 400): KurvenPunkt[] {
+  if (punkte.length <= abschnitte * 2) return [...punkte];
+  const ergebnis: KurvenPunkt[] = [];
+  const groesse = punkte.length / abschnitte;
+  for (let i = 0; i < abschnitte; i++) {
+    const teil = punkte.slice(Math.floor(i * groesse), Math.floor((i + 1) * groesse));
+    if (teil.length === 0) continue;
+    let min = teil[0]!;
+    let max = teil[0]!;
+    for (const p of teil) {
+      if (p.wert < min.wert) min = p;
+      if (p.wert > max.wert) max = p;
+    }
+    // Zeitliche Reihenfolge innerhalb des Abschnitts wahren.
+    if (min === max) ergebnis.push(min);
+    else ergebnis.push(...(min.zeit <= max.zeit ? [min, max] : [max, min]));
+  }
+  return ergebnis;
+}

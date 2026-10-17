@@ -7,9 +7,10 @@
  */
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { apiPatch, apiPost } from '../../lib/api';
+import { apiGet, apiPatch, apiPost } from '../../lib/api';
 import { ApiFehler } from '../../lib/api-client';
 import { statusLabel } from '../../lib/format';
+import { pruefungsText } from '../../lib/nachweis';
 import { istUuid } from '../../lib/seiten';
 
 function zurueckPfad(formData: FormData, standard: string): string {
@@ -118,6 +119,39 @@ export async function setzeStandortAktiv(formData: FormData): Promise<void> {
     await apiPatch(`/v1/standorte/${id}`, { version, aktiv });
     revalidatePath('/', 'layout');
     ziel = mitMeldung(zurueck, 'erfolg', aktiv ? 'Standort aktiviert.' : 'Standort deaktiviert.');
+  } catch (e) {
+    if (!(e instanceof ApiFehler)) throw e;
+    ziel = mitMeldung(zurueck, 'fehler', e.message);
+  }
+  redirect(ziel);
+}
+
+/** Neuen Temperaturnachweis anfordern (Hintergrundjob im Kern). */
+export async function fordereNachweisAn(formData: FormData): Promise<void> {
+  const mieteId = String(formData.get('mieteId') ?? '');
+  if (!istUuid(mieteId)) redirect(mitMeldung('/mieten', 'fehler', 'Ungültige Miete'));
+  await ausfuehren(
+    `/v1/mieten/${mieteId}/temperaturnachweise`,
+    undefined,
+    `/mieten/${mieteId}`,
+    'Neuer Nachweis angefordert – er erscheint in wenigen Sekunden (Seite neu laden).',
+  );
+}
+
+/** Echtheitsprüfung eines archivierten Nachweises; Ergebnis als Meldung. */
+export async function pruefeNachweis(formData: FormData): Promise<void> {
+  const id = String(formData.get('id') ?? '');
+  const mieteId = String(formData.get('mieteId') ?? '');
+  const zurueck = istUuid(mieteId) ? `/mieten/${mieteId}` : '/mieten';
+  if (!istUuid(id)) redirect(mitMeldung(zurueck, 'fehler', 'Ungültiger Nachweis'));
+  let ziel: string;
+  try {
+    const p = await apiGet<{
+      ergebnis: 'echt' | 'abweichung';
+      hinweise: string[];
+    }>(`/v1/temperaturnachweise/${id}/pruefung`);
+    const text = pruefungsText(String(formData.get('version') ?? ''), p);
+    ziel = mitMeldung(zurueck, p.ergebnis === 'echt' ? 'erfolg' : 'fehler', text);
   } catch (e) {
     if (!(e instanceof ApiFehler)) throw e;
     ziel = mitMeldung(zurueck, 'fehler', e.message);

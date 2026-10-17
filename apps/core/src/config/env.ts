@@ -36,6 +36,14 @@ export const envSchema = z.object({
   RECHNUNG_WAEHRUNG: z.string().default('EUR'),
 
   VALKEY_URL: z.string().default('redis://localhost:6379'),
+  // Berichtsdienst (BullMQ auf Valkey, D-001): erzeugt Temperaturnachweise nach
+  // Mietende. Worker standardmäßig aus (wie der Telematik-Consumer), damit
+  // Tests und ein reiner API-Start kein Valkey brauchen.
+  BERICHT_WORKER_ENABLED: booleanish.default('false'),
+  // Wartezeit nach Mietende, damit nachgelieferte Messwerte (Funklöcher) noch einfließen.
+  BERICHT_KARENZ_MIN: z.coerce.number().int().min(0).default(30),
+  // Wie oft nach fälligen Nachweisen gesucht wird.
+  BERICHT_SUCHE_SEK: z.coerce.number().int().min(10).default(300),
 
   S3_ENDPOINT: z.string().url(),
   S3_REGION: z.string().default('eu-central-1'),

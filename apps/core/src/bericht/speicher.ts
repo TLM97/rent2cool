@@ -1,13 +1,12 @@
 /**
  * Ablage des erzeugten Nachweises. Über das Interface frei austauschbar.
  *
- * - `InMemoryBerichtSpeicher`: Standard für Tests/lokal ohne S3.
- * - Produktiv gehört der Nachweis in den Objektspeicher (S3/MinIO, D-003:
- *   „Dateien nie in die DB"). Eine `S3BerichtSpeicher`-Implementierung steckt
- *   man über dasselbe Interface ein (TODO: Anbindung, sobald ein
- *   S3-kompatibler Speicher lokal verfügbar ist – MinIO-Image aktuell nicht
- *   ziehbar; siehe docs/STATUS.md).
+ * - `ObjektBerichtSpeicher`: Objektspeicher (S3-API, D-003: „Dateien nie in
+ *   die DB“) – Standard im Betrieb.
+ * - `InMemoryBerichtSpeicher`: für Unit-Tests ohne Speicher.
  */
+import type { ObjektSpeicher } from '../objektspeicher/objekt-speicher';
+
 export interface GespeicherterBericht {
   readonly ref: string;
   readonly contentType: string;
@@ -16,6 +15,15 @@ export interface GespeicherterBericht {
 
 export interface BerichtSpeicher {
   ablegen(pfad: string, contentType: string, daten: Buffer): Promise<GespeicherterBericht>;
+}
+
+/** Ablage im Objektspeicher (S3-API, D-003) – Standard im Betrieb. */
+export class ObjektBerichtSpeicher implements BerichtSpeicher {
+  constructor(private readonly speicher: ObjektSpeicher) {}
+  async ablegen(pfad: string, contentType: string, daten: Buffer): Promise<GespeicherterBericht> {
+    await this.speicher.ablegen(pfad, contentType, daten);
+    return { ref: `s3://${pfad}`, contentType, groesse: daten.length };
+  }
 }
 
 export class InMemoryBerichtSpeicher implements BerichtSpeicher {

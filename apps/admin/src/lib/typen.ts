@@ -288,3 +288,20 @@ export interface Protokoll {
   fotos: ProtokollFoto[];
   fehlt: string[];
 }
+
+/** Archivierter Temperaturnachweis (GET /v1/mieten/:id/temperaturnachweise). */
+export interface NachweisArchivEintrag {
+  id: string;
+  mieteId: string;
+  version: number;
+  ausloeser: 'automatisch' | 'manuell';
+  erzeugtAm: string;
+  bewertung: string;
+  anzahlGrenzverletzungen: number;
+  anzahlLuecken: number;
+  jsonSha256: string;
+  pdfSha256: string;
+  pdfGroesse: number;
+  jsonUrl: string;
+  pdfUrl: string;
+}

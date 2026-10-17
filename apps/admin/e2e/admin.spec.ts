@@ -56,7 +56,9 @@ test('admin meldet sich an und sieht alle Bereiche', async ({ page }) => {
     }
     if (name === 'Mieten') {
       await page.locator('tbody a').first().click();
-      await expect(page.getByRole('heading', { name: 'Temperaturnachweis' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Temperaturnachweis', exact: true }),
+      ).toBeVisible();
       await page.screenshot({ path: `${SCREENS}/07-miete.png`, fullPage: true });
     }
   }

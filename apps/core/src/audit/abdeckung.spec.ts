@@ -8,7 +8,11 @@ import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { describe, expect, it } from 'vitest';
 import { AdminController } from '../admin/admin.controller';
 import { AbweichungController, AlarmController } from '../alarm/alarm.controller';
-import { BerichtController } from '../bericht/bericht.controller';
+import {
+  BerichtController,
+  MieteNachweisController,
+  NachweisPruefungController,
+} from '../bericht/bericht.controller';
 import { FahrzeugController, SensorController } from '../fahrzeug/fahrzeug.controller';
 import { HealthController } from '../health/health.controller';
 import { FahrerController, KundeController } from '../kunde/kunde.controller';
@@ -45,6 +49,8 @@ const CONTROLLER = [
   BefehlController,
   MieteProtokollController,
   ProtokollController,
+  MieteNachweisController,
+  NachweisPruefungController,
 ];
 const LESEND = new Set([RequestMethod.GET, RequestMethod.HEAD, RequestMethod.OPTIONS]);
 

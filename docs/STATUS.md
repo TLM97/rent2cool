@@ -13,6 +13,74 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Temperaturnachweis automatisch nach jeder Miete
+
+**Automatischer, archivierter Temperaturnachweis – erledigt.** (Toms
+„fahre fort“; das zentrale Verkaufsargument der Roadmap. Planung möge die
+Aufgabe in `TASKS.md` nachziehen. Beantwortet F-16 teilweise: Erzeugung
+automatisch – Zustellung an den Kunden offen, s. F-46.)
+
+Erledigt:
+- **Berichtsdienst** (BullMQ auf Valkey, wie D-001): wiederkehrender
+  Suchlauf nach beendeten Mieten ohne Nachweis (begrenzte Abfrage mit
+  Teilindex, 30-Tage-Fenster, höchstens 100 je Lauf), je Miete ein Job mit
+  fester Job-ID (keine Doppelten), Wiederholung mit wachsendem Abstand.
+  Karenzzeit nach Mietende (Standard 30 Min.) für nachgelieferte Messwerte.
+  Kein Kopplungspunkt im Miet-Modul: geht ein Job verloren, findet ihn der
+  nächste Suchlauf. Eigenes Modul, später als Prozess herauslösbar.
+- **Archiv** (Migration `0015_temperaturnachweis_archiv`): JSON und **PDF**
+  im Objektspeicher, SHA-256 beider Dateien, Datensignatur und
+  Dokumentsignatur; **unveränderbar** per Datenbank-Trigger; automatisch
+  genau einmal je Miete (eindeutiger Index), manuell als neue Version.
+  Audit-Eintrag je Version (Akteur `system:berichtsdienst` bzw. Anforderer).
+- **PDF**: eine Seite – Ergebnis, Eckdaten, Temperaturkurve mit Profilband
+  (Min/Max-Verdichtung, kurze Spitzen bleiben sichtbar), Grenzverletzungen
+  zu Ereignissen zusammengefasst, Lücken, Integrität; reproduzierbar
+  (gleiche Daten → bytegleiche Datei).
+- **Echtheitsprüfung**: Dateien unverändert, Signaturen gültig, Messdaten
+  unverändert (erkennt Nachlieferungen → neue Version empfohlen).
+- **Objektspeicher** jetzt auch für den bisherigen Nachweis-Endpunkt (statt
+  Arbeitsspeicher).
+- **Oberfläche**: Mietakte „Temperaturnachweis für den Kunden“ mit
+  Versionen, PDF/JSON, „Prüfen“, „Neue Version erzeugen“; im Verlauf.
+- **Demo-Daten**: Nachweise der drei beendeten Mieten (einer „verletzt“).
+
+Beim Testen gefunden und behoben:
+- BullMQ 6 bringt `ioredis` nicht mehr mit – ohne die Abhängigkeit hing der
+  Test mit stark wachsendem Speicher statt mit einer Fehlermeldung. Jetzt
+  ausdrücklich installiert.
+- Die Demo-Daten signierten mit einem anderen Schlüssel als der Kern → die
+  Echtheitsprüfung meldete zu Recht „Signatur ungültig“. Demo nutzt jetzt
+  denselben (Platzhalter-)Schlüssel.
+- PDF: leere Zusatzseiten durch die Fußzeile und eine Lücke unter der Kurve.
+
+Tests: shared 70, admin 60, Kern 151/151 Integration (neu: Archiv,
+Echtheitsprüfung inkl. Manipulation und Nachlieferung, Berichtsdienst über
+echtes Valkey, Demo), CI mit Valkey-Dienst; Browser-Test „Ablauf“ fordert
+den Nachweis an und prüft ihn.
+
+Abkürzungen (vor Go-live ersetzen):
+- **Signatur = HMAC mit Platzhalter-Schlüssel** (D-015), ohne Schlüssel-ID:
+  ein Schlüsselwechsel machte alte Nachweise „ungültig“. Für Go-live
+  asymmetrische Signatur/PKI mit Schlüssel-ID im Archiv (→ F-47).
+- Worker läuft im Kern-Prozess (`BERICHT_WORKER_ENABLED`); bei Last als
+  eigener Prozess starten (Modul ist dafür getrennt).
+- Mieten, die vor mehr als 30 Tagen endeten, sucht der Dienst nicht mehr
+  (Nachweis bei Bedarf manuell).
+
+Fragen an Planung:
+- **F-46:** Wie bekommt der Kunde den Nachweis – Kundenportal (Download),
+  E-Mail an die QA des Kunden, beides? Ab wann (sofort nach Erzeugung oder
+  nach Freigabe durch unsere QA)?
+- **F-47:** Reicht eine eigene Signatur, oder soll der Nachweis ein
+  (qualifiziertes) elektronisches Siegel tragen (eIDAS), damit Auditoren
+  ihn ohne unser System prüfen können?
+- **F-48:** Karenzzeit 30 Minuten nach Mietende ok? Und soll eine
+  nachträgliche Version (Nachlieferung) den Kunden automatisch informieren?
+- F-24, F-26 bis F-37, F-41 bis F-45 weiter offen.
+
+---
+
 ### 2026-10-17 – Übergabe- und Rückgabeprotokoll mit Foto-Check
 
 **Foto-Check / Übergabeprotokoll – erledigt.** (Nächste Aufgabe auf Toms

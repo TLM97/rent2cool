@@ -1,8 +1,19 @@
-import { BadRequestException, Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { z } from 'zod';
-import type { TemperaturNachweis } from '@rent2cool/shared';
-import { Roles } from '../auth/decorators';
-import { Audited } from '../audit/audited.decorator';
+import type { Principal, TemperaturNachweis } from '@rent2cool/shared';
+import { CurrentUser, Roles } from '../auth/decorators';
+import { Audited, AuditImService } from '../audit/audited.decorator';
+import { NachweisArchiv } from './archiv.service';
+import { Berichtsdienst } from './berichtsdienst';
 import { BerichtService, type ErzeugeParams } from './bericht.service';
 
 const anfrageSchema = z.object({
@@ -71,5 +82,45 @@ export class BerichtController {
       kennzahlen: res.nachweis.kennzahlen,
       integritaet: res.nachweis.integritaet,
     };
+  }
+}
+
+/**
+ * Archivierte Nachweise je Miete (automatisch nach Mietende, D-003 als
+ * Hintergrundjob) und Echtheitsprüfung.
+ */
+@Controller('v1/mieten')
+export class MieteNachweisController {
+  constructor(
+    private readonly archiv: NachweisArchiv,
+    private readonly dienst: Berichtsdienst,
+  ) {}
+
+  @Get(':id/temperaturnachweise')
+  @Roles('ops', 'admin', 'qa_approver', 'kunde_qa', 'kunde_dispo')
+  liste(@CurrentUser() user: Principal, @Param('id', new ParseUUIDPipe()) id: string) {
+    return this.archiv.liste(user, id);
+  }
+
+  /** Neue Version anfordern (z. B. nach Nachlieferung). Der Job schreibt Archiv und Audit. */
+  @Post(':id/temperaturnachweise')
+  @Roles('ops', 'admin', 'qa_approver')
+  @AuditImService('temperaturnachweis')
+  @HttpCode(202)
+  async fordereAn(@CurrentUser() user: Principal, @Param('id', new ParseUUIDPipe()) id: string) {
+    await this.archiv.liste(user, id); // Zugriff und Existenz prüfen
+    return this.dienst.fordereAn(id, user);
+  }
+}
+
+@Controller('v1/temperaturnachweise')
+export class NachweisPruefungController {
+  constructor(private readonly archiv: NachweisArchiv) {}
+
+  /** Echtheitsprüfung: Dateien, Signaturen und Messdaten gegen das Archiv. */
+  @Get(':id/pruefung')
+  @Roles('ops', 'admin', 'qa_approver', 'kunde_qa')
+  pruefe(@CurrentUser() user: Principal, @Param('id', new ParseUUIDPipe()) id: string) {
+    return this.archiv.pruefe(user, id);
   }
 }

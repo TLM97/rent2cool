@@ -213,6 +213,19 @@ test('kompletter Ablauf von Fahrzeug bis Abweichung', async ({ page, context }) 
   await expect(mietVerlauf).toContainText('admin.dev');
   await expect(mietVerlauf).toContainText('Status: bestätigt → aktiv');
   await expect(mietVerlauf).toContainText('Status: aktiv → beendet');
+
+  // --- Temperaturnachweis: nach Mietende anfordern, im Archiv prüfen ---
+  const archiv = page.getByRole('region', { name: 'Temperaturnachweis für den Kunden' });
+  await archiv.getByRole('button', { name: 'Neue Version erzeugen' }).click();
+  await expect(page.getByRole('status')).toContainText('Neuer Nachweis angefordert');
+  // Der Berichtsdienst arbeitet im Hintergrund – bis die Version erscheint, neu laden.
+  await expect(async () => {
+    await page.reload();
+    await expect(archiv.getByRole('link', { name: 'PDF' })).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 20_000 });
+  await archiv.getByRole('button', { name: 'Prüfen' }).click();
+  await expect(page.getByRole('status')).toContainText('Version 1 ist echt');
+  await archiv.screenshot({ path: `${SCREENS}/25-nachweis-archiv.png` });
   await mietVerlauf.screenshot({ path: `${SCREENS}/22-miete-verlauf.png` });
   await page.getByLabel('Nettobetrag (EUR)').fill('250.00');
   await page.getByRole('button', { name: 'Rechnung erstellen' }).click();
@@ -227,7 +240,9 @@ test('kompletter Ablauf von Fahrzeug bis Abweichung', async ({ page, context }) 
 
   // --- Abweichung aus der Miete erfassen und durch die QA abschließen ---
   await page.getByRole('link', { name: 'Mietakte öffnen' }).click();
-  await expect(page.getByRole('heading', { name: 'Temperaturnachweis' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Temperaturnachweis', exact: true }),
+  ).toBeVisible();
   await page.getByRole('link', { name: 'Abweichung erfassen' }).click();
   await page
     .getByLabel('Beschreibung')

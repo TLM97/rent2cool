@@ -11,7 +11,7 @@ import { AbweichungService } from '../../alarm/abweichung.service';
 import { AlarmService } from '../../alarm/alarm.service';
 import { BerichtService } from '../../bericht/bericht.service';
 import { KonfigProfilQuelle } from '../../bericht/profil';
-import { JsonNachweisRenderer, RendererRegistry } from '../../bericht/renderer';
+import { standardRenderer } from '../../bericht/renderer';
 import { HmacSignierer } from '../../bericht/signierer';
 import { InMemoryBerichtSpeicher } from '../../bericht/speicher';
 import { FahrzeugService } from '../../fahrzeug/fahrzeug.service';
@@ -30,6 +30,7 @@ import {
   protokollFoto,
   rechnung,
   schluessel,
+  temperaturnachweisArchiv,
   uebergabeprotokoll,
 } from '../schema';
 import { testSpeicher } from '../../objektspeicher/testspeicher';
@@ -61,7 +62,7 @@ describe.skipIf(!RUN)('Demo-Daten (Integration, braucht DB)', () => {
         client.db,
         new KonfigProfilQuelle(),
         new HmacSignierer('test'),
-        new RendererRegistry([new JsonNachweisRenderer()]),
+        standardRenderer(),
         new InMemoryBerichtSpeicher(),
       ),
     );
@@ -84,6 +85,7 @@ describe.skipIf(!RUN)('Demo-Daten (Integration, braucht DB)', () => {
       befehle: 3,
       protokolle: 2,
       fotos: 13,
+      nachweise: 3,
     });
     expect(ergebnis.messwerte).toBeGreaterThan(5000);
     expect(ergebnis.alarme).toBeGreaterThan(0);
@@ -308,6 +310,20 @@ describe.skipIf(!RUN)('Demo-Daten (Integration, braucht DB)', () => {
     expect(fotos.every((f) => f.status === 'hochgeladen')).toBe(true);
     // Die Übergabe hat der Fahrer mit seinem App-Konto protokolliert.
     expect(zeilen.find((p) => p.art === 'uebergabe')!.erstelltVon).toMatch(/^demo-konto-max-/);
+  });
+
+  it('Temperaturnachweise der beendeten Mieten liegen im Archiv', async () => {
+    const archiv = await client.db
+      .select()
+      .from(temperaturnachweisArchiv)
+      .where(eq(temperaturnachweisArchiv.mandantId, mandantId));
+    // Die Miete mit Ausreißer (Demo) ist im Archiv als verletzt bewertet.
+    expect(archiv.map((a) => a.bewertung).sort()).toEqual([
+      'eingehalten',
+      'eingehalten',
+      'verletzt',
+    ]);
+    expect(archiv.every((a) => a.ausloeser === 'automatisch' && a.version === 1)).toBe(true);
   });
 
   it('ein zweiter Lauf ändert nichts', async () => {

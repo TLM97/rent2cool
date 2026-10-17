@@ -176,12 +176,31 @@ zuerst):
 
 **Modular** aufgebaut, damit Formate und Ablage ohne Umbau wechselbar sind:
 
-- **Format** über `NachweisRenderer` (v1: JSON; PDF/CSV = weiterer Renderer).
-- **Speicher** über `BerichtSpeicher` (v1: In-Memory; S3/MinIO als Austausch).
-- **Signatur** über `Signierer` (v1: HMAC-Platzhalter, D-015; später PKI).
+- **Format** über `NachweisRenderer`: JSON (für Systeme) und PDF (für Kunde und
+  Auditor, eine Seite mit Kurve und Ereignissen); weitere Formate = weiterer Renderer.
+- **Speicher** über `BerichtSpeicher` (Objektspeicher, S3-API).
+- **Signatur** über `Signierer` (HMAC-Platzhalter, D-015; später PKI).
 
-> v1 bezieht sich auf **Fahrzeug + Zeitraum**; sobald die Entität _Miete_
-> freigegeben ist (Datenmodell T-002), wird der Nachweis an eine Miete gebunden.
+### Automatisch nach jeder Miete
+
+Der **Berichtsdienst** (BullMQ auf Valkey, D-001; eigenes Modul, später als
+eigener Prozess herauslösbar) sucht regelmäßig beendete Mieten ohne Nachweis
+(`BERICHT_SUCHE_SEK`, Standard 5 Min.) und erzeugt den Nachweis nach einer
+Karenzzeit für nachgelieferte Messwerte (`BERICHT_KARENZ_MIN`, Standard 30).
+Eingeschaltet mit `BERICHT_WORKER_ENABLED=true` (in `.env.example` an).
+
+Jeder Nachweis landet **unveränderbar im Archiv** (JSON + PDF im Objektspeicher,
+SHA-256 beider Dateien, Daten- und Dokumentsignatur; Datenbank-Trigger
+verhindert Änderung und Löschung). Neue Erkenntnisse = neue Version.
+
+- `GET /v1/mieten/:id/temperaturnachweise` — Versionen mit Download-Links.
+- `POST /v1/mieten/:id/temperaturnachweise` — neue Version anfordern (Job, 202).
+- `GET /v1/temperaturnachweise/:id/pruefung` — **Echtheitsprüfung**: Dateien
+  unverändert? Signaturen gültig? Messdaten seitdem unverändert (sonst
+  Nachlieferung, z. B. aus einem Funkloch)?
+
+In der Mietakte zeigt die Karte „Temperaturnachweis für den Kunden“ alle
+Versionen mit PDF/JSON und „Prüfen“.
 
 ## Fahrzeugakte
 

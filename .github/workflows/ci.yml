@@ -46,7 +46,7 @@ jobs:
         run: pnpm build
 
   integration:
-    name: Integrationstests (PostgreSQL + TimescaleDB, S3)
+    name: Integrationstests (PostgreSQL + TimescaleDB, S3, Valkey)
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -60,6 +60,16 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U rent2cool"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      valkey:
+        # Gleiches Image wie docker-compose.yml (Hintergrundjobs, BullMQ).
+        image: valkey/valkey:8.0.1-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "valkey-cli ping"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20

@@ -106,6 +106,13 @@
       "when": 1760648400000,
       "tag": "0014_uebergabeprotokoll",
       "breakpoints": false
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1760652000000,
+      "tag": "0015_temperaturnachweis_archiv",
+      "breakpoints": false
     }
   ]
 }

@@ -11,6 +11,7 @@ import {
   UebergabePlakette,
 } from '../../../../components/bausteine';
 import { SchluesselKarte } from '../../../../components/fernzugriff';
+import { NachweisArchivKarte } from '../../../../components/nachweis';
 import { ProtokollKarte } from '../../../../components/protokoll';
 import { Verlauf } from '../../../../components/verlauf';
 import { Feld, FormularRahmen } from '../../../../components/formular';
@@ -34,6 +35,7 @@ import type {
   Kunde,
   Liste,
   Miete,
+  NachweisArchivEintrag,
   Protokoll,
   Rechnung,
   Schluessel,
@@ -80,6 +82,9 @@ export default async function MieteDetail({
       ])
     : [null, [], null];
   // Übergabe-/Rückgabeprotokoll (D-014): Betrieb und QA.
+  const archiv = await apiGetOderNull<NachweisArchivEintrag[]>(
+    `/v1/mieten/${id}/temperaturnachweise`,
+  );
   const protokolle = hatRolle(rollen, 'ops', 'admin', 'qa_approver')
     ? await apiGet<Protokoll[]>(`/v1/mieten/${id}/protokolle`)
     : null;
@@ -233,6 +238,15 @@ export default async function MieteDetail({
         </section>
       </div>
 
+      {archiv ? (
+        <NachweisArchivKarte
+          mieteId={miete.id}
+          mieteStatus={miete.status}
+          eintraege={archiv}
+          darfAnfordern={hatRolle(rollen, 'ops', 'admin', 'qa_approver')}
+        />
+      ) : null}
+
       {schluessel && befehle ? (
         <SchluesselKarte
           mieteId={miete.id}
@@ -330,6 +344,7 @@ export default async function MieteDetail({
           miete.id,
           ...(schluessel ?? []).map((s) => s.id),
           ...(protokolle ?? []).map((p) => p.id),
+          ...(archiv ?? []).map((a) => a.id),
         ]}
         typen={[
           'miete',
@@ -338,6 +353,7 @@ export default async function MieteDetail({
           'schluessel_status',
           'protokoll',
           'protokoll_status',
+          'temperaturnachweis',
         ]}
         bezeichnungen={Object.fromEntries([
           ...(schluessel ?? []).map((s) => [s.id, `Schlüssel ${s.fahrerName}`]),
@@ -345,6 +361,7 @@ export default async function MieteDetail({
             p.id,
             `${p.art === 'uebergabe' ? 'Übergabe' : 'Rückgabe'}protokoll`,
           ]),
+          ...(archiv ?? []).map((a) => [a.id, `Nachweis Version ${a.version}`]),
         ])}
       />
     </>

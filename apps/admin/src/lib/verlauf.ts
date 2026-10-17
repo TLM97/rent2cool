@@ -99,6 +99,8 @@ const FELDER: Record<string, string> = {
   kmStand: 'Kilometerstand',
   checkliste: 'Checkliste',
   schaeden: 'Schäden',
+  version: 'Version',
+  ausloeser: 'Auslöser',
 };
 
 const ISO_ZEIT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
@@ -124,7 +126,8 @@ export function formatWert(feld: string, wert: unknown): string {
     return uebergabeText(wert as UebergabePruefung).text;
   }
   if (wert === null || wert === undefined || wert === '') return '–';
-  if (feld === 'status' && typeof wert === 'string') return statusLabel(wert);
+  if ((feld === 'status' || feld === 'bewertung') && typeof wert === 'string')
+    return statusLabel(wert);
   if (feld === 'befehl' && typeof wert === 'string')
     return BEFEHL_NAME[wert as FahrzeugBefehl] ?? wert;
   if (feld === 'checkliste' && istObjekt(wert)) {
@@ -175,6 +178,7 @@ export function vorgang(e: AuditEintrag): string {
   if (e.entitaetTyp === 'alarm_schliessen') return 'Alarm geschlossen';
   if (e.entitaetTyp === 'sensor_tausch') return 'Sensor getauscht';
   if (e.entitaetTyp === 'schluessel') return 'Schlüssel ausgestellt';
+  if (e.entitaetTyp === 'temperaturnachweis') return 'Temperaturnachweis erzeugt';
   if (e.entitaetTyp === 'protokoll' && e.aktion === 'PATCH') return 'Protokoll ergänzt';
   if (e.aktion === 'PATCH') return 'Stammdaten geändert';
   if (e.entitaetTyp.endsWith('_status')) {
@@ -198,7 +202,10 @@ export function beschreibe(e: AuditEintrag): {
 } {
   const v = vorgang(e);
   const neuAngelegt =
-    v === 'angelegt' || v === 'Kalibrierung erfasst' || v === 'Schlüssel ausgestellt';
+    v === 'angelegt' ||
+    v === 'Kalibrierung erfasst' ||
+    v === 'Schlüssel ausgestellt' ||
+    v === 'Temperaturnachweis erzeugt';
   return {
     vorgang: v,
     wer: akteur(e),

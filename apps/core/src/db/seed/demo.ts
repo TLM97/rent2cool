@@ -28,7 +28,8 @@ import { AlarmService } from '../../alarm/alarm.service';
 import { protokolliereAnlage } from '../../audit/audit.service';
 import { BerichtService } from '../../bericht/bericht.service';
 import { KonfigProfilQuelle } from '../../bericht/profil';
-import { JsonNachweisRenderer, RendererRegistry } from '../../bericht/renderer';
+import { BERICHTSDIENST, NachweisArchiv } from '../../bericht/archiv.service';
+import { standardRenderer } from '../../bericht/renderer';
 import { HmacSignierer } from '../../bericht/signierer';
 import { InMemoryBerichtSpeicher } from '../../bericht/speicher';
 import type { Env } from '../../config/env';
@@ -81,6 +82,7 @@ export interface DemoErgebnis {
   befehle: number;
   protokolle: number;
   fotos: number;
+  nachweise: number;
 }
 
 export async function ladeDemoDaten(
@@ -104,6 +106,7 @@ export async function ladeDemoDaten(
     befehle: 0,
     protokolle: 0,
     fotos: 0,
+    nachweise: 0,
   };
 
   const [vorhanden] = await db
@@ -132,8 +135,9 @@ export async function ladeDemoDaten(
   const berichte = new BerichtService(
     db,
     new KonfigProfilQuelle(),
-    new HmacSignierer('demo-nur-lokal'),
-    new RendererRegistry([new JsonNachweisRenderer()]),
+    // Gleicher Schlüssel wie der Kern, sonst schlägt die Echtheitsprüfung fehl.
+    new HmacSignierer(process.env.BERICHT_SIGNING_KEY ?? 'PLACEHOLDER_BERICHT_SIGNING_KEY'),
+    standardRenderer(),
     new InMemoryBerichtSpeicher(),
   );
   const simulator = new SimulatorKeyProvider();
@@ -466,6 +470,18 @@ export async function ladeDemoDaten(
         await protokolle.schliesseAb(wer, id);
         ergebnis.protokolle++;
       }
+    }
+  }
+
+  // --- Temperaturnachweise der beendeten Mieten (wie der Berichtsdienst) ---
+  if (o.speicher) {
+    const archiv = new NachweisArchiv(db, berichte, o.speicher);
+    for (const m of DEMO_MIETEN.filter((x) => x.status === 'beendet')) {
+      await archiv.erstelle(mieteIds.get(m.schluessel)!, {
+        ausloeser: 'automatisch',
+        akteur: BERICHTSDIENST,
+      });
+      ergebnis.nachweise++;
     }
   }
 

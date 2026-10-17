@@ -1,7 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../config/env';
-import { BerichtController } from './bericht.controller';
+import { NachweisArchiv } from './archiv.service';
+import {
+  BerichtController,
+  MieteNachweisController,
+  NachweisPruefungController,
+} from './bericht.controller';
+import { Berichtsdienst } from './berichtsdienst';
 import {
   BERICHT_SPEICHER,
   BerichtService,
@@ -10,19 +16,19 @@ import {
   SIGNIERER,
 } from './bericht.service';
 import { KonfigProfilQuelle } from './profil';
-import { JsonNachweisRenderer, RendererRegistry } from './renderer';
+import { standardRenderer } from './renderer';
 import { HmacSignierer } from './signierer';
-import { InMemoryBerichtSpeicher } from './speicher';
+import { ObjektBerichtSpeicher } from './speicher';
+import { OBJEKT_SPEICHER, type ObjektSpeicher } from '../objektspeicher/objekt-speicher';
 
 /**
- * Temperaturbericht v1. Alle austauschbaren Teile sind über Tokens
- * eingebunden: Profilquelle, Signierer, Renderer-Registry (Formate) und
- * Speicher. Ein Formatwechsel (z. B. PDF) ist ein weiterer Renderer; ein
- * Speicherwechsel (z. B. S3/MinIO) eine andere Implementierung des
- * BerichtSpeicher-Interfaces – ohne Änderung am Service/Controller.
+ * Temperaturnachweis. Austauschbare Teile über Tokens: Profilquelle,
+ * Signierer, Renderer (JSON, PDF – weitere Formate ohne Umbau), Speicher
+ * (Objektspeicher, D-003). Dazu das unveränderbare Archiv je Miete und der
+ * Berichtsdienst (BullMQ), der Nachweise nach Mietende automatisch erzeugt.
  */
 @Module({
-  controllers: [BerichtController],
+  controllers: [BerichtController, MieteNachweisController, NachweisPruefungController],
   providers: [
     BerichtService,
     { provide: PROFIL_QUELLE, useFactory: () => new KonfigProfilQuelle() },
@@ -32,12 +38,15 @@ import { InMemoryBerichtSpeicher } from './speicher';
       useFactory: (config: ConfigService<Env, true>) =>
         new HmacSignierer(config.get('BERICHT_SIGNING_KEY', { infer: true })),
     },
+    { provide: RENDERER_REGISTRY, useFactory: standardRenderer },
     {
-      provide: RENDERER_REGISTRY,
-      useFactory: () => new RendererRegistry([new JsonNachweisRenderer()]),
+      provide: BERICHT_SPEICHER,
+      inject: [OBJEKT_SPEICHER],
+      useFactory: (s: ObjektSpeicher) => new ObjektBerichtSpeicher(s),
     },
-    { provide: BERICHT_SPEICHER, useFactory: () => new InMemoryBerichtSpeicher() },
+    NachweisArchiv,
+    Berichtsdienst,
   ],
-  exports: [BerichtService],
+  exports: [BerichtService, NachweisArchiv],
 })
 export class BerichtModule {}
