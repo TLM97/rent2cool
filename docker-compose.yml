@@ -72,7 +72,7 @@ services:
     entrypoint: >
       /bin/sh -c "
       printf '{\"identities\":[{\"name\":\"rent2cool\",\"credentials\":[{\"accessKey\":\"%s\",\"secretKey\":\"%s\"}],\"actions\":[\"Admin\",\"Read\",\"Write\",\"List\",\"Tagging\"]}]}' \"$$S3_ACCESS_KEY\" \"$$S3_SECRET_KEY\" > /tmp/s3.json &&
-      exec weed server -dir=/data -s3 -s3.port=8333 -s3.config=/tmp/s3.json"
+      exec weed server -ip.bind=0.0.0.0 -dir=/data -s3 -s3.port=8333 -s3.config=/tmp/s3.json"
     environment:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-rent2cool_local}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-rent2cool_local_secret}
