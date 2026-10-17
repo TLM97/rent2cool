@@ -12,6 +12,7 @@ import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Database } from '../db/client';
 import { DB } from '../db/db.module';
 import { aggregat, fahrzeug, kalibrierung, sensor } from '../db/schema';
+import { istPgFehler, PG_FEHLER } from '../db/fehler';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 import { bewerteBuchbarkeit, type BuchbarkeitErgebnis, type SensorFrist } from './fristen';
 import type { FahrzeugAendern, FahrzeugErstellen, KalibrierungEingabe, SensorTausch } from './dto';
@@ -66,8 +67,7 @@ export class FahrzeugService {
           })
           .returning();
       } catch (e: unknown) {
-        const msg = String(e);
-        if (msg.includes('23505') || msg.toLowerCase().includes('unique')) {
+        if (istPgFehler(e, PG_FEHLER.EINDEUTIG, 'uq_fahrzeug_kennzeichen')) {
           throw new ConflictException(`Kennzeichen "${p.kennzeichen}" existiert bereits für diesen Mandanten`);
         }
         throw e;
@@ -138,8 +138,7 @@ export class FahrzeugService {
           .set({ ...neueWerte(eingabe, a), aktualisiertAm: jetzt })
           .where(eq(fahrzeug.id, id));
       } catch (e: unknown) {
-        const msg = String(e);
-        if (msg.includes('23505') || msg.toLowerCase().includes('unique')) {
+        if (istPgFehler(e, PG_FEHLER.EINDEUTIG, 'uq_fahrzeug_kennzeichen')) {
           throw new ConflictException(`Kennzeichen "${p.kennzeichen}" existiert bereits für diesen Mandanten`);
         }
         throw e;

@@ -13,6 +13,51 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Doppelbuchung verhindern
+
+**Doppelbuchung bei gleichzeitigen Buchungen – behoben.** (Fund aus der
+vorigen Session; Planung möge die Aufgabe in `TASKS.md` nachziehen.)
+
+Erledigt:
+- **Datenbank-Regel** (Migration `0010_miete_keine_ueberschneidung`):
+  Exclusion-Constraint `ex_miete_fahrzeug_zeitraum` – je Fahrzeug keine
+  überlappenden bestätigten/aktiven Mieten, Zeiträume halboffen (Rückgabe
+  10:00 und nächste Abholung 10:00 sind erlaubt). Gilt auch am Kern vorbei.
+  Vorschlag als **D-017**.
+- Der Kern übersetzt eine Regelverletzung in dieselbe Ablehnung wie die
+  Vorabprüfung („Fahrzeug ist im gewünschten Zeitraum bereits gebucht“) –
+  beim Buchen und beim Statuswechsel (z. B. angefragt → bestätigt). Die
+  Oberfläche zeigt die Gründe wie bisher.
+- **Nebenbei behobener Fehler:** Der Kern erkannte Datenbank-Fehler über den
+  Fehlertext, postgres.js liefert den SQLSTATE aber nur im Feld `code`.
+  Dadurch lief eine gleichzeitige Wiederholung mit demselben
+  Idempotency-Key in einen Serverfehler statt die vorhandene Buchung
+  zurückzugeben. Neuer Baustein `apps/core/src/db/fehler.ts` (SQLSTATE +
+  Constraint-Name); umgestellt bei Buchung, Fahrzeug (doppeltes Kennzeichen)
+  und Rechnung (gleichzeitige Rechnung zur selben Miete → 409 statt 500).
+- **Tests:** Kern 41 Unit + 50 Integration (91/91 gegen den lokalen Stack).
+  Neuer Integrationstest Doppelbuchung: gleichzeitige Buchungen, angrenzende
+  Zeiträume, Idempotency-Key gleichzeitig, Stornierung, Statuswechsel,
+  Schreiben am Kern vorbei. **Gegenprobe:** Ohne die Regel schlägt der Test
+  mit abgeschalteter Vorabprüfung fehl – mit Regel ist er grün. (Der Test mit
+  echter Vorabprüfung allein ist nicht beweiskräftig, weil die Anfragen lokal
+  meist nacheinander ankommen.)
+- Lokale Testdaten: Bei der Gegenprobe entstandene Überschneidungen
+  (nur Test-Mandant „Doppelbuchung“) wurden storniert.
+
+Hinweise:
+- Die Migration schlägt fehl, wenn eine Datenbank bereits überlappende
+  Buchungen enthält – gewollt; vor dem Einspielen Überschneidungen suchen und
+  fachlich klären (welche Buchung gilt).
+- **Formatierung:** 97 Dateien entsprechen nicht der Prettier-Konfiguration
+  (schon vorher so); die CI prüft das nicht. Empfehlung: einmal `pnpm format`
+  in einem eigenen Commit und `format:check` in die CI aufnehmen.
+
+Fragen an Planung:
+- Keine neuen. F-24, F-26 bis F-32 weiter offen (siehe unten).
+
+---
+
 ### 2026-10-17 – Protokollierung beim Anlegen
 
 **Anlegen mit vollständigem Audit – erledigt.** (Auf Toms Auftrag; Planung
@@ -52,6 +97,7 @@ Gefunden, nicht Teil dieser Aufgabe:
   beide bestätigt werden. Vorschlag: Exclusion-Constraint auf
   (Fahrzeug, Zeitraum) für bestätigte/aktive Mieten. Als eigene Aufgabe
   vorgeschlagen – bitte in `TASKS.md` aufnehmen, **vor Go-live zwingend**.
+  (Nachtrag: behoben, siehe Eintrag „Doppelbuchung verhindern“.)
 
 Offen / Abkürzungen:
 - Alarme, die die Telematik automatisch anlegt, haben keinen Audit-Eintrag

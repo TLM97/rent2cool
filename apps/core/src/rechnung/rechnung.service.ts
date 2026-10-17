@@ -1,9 +1,4 @@
-import {
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import {
@@ -20,6 +15,7 @@ import type { Env } from '../config/env';
 import type { Database, Transaktion } from '../db/client';
 import { DB } from '../db/db.module';
 import { miete, rechnung, rechnungSequenz } from '../db/schema';
+import { istPgFehler, PG_FEHLER } from '../db/fehler';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 import { MieteService } from '../miete/miete.service';
 import type { RechnungErstellen } from './dto';
@@ -71,28 +67,37 @@ export class RechnungService {
     const bis = m.endeIst ?? m.endeGeplant;
     const jahr = new Date().getUTCFullYear();
 
-    const row = await this.db.transaction(async (tx) => {
-      const nr = await this.naechsteNummer(tx, mandant, jahr);
-      const [neu] = await tx
-        .insert(rechnung)
-        .values({
-          mandantId: mandant,
-          kundeId: m.kundeId,
-          mieteId: m.id,
-          rechnungsnummer: formatRechnungsnummer(jahr, nr),
-          zeitraumVon: von,
-          zeitraumBis: bis,
-          nettoCent: betraege.nettoCent,
-          steuerSatz: betraege.steuerSatzProzent,
-          steuerCent: betraege.steuerCent,
-          bruttoCent: betraege.bruttoCent,
-          waehrung,
-          status: 'entwurf',
-        })
-        .returning();
-      await protokolliereAnlage(tx, principal, 'rechnung', neu!.id, neu);
-      return neu!;
-    });
+    let row: typeof rechnung.$inferSelect;
+    try {
+      row = await this.db.transaction(async (tx) => {
+        const nr = await this.naechsteNummer(tx, mandant, jahr);
+        const [neu] = await tx
+          .insert(rechnung)
+          .values({
+            mandantId: mandant,
+            kundeId: m.kundeId,
+            mieteId: m.id,
+            rechnungsnummer: formatRechnungsnummer(jahr, nr),
+            zeitraumVon: von,
+            zeitraumBis: bis,
+            nettoCent: betraege.nettoCent,
+            steuerSatz: betraege.steuerSatzProzent,
+            steuerCent: betraege.steuerCent,
+            bruttoCent: betraege.bruttoCent,
+            waehrung,
+            status: 'entwurf',
+          })
+          .returning();
+        await protokolliereAnlage(tx, principal, 'rechnung', neu!.id, neu);
+        return neu!;
+      });
+    } catch (e: unknown) {
+      // Gleichzeitiges Anlegen zur selben Miete: die Vorabprüfung sah noch keine Rechnung.
+      if (istPgFehler(e, PG_FEHLER.EINDEUTIG, 'uq_rechnung_miete')) {
+        throw new ConflictException('Für diese Miete existiert bereits eine Rechnung');
+      }
+      throw e;
+    }
 
     return {
       id: row.id,
@@ -117,8 +122,17 @@ export class RechnungService {
       opts.mieteId ? eq(rechnung.mieteId, opts.mieteId) : undefined,
     );
     const [eintraege, [zaehler]] = await Promise.all([
-      this.db.select().from(rechnung).where(filter).orderBy(desc(rechnung.erstelltAm)).limit(opts.limit).offset(opts.offset),
-      this.db.select({ n: sql<number>`count(*)::int` }).from(rechnung).where(filter),
+      this.db
+        .select()
+        .from(rechnung)
+        .where(filter)
+        .orderBy(desc(rechnung.erstelltAm))
+        .limit(opts.limit)
+        .offset(opts.offset),
+      this.db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(rechnung)
+        .where(filter),
     ]);
     return { eintraege, gesamt: zaehler?.n ?? 0 };
   }
@@ -132,7 +146,11 @@ export class RechnungService {
   }
 
   /** Status ändern; beim Stellen wird die Miete in derselben Transaktion abgerechnet. */
-  async aendereStatus(principal: Principal, id: string, nach: RechnungStatus): Promise<StatusErgebnis<RechnungStatus>> {
+  async aendereStatus(
+    principal: Principal,
+    id: string,
+    nach: RechnungStatus,
+  ): Promise<StatusErgebnis<RechnungStatus>> {
     const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
     let mieteId = '';
     return wechsleStatus(this.db, principal, {
@@ -168,7 +186,10 @@ export class RechnungService {
       },
       danach: async (tx) => {
         if (nach !== 'gestellt') return;
-        const [m] = await tx.select({ status: miete.status }).from(miete).where(eq(miete.id, mieteId));
+        const [m] = await tx
+          .select({ status: miete.status })
+          .from(miete)
+          .where(eq(miete.id, mieteId));
         if (m?.status === 'beendet') {
           await this.mieten.aendereStatus(principal, mieteId, 'abgerechnet', tx);
         }

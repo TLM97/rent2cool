@@ -18,11 +18,17 @@ import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Database, Transaktion } from '../db/client';
 import { DB } from '../db/db.module';
 import { fahrzeug, kunde, miete } from '../db/schema';
+import { istPgFehler, PG_FEHLER } from '../db/fehler';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
 import { FahrzeugService } from '../fahrzeug/fahrzeug.service';
 import { KundeService } from '../kunde/kunde.service';
 import { BerichtService } from '../bericht/bericht.service';
 import type { MieteErstellen } from './dto';
+
+/** Ablehnungsgrund bei Überschneidung – gleich, ob Vorabprüfung oder DB-Regel greift. */
+const UEBERSCHNEIDUNG = 'Fahrzeug ist im gewünschten Zeitraum bereits gebucht';
+/** Exclusion-Constraint aus Migration 0010 (Fahrzeug × Zeitraum, nur bestätigt/aktiv). */
+const UEBERSCHNEIDUNG_REGEL = 'ex_miete_fahrzeug_zeitraum';
 
 @Injectable()
 export class MieteService {
@@ -98,7 +104,7 @@ export class MieteService {
         ),
       );
     if ((ueberlappung?.n ?? 0) > 0) {
-      gruende.push('Fahrzeug ist im gewünschten Zeitraum bereits gebucht');
+      gruende.push(UEBERSCHNEIDUNG);
     }
 
     return gruende;
@@ -167,8 +173,12 @@ export class MieteService {
         return { id: row!.id, status: 'bestaetigt' as const, idempotent: false };
       });
     } catch (e: unknown) {
-      // Race auf idempotency_key: bestehende Miete zurückgeben.
-      if (p.idempotencyKey && String(e).includes('23505')) {
+      // Gleichzeitige Buchung hat das Fahrzeug im Zeitraum zuerst bekommen (DB-Regel).
+      if (istPgFehler(e, PG_FEHLER.AUSSCHLUSS, UEBERSCHNEIDUNG_REGEL)) {
+        throw new ConflictException({ fehler: 'Buchung abgelehnt', gruende: [UEBERSCHNEIDUNG] });
+      }
+      // Gleichzeitige Wiederholung mit demselben idempotency_key: bestehende Miete zurückgeben.
+      if (p.idempotencyKey && istPgFehler(e, PG_FEHLER.EINDEUTIG, 'uq_miete_idempotency')) {
         const [vorhanden] = await this.db
           .select({ id: miete.id, status: miete.status })
           .from(miete)
@@ -238,10 +248,18 @@ export class MieteService {
         ...(nach === 'beendet' && !m.endeIst ? { endeIst: new Date() } : {}),
       }),
       speichere: async (tx, werte) => {
-        await tx
-          .update(miete)
-          .set({ ...werte, aktualisiertAm: new Date() })
-          .where(eq(miete.id, id));
+        try {
+          await tx
+            .update(miete)
+            .set({ ...werte, aktualisiertAm: new Date() })
+            .where(eq(miete.id, id));
+        } catch (e: unknown) {
+          // z. B. angefragt → bestätigt, während das Fahrzeug inzwischen anderweitig gebucht ist.
+          if (istPgFehler(e, PG_FEHLER.AUSSCHLUSS, UEBERSCHNEIDUNG_REGEL)) {
+            throw new ConflictException({ fehler: 'Statuswechsel abgelehnt', gruende: [UEBERSCHNEIDUNG] });
+          }
+          throw e;
+        }
       },
     });
   }

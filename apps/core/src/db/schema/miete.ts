@@ -35,6 +35,8 @@ export const miete = pgTable(
   },
   (t) => [
     index('idx_miete_mandant_status').on(t.mandantId, t.status),
+    // Zusätzlich (nur SQL, Drizzle kennt keine EXCLUDE-Constraints): ex_miete_fahrzeug_zeitraum
+    // verhindert überlappende bestätigte/aktive Mieten je Fahrzeug (Migration 0010).
     index('idx_miete_kunde').on(t.kundeId),
     index('idx_miete_fahrzeug_zeit').on(t.fahrzeugId, t.startGeplant),
   ],
