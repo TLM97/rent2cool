@@ -73,5 +73,8 @@ export function zuPrincipal(p: JwtPayload): Principal {
     .filter(istRolle);
   const mandantId = typeof p.mandant_id === 'string' ? p.mandant_id : undefined;
   const name = typeof p.preferred_username === 'string' ? p.preferred_username : undefined;
-  return { akteurId: p.sub, rollen, mandantId, name };
+  // Nur bestätigte E-Mail-Adressen zählen (Einladungen werden daran gebunden).
+  const email =
+    typeof p.email === 'string' && p.email_verified === true ? p.email.toLowerCase() : undefined;
+  return { akteurId: p.sub, rollen, mandantId, name, email };
 }

@@ -450,7 +450,13 @@ export async function ordneKundenLoginZu(
   if (!istUuid(kundeId)) return { fehler: 'Kunde fehlt.', werte };
   const p = pruefe(
     kundeKontoSchema,
-    { kontoId: text(fd, 'kontoId') ?? '', bezeichnung: text(fd, 'bezeichnung') },
+    {
+      kontoId: text(fd, 'kontoId') ?? '',
+      bezeichnung: text(fd, 'bezeichnung'),
+      rollen: (['kunde_admin', 'kunde_dispo', 'kunde_qa'] as const).filter((r) =>
+        haken(fd, `rolle_${r}`),
+      ),
+    },
     werte,
   );
   if (!p.ok) return p.zustand;

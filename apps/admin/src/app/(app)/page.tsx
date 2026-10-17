@@ -4,6 +4,7 @@ import { FahrzeugLink, Leer, Seitenkopf } from '../../components/bausteine';
 import { apiGetOderNull } from '../../lib/api';
 import { formatDatumZeit, formatTemperatur, kurzeId, statusLabel } from '../../lib/format';
 import type {
+  Kunde,
   Abweichung,
   Alarm,
   FaelligeKalibrierung,
@@ -46,6 +47,7 @@ export default async function Uebersicht() {
     rechnungen,
     kalibrierungen,
     fuehrerscheine,
+    zurFreigabe,
   ] = await Promise.all([
     apiGetOderNull<Liste<Fahrzeug>>('/v1/fahrzeuge', { limit: 1 }),
     apiGetOderNull<Liste<Fahrzeug>>('/v1/fahrzeuge', { status: 'verfuegbar', limit: 1 }),
@@ -55,6 +57,8 @@ export default async function Uebersicht() {
     apiGetOderNull<Liste<Rechnung>>('/v1/rechnungen', { status: 'gestellt', limit: 1 }),
     apiGetOderNull<FaelligeKalibrierung[]>('/v1/fahrzeuge/faellige-kalibrierungen'),
     apiGetOderNull<FaelligerFuehrerschein[]>('/v1/fahrer/faellige-fuehrerscheine'),
+    // Selbst registrierte Kunden warten auf unsere Freigabe (F-51).
+    apiGetOderNull<Liste<Kunde>>('/v1/kunden', { status: 'in_pruefung', limit: 1 }),
   ]);
 
   return (
@@ -65,6 +69,12 @@ export default async function Uebersicht() {
       />
 
       <section className="kennzahlen" aria-label="Kennzahlen">
+        <Kennzahl
+          wert={zurFreigabe?.gesamt ?? null}
+          bezeichnung="Kunden zur Freigabe"
+          href="/kunden?status=in_pruefung"
+          ton="warn"
+        />
         <Kennzahl
           wert={fahrzeuge?.gesamt ?? null}
           bezeichnung="Fahrzeuge gesamt"

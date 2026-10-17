@@ -3,7 +3,15 @@
   "enabled": true,
   "displayName": "Rent2Cool (lokal)",
   "sslRequired": "none",
-  "registrationAllowed": false,
+  "registrationAllowed": true,
+  "verifyEmail": true,
+  "loginWithEmailAllowed": true,
+  "smtpServer": {
+    "host": "mail",
+    "port": "1025",
+    "from": "konto@rent2cool.example",
+    "fromDisplayName": "Rent2Cool (lokal, Mailpit)"
+  },
   "accessTokenLifespan": 900,
   "ssoSessionIdleTimeout": 3600,
   "roles": {

@@ -10,6 +10,7 @@ export const ROLLEN = [
   'ops',
   'dpo',
   'qa_approver',
+  'kunde_admin',
   'kunde_dispo',
   'kunde_qa',
   'fahrer',
@@ -34,7 +35,25 @@ export interface Principal {
   readonly mandantId?: string;
   /** Anmeldename (`preferred_username`) – lesbar im Audit Trail, `akteurId` bleibt maßgeblich. */
   readonly name?: string;
+  /** E-Mail aus dem Token (für Einladungen). */
+  readonly email?: string;
+  /** Kunde, dem der Login gehört (F-41/F-51, aus der Zuordnung im Kern). */
+  readonly kundeId?: string;
 }
+
+/**
+ * Rollen innerhalb der Organisation eines Kunden (F-51, Tom 2026-10-17): Der
+ * Kunde vergibt sie selbst; sie stehen im Kern an der Zuordnung Login → Kunde,
+ * nicht in Keycloak.
+ */
+export const KUNDE_ROLLEN = ['kunde_admin', 'kunde_dispo', 'kunde_qa'] as const;
+export type KundeRolle = (typeof KUNDE_ROLLEN)[number];
+
+export const KUNDE_ROLLE_NAME: Record<KundeRolle, string> = {
+  kunde_admin: 'Verwaltung (Organisation, Einladungen)',
+  kunde_dispo: 'Disposition (Buchungen, Fahrer, Schlüssel)',
+  kunde_qa: 'Qualitätssicherung (Nachweise, Alarme, Abweichungen)',
+};
 
 export function hatRolle(principal: Principal, ...erlaubte: Rolle[]): boolean {
   return erlaubte.some((r) => principal.rollen.includes(r));

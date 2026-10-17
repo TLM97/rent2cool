@@ -13,6 +13,65 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – F-51: Kunden registrieren sich selbst und verwalten ihre Organisation
+
+Tom hat F-51 direkt beantwortet: „Der Kunde kann seinen Account selbst
+anlegen und seine Organisation managen. Wir müssen den Kunden nur
+freigeben.“ Umgesetzt (Schnittstelle zuerst, Architekturregel 1); Planung
+möge die Aufgabe in `TASKS.md` nachziehen und den Nachtrag zu D-020 prüfen.
+
+Erledigt:
+- **Selbstregistrierung:** Keycloak erlaubt Registrierung mit
+  E-Mail-Bestätigung (lokal über Mailpit). `POST /v1/registrierung` legt den
+  Kunden im Status `in_pruefung` an, der Login wird Verwalter; der Betrieb
+  bekommt eine Mail, die Admin-Startseite zeigt „Kunden zur Freigabe“.
+  Gebucht wird erst nach der Freigabe (bestehende Regel D-010). Interne
+  Logins und schon zugeordnete Logins können sich nicht registrieren.
+- **Organisation selbst verwalten** (`/v1/organisation`): Firmendaten
+  ändern (Name, HR, USt-ID nach der Freigabe nur durch uns), Mitglieder
+  einladen, Rollen ändern, entfernen; mindestens ein Verwalter bleibt.
+- **Neue Kundenrolle `kunde_admin`**; Kundenrollen stehen je Login im Kern
+  (`kunde_konto.rollen`, Migration `0019`) und werden beim Anmelden ergänzt
+  (D-001/D-020). Interne Rollen kommen weiter nur aus Keycloak.
+- **Einladungen:** Einmalcode nur in der Mail, gespeichert nur als
+  SHA-256-Hash, 7 Tage gültig, eine offene Einladung je Adresse, einlösbar
+  nur mit derselben **bestätigten** E-Mail (weitergeleitete Links greifen
+  nicht), widerrufbar. Code steht nie im Audit Trail.
+- E-Mail im Token wird nur übernommen, wenn Keycloak sie als bestätigt
+  meldet.
+- Admin-Oberfläche: Logins am Kunden mit Rollen und E-Mail; beim manuellen
+  Zuordnen Rollen per Haken; Verlauf zeigt Einladungen und Rollenänderungen.
+  Fahrer anlegen dürfen jetzt auch `kunde_admin`/`kunde_dispo` für den
+  eigenen Kunden.
+- Demo: `kunde.dev` ist Verwalter von „Nordlicht“.
+
+Tests: Kern 166/166 Integration (neu: Registrierung inkl. Buchungssperre
+bis zur Freigabe, Firmendaten vor/nach Freigabe, Einladung mit Hash,
+E-Mail-Bindung, Einmaligkeit, Widerruf, Mitglieder mit „letzter
+Verwalter“), Shared 73, Admin 61, alle 9 Browser-Tests grün. Über echte
+Tokens geprüft: `kunde.dev` sieht weiter nur Nordlicht,
+`/v1/organisation` liefert die Organisation.
+
+Abkürzungen (vor Go-live ersetzen):
+- Es gibt noch **keine Portal-Oberfläche** (`apps/web`); Registrierung,
+  Einladung und Mitgliederverwaltung sind heute nur per API nutzbar. Der
+  Einladungslink zeigt auf `PORTAL_URL` (`/einladung?code=…`), die Seite
+  existiert noch nicht.
+- Registrierung und interne Anmeldung teilen sich Realm und Anmeldeseite;
+  der Link „Registrieren“ ist dadurch auch auf der Admin-Anmeldung sichtbar
+  (harmlos: ohne interne Rolle kein Zugang, siehe F-52).
+- Abgelaufene Einladungen bleiben als Historie stehen; eine neue Einladung
+  an dieselbe Adresse ersetzt sie (im Audit vermerkt).
+
+Fragen an Planung:
+- **F-52:** Sollen Mitarbeitende und Kunden getrennt anmelden (eigener
+  Keycloak-Client oder Realm für Kunden, Registrierung nur dort, MFA-Pflicht
+  für interne Konten)? Empfehlung: ein Realm, zwei Clients; Registrierung
+  nur über das Portal, MFA für interne Rollen.
+- F-24, F-26 bis F-37, F-42 bis F-45, F-49, F-50 weiter offen.
+
+---
+
 ### 2026-10-17 – F-41: Kunden sehen nur ihre eigenen Daten
 
 **Datensichtbarkeit je Kunde – erledigt.** (Toms „Ja bitte“ zum Vorschlag;

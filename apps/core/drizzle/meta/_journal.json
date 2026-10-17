@@ -134,6 +134,13 @@
       "when": 1760662800000,
       "tag": "0018_kunde_konto",
       "breakpoints": false
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1760666400000,
+      "tag": "0019_organisation",
+      "breakpoints": false
     }
   ]
 }

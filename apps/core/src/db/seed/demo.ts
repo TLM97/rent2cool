@@ -250,6 +250,8 @@ export async function ladeDemoDaten(
       await kunden.ordneKontoZu(akteur, id, {
         kontoId: mandantId === PLACEHOLDER_MANDANT_ID ? DEMO_KUNDE_LOGIN : demoKonto('demo-login'),
         bezeichnung: 'kunde.dev (Demo-Login)',
+        // Verwaltet die Organisation selbst (F-51): Einladungen, Rollen, Firmendaten.
+        rollen: ['kunde_admin', 'kunde_dispo', 'kunde_qa'],
       });
     }
     fahrerIds.set(k.schluessel, ids);

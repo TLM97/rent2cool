@@ -8,6 +8,7 @@ import {
   istKundeUebergangErlaubt,
   type EinsatzErgebnis,
   type FahrerStatus,
+  type KundeRolle,
   type KundeStatus,
   type Principal,
 } from '@rent2cool/shared';
@@ -299,6 +300,7 @@ export class KundeService {
             mandantId: k.mandantId,
             kundeId,
             bezeichnung: p.bezeichnung ?? null,
+            rollen: [...new Set<KundeRolle>(p.rollen ?? ['kunde_dispo', 'kunde_qa'])],
             erstelltVon: principal.akteurId,
           })
           .returning();

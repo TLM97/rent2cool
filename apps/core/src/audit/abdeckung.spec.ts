@@ -27,6 +27,10 @@ import {
 } from '../schluessel/schluessel.controller';
 import { StandortController } from '../standort/standort.controller';
 import { IchController } from '../auth/ich.controller';
+import {
+  OrganisationController,
+  RegistrierungController,
+} from '../organisation/organisation.controller';
 import { AuditController } from './audit.controller';
 import { AUDITED_KEY } from './audited.decorator';
 
@@ -53,6 +57,8 @@ const CONTROLLER = [
   MieteNachweisController,
   NachweisPruefungController,
   IchController,
+  RegistrierungController,
+  OrganisationController,
 ];
 const LESEND = new Set([RequestMethod.GET, RequestMethod.HEAD, RequestMethod.OPTIONS]);
 

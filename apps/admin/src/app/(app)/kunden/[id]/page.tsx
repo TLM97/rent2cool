@@ -15,7 +15,7 @@ import {
   StatusFormular,
 } from '../../../../components/bausteine';
 import { Verlauf } from '../../../../components/verlauf';
-import { Feld, FormularRahmen } from '../../../../components/formular';
+import { Feld, FormularRahmen, Haken } from '../../../../components/formular';
 import { FahrerFelder } from '../../../../components/stammdaten';
 import { apiGet, apiGetOderNull } from '../../../../lib/api';
 import { formatDatum } from '../../../../lib/format';
@@ -27,6 +27,13 @@ import { hatRolle } from '../../../../lib/token';
 import type { Fahrer, Kunde, KundeKonto } from '../../../../lib/typen';
 import { aendereFahrerStatus, aendereKundeStatus, entferneKundenLogin } from '../../aktionen';
 import { erstelleFahrer, ordneKundenLoginZu } from '../../formulare';
+
+/** Kurzform der Kundenrollen für die Tabelle. */
+const KUNDE_ROLLE_KURZ: Record<string, string> = {
+  kunde_admin: 'Verwaltung',
+  kunde_dispo: 'Disposition',
+  kunde_qa: 'QA',
+};
 
 export const metadata: Metadata = { title: 'Kunde' };
 
@@ -173,7 +180,8 @@ export default async function KundeDetail({
           <h2 id="logins-titel">Logins fürs Kundenportal</h2>
           <p className="leise">
             Diese Logins sehen ausschließlich Daten dieses Kunden (Mieten, Nachweise, Rechnungen,
-            Alarme). Die Benutzer-ID stammt aus der Anmeldung (Keycloak).
+            Alarme). Normalerweise verwaltet der Kunde sie selbst (Registrierung, Einladungen); hier
+            nur für Ausnahmen. Die Benutzer-ID stammt aus der Anmeldung (Keycloak).
           </p>
           {konten.length === 0 ? (
             <Leer>Noch kein Login zugeordnet.</Leer>
@@ -182,7 +190,8 @@ export default async function KundeDetail({
               <table aria-labelledby="logins-titel">
                 <thead>
                   <tr>
-                    <th scope="col">Bezeichnung</th>
+                    <th scope="col">Person</th>
+                    <th scope="col">Rollen</th>
                     <th scope="col">Benutzer-ID</th>
                     <th scope="col">seit</th>
                     {darfLogins ? <th scope="col">Aktion</th> : null}
@@ -191,7 +200,11 @@ export default async function KundeDetail({
                 <tbody>
                   {konten.map((k) => (
                     <tr key={k.kontoId}>
-                      <td>{k.bezeichnung ?? '–'}</td>
+                      <td>
+                        {k.bezeichnung ?? '–'}
+                        {k.email ? <div className="leise">{k.email}</div> : null}
+                      </td>
+                      <td>{k.rollen.map((r) => KUNDE_ROLLE_KURZ[r]).join(', ')}</td>
                       <td className="mono">{k.kontoId}</td>
                       <td>{formatDatum(k.erstelltAm)}</td>
                       {darfLogins ? (
@@ -223,6 +236,9 @@ export default async function KundeDetail({
                 label="Bezeichnung"
                 hinweis="z. B. „Disposition, Frau Muster“"
               />
+              <Haken name="rolle_kunde_admin" label="Verwaltung (Organisation, Einladungen)" />
+              <Haken name="rolle_kunde_dispo" label="Disposition" standard />
+              <Haken name="rolle_kunde_qa" label="Qualitätssicherung" standard />
             </FormularRahmen>
           ) : null}
         </section>
@@ -246,7 +262,14 @@ export default async function KundeDetail({
       ) : null}
       <Verlauf
         entitaetIds={[kunde.id, ...fahrer.map((f) => f.id)]}
-        typen={['kunde', 'kunde_status', 'fahrer', 'fahrer_status', 'kunde_konto']}
+        typen={[
+          'kunde',
+          'kunde_status',
+          'fahrer',
+          'fahrer_status',
+          'kunde_konto',
+          'kunde_einladung',
+        ]}
         bezeichnungen={Object.fromEntries(fahrer.map((f) => [f.id, `Fahrer ${f.name}`]))}
       />
     </>

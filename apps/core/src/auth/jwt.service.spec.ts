@@ -62,4 +62,13 @@ describe('zuPrincipal', () => {
     expect(zuPrincipal({ sub: 'u', preferred_username: 'ops.dev' }).name).toBe('ops.dev');
     expect(zuPrincipal({ sub: 'u' }).name).toBeUndefined();
   });
+  it('übernimmt die E-Mail nur, wenn sie bestätigt ist (Einladungen hängen daran)', () => {
+    expect(zuPrincipal({ sub: 'u', email: 'QA@Kunde.Example', email_verified: true }).email).toBe(
+      'qa@kunde.example',
+    );
+    expect(
+      zuPrincipal({ sub: 'u', email: 'qa@kunde.example', email_verified: false }).email,
+    ).toBeUndefined();
+    expect(zuPrincipal({ sub: 'u', email: 'qa@kunde.example' }).email).toBeUndefined();
+  });
 });

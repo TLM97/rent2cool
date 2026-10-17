@@ -177,7 +177,31 @@ genutzt, den Kunden erreichen.
   während der laufenden Miete; buchen nur für sich, als Status nur „storniert“.
 - Flottenliste und der freie Nachweis über beliebige Fahrzeuge sind intern.
 - `GET /v1/ich` zeigt Rollen und den zugeordneten Kunden.
-- Lokal ist `kunde.dev` dem Demo-Kunden „Nordlicht“ zugeordnet.
+- Lokal ist `kunde.dev` dem Demo-Kunden „Nordlicht“ zugeordnet (als Verwalter).
+
+### Selbstregistrierung und Organisation (F-51)
+
+Kunden legen ihr Konto selbst an und verwalten ihre Organisation;
+Rent2Cool gibt nur frei. Keycloak übernimmt Registrierung und
+E-Mail-Bestätigung (lokal landen die Mails in Mailpit,
+http://localhost:8025). Die Kundenrollen stehen je Login im Kern
+(`kunde_konto.rollen`): `kunde_admin` (verwaltet die Organisation),
+`kunde_dispo` (bucht), `kunde_qa` (Nachweise).
+
+| Route                                         | Wer                                   | Was                                                                                   |
+| --------------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------- |
+| `POST /v1/registrierung`                      | angemeldet, noch ohne Kunde           | Kunde anlegen (Status `in_pruefung`), Login wird Verwalter, Betrieb bekommt eine Mail |
+| `GET /v1/organisation`                        | Kundenrollen                          | Firmendaten, Freigabe, Mitglieder, offene Einladungen                                 |
+| `PATCH /v1/organisation`                      | `kunde_admin`                         | Firmendaten; Name, HR, USt-ID nach der Freigabe nur durch Rent2Cool                   |
+| `POST /v1/organisation/einladungen`           | `kunde_admin`                         | Einladung per E-Mail (7 Tage gültig, nur der Hash des Codes wird gespeichert)         |
+| `DELETE /v1/organisation/einladungen/:id`     | `kunde_admin`                         | Einladung widerrufen                                                                  |
+| `POST /v1/einladungen/annehmen`               | angemeldet, gleiche bestätigte E-Mail | Einladung einlösen                                                                    |
+| `PATCH /v1/organisation/mitglieder/:kontoId`  | `kunde_admin`                         | Rollen ändern (mindestens ein Verwalter bleibt)                                       |
+| `DELETE /v1/organisation/mitglieder/:kontoId` | `kunde_admin`                         | Mitglied entfernen                                                                    |
+
+Neue Registrierungen erscheinen in der Admin-Oberfläche auf der Startseite
+(„Kunden zur Freigabe“); freigegeben wird wie bisher am Kunden. Alles ist
+auditiert und im Verlauf des Kunden sichtbar.
 
 ## Temperaturnachweis v1
 

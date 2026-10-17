@@ -91,15 +91,17 @@ export class KundeController {
     return this.service.aendereKundeStatus(user, id, status);
   }
 
+  /** Fahrer anlegen – auch der Kunde selbst; Prüfung und Freigabe bleiben bei uns (R-22). */
   @Post(':kundeId/fahrer')
-  @Roles('ops', 'admin')
+  @Roles('ops', 'admin', 'kunde_admin', 'kunde_dispo')
   @AuditImService('fahrer')
   @HttpCode(201)
-  erstelleFahrer(
+  async erstelleFahrer(
     @CurrentUser() user: Principal,
     @Param('kundeId') kundeId: string,
     @Body() body: unknown,
   ): Promise<{ id: string }> {
+    await this.zugriff.kunde(user, kundeId);
     return this.service.erstelleFahrer(user, kundeId, parse(fahrerErstellenSchema, body));
   }
 

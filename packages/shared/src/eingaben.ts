@@ -6,6 +6,7 @@
  */
 import { z } from 'zod';
 import { ABWEICHUNG_STATUS } from './alarm';
+import { KUNDE_ROLLEN } from './auth';
 import { FAHRZEUG_STATUS } from './fahrzeug';
 import { FAHRER_STATUS, KUNDE_STATUS } from './kunde';
 import { MIETE_STATUS } from './miete';
@@ -135,12 +136,58 @@ export const kundeAendernSchema = z.object({
 });
 export type KundeAendern = z.infer<typeof kundeAendernSchema>;
 
+// --- Selbstregistrierung und Organisation des Kunden (F-51) ---
+const kundeRollen = z
+  .array(z.enum(KUNDE_ROLLEN))
+  .min(1, 'Mindestens eine Rolle wählen')
+  .transform((r) => [...new Set(r)]);
+
+/** Der angemeldete Nutzer legt seinen Kunden an (Status „in Prüfung“). */
+export const registrierungSchema = z.object({
+  firmenname: pflicht('Firmenname fehlt'),
+  handelsregisternummer: z.string().trim().optional(),
+  ustId: z.string().trim().optional(),
+  strasse: z.string().trim().optional(),
+  plz: z.string().trim().optional(),
+  ort: z.string().trim().optional(),
+  land: z.string().trim().length(2).default('DE'),
+  nachweisEmail: z.string().trim().email('Gültige E-Mail-Adresse erwartet').optional(),
+});
+export type Registrierung = z.infer<typeof registrierungSchema>;
+
+/** Kontakt- und Zustelldaten ändert der Kunde selbst; Identität (Name, USt-ID, HR) nur vor der Freigabe. */
+export const organisationAendernSchema = z.object({
+  version: version(),
+  firmenname: pflicht('Firmenname fehlt').optional(),
+  handelsregisternummer: leerbar(),
+  ustId: leerbar(),
+  strasse: leerbar(),
+  plz: leerbar(),
+  ort: leerbar(),
+  nachweisEmail: z.string().trim().email('Gültige E-Mail-Adresse erwartet').nullable().optional(),
+});
+export type OrganisationAendern = z.infer<typeof organisationAendernSchema>;
+
+export const einladungSchema = z.object({
+  email: z.string().trim().toLowerCase().email('Gültige E-Mail-Adresse erwartet'),
+  rollen: kundeRollen,
+});
+export type Einladung = z.infer<typeof einladungSchema>;
+
+export const einladungAnnehmenSchema = z.object({
+  token: z.string().trim().min(20, 'Einladungscode fehlt').max(200),
+});
+
+export const mitgliedRollenSchema = z.object({ rollen: kundeRollen });
+
 /** Login (Keycloak-Benutzer-ID) einem Kunden zuordnen (F-41). */
 export const kundeKontoSchema = z.object({
   kontoId: pflicht('Benutzer-ID fehlt').pipe(z.string().max(200)),
   bezeichnung: z.string().trim().max(200).optional(),
+  rollen: kundeRollen.default(['kunde_dispo', 'kunde_qa']),
 });
-export type KundeKontoEingabe = z.infer<typeof kundeKontoSchema>;
+/** Eingabe (Rollen optional, Standard Disposition und QA). */
+export type KundeKontoEingabe = z.input<typeof kundeKontoSchema>;
 
 export const fahrerErstellenSchema = z.object({
   name: pflicht('Name fehlt'),

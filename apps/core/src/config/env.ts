@@ -52,6 +52,10 @@ export const envSchema = z.object({
   // Platzhalter-Domain bis die Domain gesichert ist (D-013, D-015).
   SMTP_URL: z.string().default('smtp://localhost:1025'),
   MAIL_ABSENDER: z.string().default('Rent2Cool Nachweise <nachweise@rent2cool.example>'),
+  // Kundenportal (Links in Einladungen) und Postfach des Betriebs (neue
+  // Registrierungen zur Freigabe) – Platzhalter bis Domain gesichert (D-013).
+  PORTAL_URL: z.string().url().default('http://localhost:3003'),
+  BETRIEB_EMAIL: z.string().default('betrieb@rent2cool.example'),
 
   S3_ENDPOINT: z.string().url(),
   S3_REGION: z.string().default('eu-central-1'),

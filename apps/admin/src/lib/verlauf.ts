@@ -104,6 +104,8 @@ const FELDER: Record<string, string> = {
   nachweisEmail: 'E-Mail für Nachweise',
   empfaenger: 'Empfänger',
   bezeichnung: 'Bezeichnung',
+  rollen: 'Rollen',
+  email: 'E-Mail',
 };
 
 const ISO_ZEIT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
@@ -184,7 +186,11 @@ export function vorgang(e: AuditEintrag): string {
   if (e.entitaetTyp === 'temperaturnachweis') return 'Temperaturnachweis erzeugt';
   if (e.entitaetTyp === 'nachweis_zustellung') return 'Nachweis an den Kunden';
   if (e.entitaetTyp === 'kunde_konto') {
-    return e.aktion === 'DELETE' ? 'Login entfernt' : 'Login zugeordnet';
+    if (e.aktion === 'DELETE') return 'Login entfernt';
+    return e.aktion === 'PATCH' ? 'Rollen geändert' : 'Login zugeordnet';
+  }
+  if (e.entitaetTyp === 'kunde_einladung') {
+    return e.aktion === 'DELETE' ? 'Einladung widerrufen' : 'Einladung verschickt';
   }
   if (e.entitaetTyp === 'protokoll' && e.aktion === 'PATCH') return 'Protokoll ergänzt';
   if (e.aktion === 'PATCH') return 'Stammdaten geändert';
@@ -214,7 +220,8 @@ export function beschreibe(e: AuditEintrag): {
     v === 'Schlüssel ausgestellt' ||
     v === 'Temperaturnachweis erzeugt' ||
     v === 'Nachweis an den Kunden' ||
-    v === 'Login zugeordnet';
+    v === 'Login zugeordnet' ||
+    v === 'Einladung verschickt';
   return {
     vorgang: v,
     wer: akteur(e),

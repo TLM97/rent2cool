@@ -2,6 +2,7 @@
  * Firmenkunde (D-010) und Fahrer (gehört zum Kunden, D-004). Arbeitsgrundlage
  * nach T-002. Fahrerdaten sind personenbezogen (DSGVO) – nur Testdaten (D-015).
  */
+import type { KundeRolle } from '@rent2cool/shared';
 import { index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { mandant } from './stammdaten';
 
@@ -68,8 +69,32 @@ export const kundeKonto = pgTable(
       .notNull()
       .references(() => kunde.id),
     bezeichnung: text('bezeichnung'),
+    /** Rollen in der Organisation des Kunden (F-51, Migration 0019). */
+    rollen: text('rollen').array().notNull().$type<KundeRolle[]>(),
+    email: text('email'),
     erstelltVon: text('erstellt_von').notNull(),
     erstelltAm: timestamp('erstellt_am', { withTimezone: true }).notNull().defaultNow(),
+    aktualisiertAm: timestamp('aktualisiert_am', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('idx_kunde_konto_kunde').on(t.kundeId)],
 );
+
+/** Einladung in die Organisation eines Kunden (F-51): nur der Hash des Codes. */
+export const kundeEinladung = pgTable('kunde_einladung', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  mandantId: uuid('mandant_id')
+    .notNull()
+    .references(() => mandant.id),
+  kundeId: uuid('kunde_id')
+    .notNull()
+    .references(() => kunde.id),
+  email: text('email').notNull(),
+  rollen: text('rollen').array().notNull().$type<KundeRolle[]>(),
+  codeHash: text('code_hash').notNull().unique(),
+  erstelltVon: text('erstellt_von').notNull(),
+  erstelltAm: timestamp('erstellt_am', { withTimezone: true }).notNull().defaultNow(),
+  gueltigBis: timestamp('gueltig_bis', { withTimezone: true }).notNull(),
+  angenommenVon: text('angenommen_von'),
+  angenommenAm: timestamp('angenommen_am', { withTimezone: true }),
+  widerrufenAm: timestamp('widerrufen_am', { withTimezone: true }),
+});

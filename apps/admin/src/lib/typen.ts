@@ -323,6 +323,9 @@ export interface KundeKonto {
   kontoId: string;
   kundeId: string;
   bezeichnung: string | null;
+  /** Rollen in der Organisation des Kunden (F-51). */
+  rollen: ('kunde_admin' | 'kunde_dispo' | 'kunde_qa')[];
+  email: string | null;
   erstelltVon: string;
   erstelltAm: string;
 }
