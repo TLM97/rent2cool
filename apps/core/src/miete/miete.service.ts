@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { and, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
 import {
@@ -25,6 +26,7 @@ import { KundeService } from '../kunde/kunde.service';
 import { standortNutzbar } from '../standort/standort.service';
 import { pruefeUebergabe } from '../standort/uebergabe';
 import { BerichtService } from '../bericht/bericht.service';
+import { SchluesselService, widerrufeSchluesselDerMiete } from '../schluessel/schluessel.service';
 import type { MieteErstellen } from './dto';
 
 /** Ablehnungsgrund bei Überschneidung – gleich, ob Vorabprüfung oder DB-Regel greift. */
@@ -39,6 +41,8 @@ export class MieteService {
     private readonly fahrzeuge: FahrzeugService,
     private readonly kunden: KundeService,
     private readonly berichte: BerichtService,
+    // Meldet Widerrufe an den Schlüssel-Anbieter; gesperrt wird immer im Kern (s. u.).
+    @Optional() private readonly schluessel?: SchluesselService,
   ) {}
 
   /** Prüft die Buchungsregeln und liefert die Ablehnungsgründe (leer = ok). */
@@ -282,7 +286,8 @@ export class MieteService {
     ausfuehrer: Database | Transaktion = this.db,
   ): Promise<StatusErgebnis<MieteStatus>> {
     const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
-    return wechsleStatus(ausfuehrer, principal, {
+    let widerrufen: string[] = [];
+    const ergebnis = await wechsleStatus(ausfuehrer, principal, {
       entitaetTyp: 'miete_status',
       id,
       nach,
@@ -339,7 +344,17 @@ export class MieteService {
           throw e;
         }
       },
+      // Mietende oder Storno: digitale Schlüssel in derselben Transaktion sperren.
+      danach: async (tx) => {
+        if (nach === 'beendet' || nach === 'storniert') {
+          const grund = nach === 'beendet' ? 'Miete beendet' : 'Miete storniert';
+          widerrufen = await widerrufeSchluesselDerMiete(tx, principal, id, grund);
+        }
+      },
     });
+    // Dem Anbieter erst nach dem Commit melden (keine Netzwerkaufrufe in der Transaktion).
+    if (widerrufen.length > 0) await this.schluessel?.meldeWiderruf(widerrufen);
+    return ergebnis;
   }
 
   /** Temperaturnachweis zu dieser Miete (bindet Fahrzeug + Zeitfenster der Miete). */

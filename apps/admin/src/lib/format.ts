@@ -88,6 +88,11 @@ const TON: Record<string, Ton> = {
   eingehalten: 'ok',
   verletzt: 'kritisch',
   unvollstaendig: 'warn',
+  // Schlüssel und Fahrzeugbefehle
+  widerrufen: 'neutral',
+  gesendet: 'info',
+  ausgefuehrt: 'ok',
+  fehlgeschlagen: 'kritisch',
 };
 
 export function statusTon(status: string): Ton {
@@ -130,6 +135,10 @@ const LABEL: Record<string, string> = {
   eingehalten: 'eingehalten',
   verletzt: 'verletzt',
   unvollstaendig: 'unvollständig',
+  widerrufen: 'widerrufen',
+  gesendet: 'gesendet',
+  ausgefuehrt: 'ausgeführt',
+  fehlgeschlagen: 'fehlgeschlagen',
   // Alarmtypen
   temperatur_ueber: 'Temperatur zu hoch',
   temperatur_unter: 'Temperatur zu niedrig',

@@ -14,6 +14,12 @@ import { HealthController } from '../health/health.controller';
 import { FahrerController, KundeController } from '../kunde/kunde.controller';
 import { MieteController } from '../miete/miete.controller';
 import { RechnungController } from '../rechnung/rechnung.controller';
+import {
+  BefehlController,
+  FahrzeugBefehlController,
+  MieteSchluesselController,
+  SchluesselController,
+} from '../schluessel/schluessel.controller';
 import { StandortController } from '../standort/standort.controller';
 import { AuditController } from './audit.controller';
 import { AUDITED_KEY } from './audited.decorator';
@@ -32,6 +38,10 @@ const CONTROLLER = [
   MieteController,
   RechnungController,
   StandortController,
+  MieteSchluesselController,
+  SchluesselController,
+  FahrzeugBefehlController,
+  BefehlController,
 ];
 const LESEND = new Set([RequestMethod.GET, RequestMethod.HEAD, RequestMethod.OPTIONS]);
 

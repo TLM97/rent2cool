@@ -3,7 +3,9 @@
  * geändert. Beschriftungen und Formate liegen hier an einer Stelle.
  */
 import {
+  BEFEHL_NAME,
   oeffnungszeitenText,
+  type FahrzeugBefehl,
   type Oeffnungsregeln,
   type UebergabePruefung,
 } from '@rent2cool/shared';
@@ -88,6 +90,11 @@ const FELDER: Record<string, string> = {
   region: 'Region',
   uebergabePruefung: 'Übergabebereich (Übergabe)',
   rueckgabePruefung: 'Übergabebereich (Rückgabe)',
+  kontoId: 'App-Konto',
+  gueltigVon: 'gültig ab',
+  widerrufGrund: 'Grund des Widerrufs',
+  befehl: 'Befehl',
+  gruende: 'Gründe',
 };
 
 const ISO_ZEIT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
@@ -114,6 +121,9 @@ export function formatWert(feld: string, wert: unknown): string {
   }
   if (wert === null || wert === undefined || wert === '') return '–';
   if (feld === 'status' && typeof wert === 'string') return statusLabel(wert);
+  if (feld === 'befehl' && typeof wert === 'string')
+    return BEFEHL_NAME[wert as FahrzeugBefehl] ?? wert;
+  if (Array.isArray(wert)) return wert.map(String).join(' · ');
   if (typeof wert === 'boolean') return wert ? 'ja' : 'nein';
   if (typeof wert === 'number')
     return feld.endsWith('Cent') ? formatEuro(wert) : wert.toLocaleString('de-DE');
@@ -148,6 +158,7 @@ export function vorgang(e: AuditEintrag): string {
   if (e.entitaetTyp === 'alarm_quittieren') return 'Alarm quittiert';
   if (e.entitaetTyp === 'alarm_schliessen') return 'Alarm geschlossen';
   if (e.entitaetTyp === 'sensor_tausch') return 'Sensor getauscht';
+  if (e.entitaetTyp === 'schluessel') return 'Schlüssel ausgestellt';
   if (e.aktion === 'PATCH') return 'Stammdaten geändert';
   if (e.entitaetTyp.endsWith('_status')) {
     const alt = istObjekt(e.altWert) ? e.altWert.status : undefined;
@@ -169,7 +180,8 @@ export function beschreibe(e: AuditEintrag): {
   aenderungen: Feldaenderung[];
 } {
   const v = vorgang(e);
-  const neuAngelegt = v === 'angelegt' || v === 'Kalibrierung erfasst';
+  const neuAngelegt =
+    v === 'angelegt' || v === 'Kalibrierung erfasst' || v === 'Schlüssel ausgestellt';
   return {
     vorgang: v,
     wer: akteur(e),

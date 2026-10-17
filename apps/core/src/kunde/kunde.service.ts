@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, asc, desc, eq, ilike, isNull, lt, notInArray, or, sql } from 'drizzle-orm';
 import {
   bewerteFahrerEinsatz,
@@ -22,6 +22,7 @@ import { protokolliereAnlage, schreibeAudit } from '../audit/audit.service';
 import { wechsleStatus, type StatusErgebnis } from '../audit/statuswechsel';
 import type { Database } from '../db/client';
 import { DB } from '../db/db.module';
+import { istPgFehler, PG_FEHLER } from '../db/fehler';
 import { enthaeltMuster } from '../db/suche';
 import { fahrer, fahrzeug, kunde } from '../db/schema';
 import { PLACEHOLDER_MANDANT_ID } from '../db/seed/placeholder-data';
@@ -204,9 +205,11 @@ export class KundeService {
     p: FahrerAendern,
   ): Promise<StammdatenErgebnis> {
     const mandant = principal.mandantId ?? PLACEHOLDER_MANDANT_ID;
-    const { version, fuehrerscheinGueltigBis, ...rest } = p;
+    const { version, fuehrerscheinGueltigBis, kontoId, ...rest } = p;
     const eingabe = {
       ...rest,
+      // Leeres Feld = keine Verknüpfung (eindeutiger Index ignoriert NULL).
+      kontoId: kontoId === undefined ? undefined : kontoId || null,
       fuehrerscheinGueltigBis:
         fuehrerscheinGueltigBis === undefined
           ? undefined
@@ -231,10 +234,19 @@ export class KundeService {
         return { id, version: versionVon(vorher.aktualisiertAm), geaendert: [] };
       }
       const jetzt = new Date();
-      await tx
-        .update(fahrer)
-        .set({ ...neueWerte(eingabe, a), aktualisiertAm: jetzt })
-        .where(eq(fahrer.id, id));
+      try {
+        await tx
+          .update(fahrer)
+          .set({ ...neueWerte(eingabe, a), aktualisiertAm: jetzt })
+          .where(eq(fahrer.id, id));
+      } catch (e: unknown) {
+        if (istPgFehler(e, PG_FEHLER.EINDEUTIG, 'uq_fahrer_konto')) {
+          throw new ConflictException(
+            'Dieses App-Konto ist bereits einem anderen Fahrer zugeordnet',
+          );
+        }
+        throw e;
+      }
       await schreibeAudit(tx, principal, {
         aktion: 'PATCH',
         entitaetTyp: 'fahrer',

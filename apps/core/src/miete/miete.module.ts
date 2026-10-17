@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BerichtModule } from '../bericht/bericht.module';
 import { FahrzeugModule } from '../fahrzeug/fahrzeug.module';
 import { KundeModule } from '../kunde/kunde.module';
+import { SchluesselModule } from '../schluessel/schluessel.module';
 import { MieteController } from './miete.controller';
 import { MieteService } from './miete.service';
 
@@ -11,7 +12,7 @@ import { MieteService } from './miete.service';
  * D-003) und Nachweis gebunden an die Miete. Schreibzugriffe auditiert (T-004).
  */
 @Module({
-  imports: [FahrzeugModule, KundeModule, BerichtModule],
+  imports: [FahrzeugModule, KundeModule, BerichtModule, SchluesselModule],
   controllers: [MieteController],
   providers: [MieteService],
   exports: [MieteService],

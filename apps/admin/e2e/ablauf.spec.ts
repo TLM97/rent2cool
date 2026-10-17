@@ -133,7 +133,39 @@ test('kompletter Ablauf von Fahrzeug bis Abweichung', async ({ page, context }) 
   await statusWechseln(page, 'Mietstatus ändern', 'aktiv', 'Status');
   // Ohne Standort und Position: Übergabebereich ehrlich „unbekannt“, nie „im Bereich“.
   await expect(page.getByText('unbekannt – Kein Standort festgelegt').first()).toBeVisible();
+
+  // --- Digitaler Schlüssel (D-014): ausstellen; Fernzugriff durch den Betrieb ---
+  const mieteUrl = page.url().split('?')[0]!;
+  const schluesselKarte = page.getByRole('region', { name: 'Digitaler Schlüssel' });
+  await schluesselKarte
+    .getByLabel('Fahrer des Kunden')
+    .selectOption({ label: `${fahrerName} (freigegeben)` });
+  await schluesselKarte.getByRole('button', { name: 'Schlüssel ausstellen' }).click();
+  await expect(page.getByRole('status')).toContainText('Schlüssel ausgestellt');
+  await expect(schluesselKarte.getByRole('row', { name: new RegExp(fahrerName) })).toContainText(
+    'bis Mietende',
+  );
+
+  await page.goto(fahrzeugUrl);
+  const fernzugriff = page.getByRole('region', { name: 'Fernzugriff' });
+  await fernzugriff.getByLabel('Befehl').selectOption('entriegeln');
+  await fernzugriff.getByRole('button', { name: 'Befehl senden' }).click();
+  await expect(fernzugriff.getByLabel('Grund')).toHaveAttribute('aria-invalid', 'true');
+  await fernzugriff.getByLabel('Grund').fill('Fahrer ausgesperrt (Test)');
+  await fernzugriff.getByRole('button', { name: 'Befehl senden' }).click();
+  await expect(page.getByRole('status')).toContainText('Entriegeln ausgeführt');
+  await expect(fernzugriff.getByRole('row').nth(1)).toContainText('Fahrer ausgesperrt (Test)');
+  await page.screenshot({ path: `${SCREENS}/23-fernzugriff.png`, fullPage: true });
+
+  // Der Befehl hängt an der laufenden Miete.
+  await page.goto(mieteUrl);
+  await expect(schluesselKarte).toContainText('Fahrer ausgesperrt (Test)');
   await statusWechseln(page, 'Mietstatus ändern', 'beendet', 'Status');
+  // Mietende widerruft den Schlüssel automatisch.
+  await expect(schluesselKarte).toContainText('widerrufen – Miete beendet');
+  await expect(schluesselKarte.getByRole('heading', { name: 'Schlüssel ausstellen' })).toHaveCount(
+    0,
+  );
   // Verlauf: jeder Statuswechsel mit Person, altem und neuem Wert.
   const mietVerlauf = page.getByRole('region', { name: 'Verlauf' });
   await expect(mietVerlauf).toContainText('admin.dev');

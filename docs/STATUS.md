@@ -13,6 +13,72 @@ Fragen an Planung:
 
 ---
 
+### 2026-10-17 – Digitaler Schlüssel und Fernzugriff
+
+**Digitaler Schlüssel und Fernzugriff – erledigt** (Simulator-Stufe). Nächster
+Schritt auf dem kritischen Pfad der Roadmap („Fernöffnen und Wegfahrsperre
+über den Kern → digitaler Schlüssel“). Auf Toms Auftrag („weiter mit der
+nächsten Aufgabe“); Planung möge die Aufgabe in `TASKS.md` nachziehen und
+D-018 prüfen.
+
+Erledigt:
+- **Geteilte Regeln** `packages/shared/src/schluessel.ts`: Befehle,
+  Status, Gültigkeit (ab 1 h vor Mietbeginn, bis Mietende), Prüfung eines
+  Fahrerbefehls mit allen Gründen, Eingabe-Schemas.
+- **Kern-Modul `schluessel`:** Schnittstelle `KeyProvider` mit Simulator
+  (`TODO(D-015)`); Schlüssel ausstellen (nur Fahrer des Mietkunden mit
+  gültiger Fahrerlaubnis, nur bestätigte/aktive Mieten, idempotent je Miete
+  und Fahrer, auch gleichzeitig), widerrufen (mit Grund), automatisch bei
+  Mietende/Storno in der Transaktion des Statuswechsels. Befehle des Fahrers
+  (nur mit eigenem Login → `fahrer.konto_id`) und des Betriebs (mit Grund).
+  **Jeder Versuch wird protokolliert**, abgelehnte mit Gründen; Rückmeldung
+  des Anbieters als eigener Statuswechsel mit Audit. Idempotency-Key Pflicht.
+  Kein Anbieteraufruf innerhalb einer Transaktion. Migration
+  `0013_schluessel_fernzugriff`, Vorschlag **D-018**.
+- **Oberfläche:** Mietakte „Digitaler Schlüssel“, Fahrzeugakte
+  „Fernzugriff“ (Befehl mit Grund + Protokoll), Feld „App-Konto“ beim Fahrer,
+  Verlauf zeigt Schlüssel-Ereignisse.
+- **Demo-Daten:** laufende Miete mit Schlüssel und drei Befehlen des Fahrers
+  (zwei ausgeführt, Wegfahrsperre abgelehnt); künftige Miete mit Schlüssel,
+  der erst ab Mietbeginn − 1 h gilt.
+
+Tests: shared 60, admin 57, Kern 134/134 Integration (neu: 8 zum Schlüssel,
+Demo), Audit-Abdeckung um 4 Controller erweitert, Browser-Test „Ablauf“ um
+Schlüssel, Fernzugriff und automatischen Widerruf erweitert; alle 9 grün.
+
+Abkürzungen (vor Go-live ersetzen):
+- **Simulator** statt echtem Anbieter; Rückmelde-Endpunkt (Webhook) des
+  Anbieters fehlt noch – `SchluesselService.schliesseAb` ist vorbereitet.
+- Befehle, die auf `gesendet` hängen bleiben (Anbieter antwortet nie),
+  werden noch nicht nachgefasst (Index `idx_befehl_offen` liegt bereit →
+  Hintergrundjob).
+- Widerruf beim Anbieter nach Mietende ohne Wiederholung (nur Log bei
+  Fehler). Unkritisch, solange jeder Befehl über den Kern läuft (D-018).
+- Kein Keycloak-Testnutzer mit Rolle `fahrer`; Fahrer-Endpunkte sind per
+  Integrationstest abgedeckt. Kommt mit dem App-MVP.
+
+Beim Bauen aufgefallen (bestehend, nicht in dieser Aufgabe geändert):
+- `GET /v1/mieten/:id` (und weitere Einzelabrufe wie Kunde/Fahrer) prüfen den
+  Mandanten nicht, und `kunde_dispo`/`kunde_qa` sind nicht auf den eigenen
+  Kunden beschränkt – heute harmlos (ein Mandant, keine Kundenlogins), vor
+  dem Kundenportal zwingend → F-41.
+
+Fragen an Planung:
+- **F-38:** Darf der Fahrer die Wegfahrsperre selbst steuern, oder bleibt
+  das beim Betrieb (heute: nur Ops/Admin)? Soll „Wegfahrsperre ein“ nur bei
+  stehendem Fahrzeug wirken (Sicherheit; hängt vom Anbieter ab)?
+- **F-39:** Soll das erste Entriegeln durch den Fahrer die Miete automatisch
+  auf `aktiv` setzen (kontaktlose Übergabe, D-014) – ggf. erst nach
+  Foto-Check?
+- **F-40:** Vorlauf des Schlüssels 1 h vor Mietbeginn ok? Und gilt er bis
+  zum tatsächlichen Mietende (heute) oder endet er zum geplanten Ende plus
+  Kulanz (dann könnte ein verspäteter Fahrer nicht mehr abschließen)?
+- **F-41:** Kundenrollen auf den eigenen Kunden beschränken (siehe oben) –
+  eigene Aufgabe vor dem Kundenportal?
+- F-24, F-26 bis F-37 weiter offen (siehe unten).
+
+---
+
 ### 2026-10-17 – Übergabebereich-Prüfung
 
 **Übergabebereich-Prüfung – erledigt.** (Auf Toms Auftrag; Planung möge die

@@ -148,6 +148,8 @@ export const fahrerAendernSchema = z.object({
   fuehrerscheinKlasse: pflicht('Klasse fehlt').optional(),
   fuehrerscheinNummer: leerbar(),
   fuehrerscheinGueltigBis: zeitpunkt().nullable().optional(),
+  /** Login-Konto des Fahrers (Benutzer-ID in Keycloak) – für den digitalen Schlüssel in der App. */
+  kontoId: leerbar(),
 });
 export type FahrerAendern = z.infer<typeof fahrerAendernSchema>;
 

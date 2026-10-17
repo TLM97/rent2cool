@@ -20,7 +20,16 @@ import type { Env } from '../../config/env';
 import { MieteService } from '../../miete/miete.service';
 import { RechnungService } from '../../rechnung/rechnung.service';
 import { createDbClient } from '../client';
-import { abweichung, alarm, auditEvent, fahrzeug, miete, rechnung } from '../schema';
+import {
+  abweichung,
+  alarm,
+  auditEvent,
+  fahrzeug,
+  fahrzeugBefehl,
+  miete,
+  rechnung,
+  schluessel,
+} from '../schema';
 import { DEMO_AKTEUR_ID } from './demo-daten';
 import { ladeDemoDaten, type DemoErgebnis } from './demo';
 
@@ -68,6 +77,8 @@ describe.skipIf(!RUN)('Demo-Daten (Integration, braucht DB)', () => {
       mieten: 6,
       rechnungen: 3,
       standorte: 2,
+      schluessel: 2,
+      befehle: 3,
     });
     expect(ergebnis.messwerte).toBeGreaterThan(5000);
     expect(ergebnis.alarme).toBeGreaterThan(0);
@@ -245,6 +256,29 @@ describe.skipIf(!RUN)('Demo-Daten (Integration, braucht DB)', () => {
     expect((await fahrzeuge.positionUndBereich(mandantId, zuHause.id)).pruefung.ergebnis).toBe(
       'im_bereich',
     );
+  });
+
+  it('digitaler Schlüssel: laufende Miete mit Befehlen des Fahrers, künftige noch nicht gültig', async () => {
+    const alle = await client.db.select().from(miete).where(eq(miete.mandantId, mandantId));
+    const aktiv = alle.find((m) => m.status === 'aktiv')!;
+    const schl = await client.db
+      .select()
+      .from(schluessel)
+      .where(eq(schluessel.mandantId, mandantId));
+    expect(schl).toHaveLength(2);
+    expect(schl.every((s) => s.status === 'aktiv')).toBe(true);
+    const befehle = await client.db
+      .select()
+      .from(fahrzeugBefehl)
+      .where(eq(fahrzeugBefehl.mieteId, aktiv.id))
+      .orderBy(fahrzeugBefehl.angefordertAm);
+    expect(befehle.map((b) => [b.befehl, b.status])).toEqual([
+      ['entriegeln', 'ausgefuehrt'],
+      ['verriegeln', 'ausgefuehrt'],
+      ['wegfahrsperre_aus', 'abgelehnt'],
+    ]);
+    const kuenftig = schl.find((s) => s.mieteId !== aktiv.id)!;
+    expect(kuenftig.gueltigVon.getTime()).toBeGreaterThan(Date.now());
   });
 
   it('ein zweiter Lauf ändert nichts', async () => {

@@ -11,6 +11,8 @@ import { redirect } from 'next/navigation';
 import {
   abweichungErstellenSchema,
   abweichungStatusSchema,
+  BEFEHL_NAME,
+  fahrzeugBefehlSchema,
   fahrerAendernSchema,
   fahrerErstellenSchema,
   fahrzeugAendernSchema,
@@ -20,6 +22,8 @@ import {
   kundeErstellenSchema,
   mieteErstellenSchema,
   rechnungErstellenSchema,
+  schluesselAusstellenSchema,
+  schluesselWiderrufenSchema,
   sensorTauschSchema,
   standortAendernSchema,
   standortErstellenSchema,
@@ -382,6 +386,7 @@ export async function aendereFahrer(_z: FormularZustand, fd: FormData): Promise<
     fuehrerscheinKlasse: text(fd, 'fuehrerscheinKlasse') ?? '',
     fuehrerscheinNummer: leer(fd, 'fuehrerscheinNummer'),
     fuehrerscheinGueltigBis: gueltigBis ?? null,
+    kontoId: leer(fd, 'kontoId'),
   };
   const p = pruefe(fahrerAendernSchema, roh, werte);
   if (!p.ok) return p.zustand;
@@ -420,6 +425,84 @@ export async function erstelleMiete(_z: FormularZustand, fd: FormData): Promise<
   weiter(
     `/mieten/${ergebnis.id}`,
     ergebnis.idempotent ? 'Diese Buchung war bereits angelegt.' : 'Buchung bestätigt.',
+  );
+}
+
+// --- Digitaler Schlüssel und Fernzugriff (D-014) ---
+export async function stelleSchluesselAus(
+  _z: FormularZustand,
+  fd: FormData,
+): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const mieteId = text(fd, 'mieteId') ?? '';
+  if (!istUuid(mieteId)) return { fehler: 'Miete fehlt.', werte };
+  const p = pruefe(schluesselAusstellenSchema, { fahrerId: text(fd, 'fahrerId') ?? '' }, werte);
+  if (!p.ok) return p.zustand;
+  let r: { idempotent: boolean };
+  try {
+    r = await apiPost<{ idempotent: boolean }>(`/v1/mieten/${mieteId}/schluessel`, p.daten);
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(
+    `/mieten/${mieteId}`,
+    r.idempotent ? 'Dieser Fahrer hat bereits einen gültigen Schlüssel.' : 'Schlüssel ausgestellt.',
+  );
+}
+
+export async function widerrufeSchluessel(
+  _z: FormularZustand,
+  fd: FormData,
+): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const id = text(fd, 'id') ?? '';
+  const mieteId = text(fd, 'mieteId') ?? '';
+  if (!istUuid(id) || !istUuid(mieteId)) return { fehler: 'Schlüssel fehlt.', werte };
+  const p = pruefe(schluesselWiderrufenSchema, { grund: text(fd, 'grund') ?? '' }, werte);
+  if (!p.ok) return p.zustand;
+  try {
+    await apiPost(`/v1/schluessel/${id}/widerruf`, p.daten);
+  } catch (e) {
+    return kernFehler(e, werte);
+  }
+  weiter(`/mieten/${mieteId}`, 'Schlüssel widerrufen.');
+}
+
+/** Befehl durch den Betrieb. Fehlschlag oder Ablehnung bleibt im Formular stehen. */
+export async function sendeFahrzeugBefehl(
+  _z: FormularZustand,
+  fd: FormData,
+): Promise<FormularZustand> {
+  const werte = werteAus(fd);
+  const fahrzeugId = text(fd, 'fahrzeugId') ?? '';
+  if (!istUuid(fahrzeugId)) return { fehler: 'Fahrzeug fehlt.', werte };
+  const roh = {
+    befehl: text(fd, 'befehl') ?? '',
+    grund: text(fd, 'grund') ?? '',
+    idempotencyKey: text(fd, 'idempotencyKey') ?? '',
+  };
+  const p = pruefe(fahrzeugBefehlSchema, roh, werte);
+  if (!p.ok) return p.zustand;
+  const name = BEFEHL_NAME[p.daten.befehl];
+  let b: { status: string; gruende: string[] | null };
+  try {
+    b = await apiPost<{ status: string; gruende: string[] | null }>(
+      `/v1/fahrzeuge/${fahrzeugId}/befehle`,
+      p.daten,
+    );
+  } catch (e) {
+    revalidatePath('/', 'layout'); // auch Ablehnungen stehen im Protokoll
+    return kernFehler(e, werte);
+  }
+  if (b.status === 'fehlgeschlagen') {
+    revalidatePath('/', 'layout');
+    return { fehler: `${name} fehlgeschlagen.`, liste: b.gruende ?? [], werte };
+  }
+  weiter(
+    `/fahrzeuge/${fahrzeugId}`,
+    b.status === 'ausgefuehrt'
+      ? `${name} ausgeführt.`
+      : `${name} gesendet – Bestätigung des Fahrzeugs steht aus.`,
   );
 }
 

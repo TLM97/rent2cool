@@ -7,7 +7,7 @@
  * `demo.ts` über die echten Services (Audit, Regeln, Telematik-Verarbeitung).
  * Szenarien anpassen = diese Datei ändern.
  */
-import type { Oeffnungsregeln, TelemetrieNachricht } from '@rent2cool/shared';
+import type { FahrzeugBefehl, Oeffnungsregeln, TelemetrieNachricht } from '@rent2cool/shared';
 
 export const DEMO_AKTEUR_ID = 'system:demo-daten';
 /** Erkennungszeichen: existiert dieser Kunde, sind die Demo-Daten schon geladen. */
@@ -145,6 +145,8 @@ export interface DemoFahrer {
   klasse: string;
   /** Führerschein gültig für so viele Tage ab heute (kurz = Frist-Warnung). */
   gueltigTage: number;
+  /** App-Konto (erfundene Kennung; je Mandant eindeutig gemacht). */
+  konto?: string;
 }
 
 export interface DemoKunde {
@@ -170,8 +172,8 @@ export const DEMO_KUNDEN: readonly DemoKunde[] = [
     ort: 'Musterstadt',
     status: 'freigegeben',
     fahrer: [
-      { name: 'Erika Mustermann', klasse: 'B', gueltigTage: 2000 },
-      { name: 'Max Mustermann', klasse: 'C1', gueltigTage: 20 },
+      { name: 'Erika Mustermann', klasse: 'B', gueltigTage: 2000, konto: 'demo-konto-erika' },
+      { name: 'Max Mustermann', klasse: 'C1', gueltigTage: 20, konto: 'demo-konto-max' },
     ],
   },
   {
@@ -222,6 +224,8 @@ export interface DemoMiete {
   aktuellAbstandM?: number;
   /** Rechnung (nur bei beendeten Mieten): Nettobetrag und Endstatus. */
   rechnung?: { netto: number; status: 'entwurf' | 'gestellt' | 'bezahlt' };
+  /** Digitaler Schlüssel für den Fahrer und Befehle, die er damit sendet. */
+  digitalerSchluessel?: { befehle: readonly FahrzeugBefehl[] };
 }
 
 export const DEMO_MIETEN: readonly DemoMiete[] = [
@@ -270,6 +274,9 @@ export const DEMO_MIETEN: readonly DemoMiete[] = [
     endeStunden: 2 * 24,
     status: 'aktiv',
     aktuellAbstandM: 18_000,
+    // Entriegeln und Verriegeln klappen; die Wegfahrsperre darf der Fahrer nicht
+    // steuern – der Versuch steht abgelehnt im Protokoll.
+    digitalerSchluessel: { befehle: ['entriegeln', 'verriegeln', 'wegfahrsperre_aus'] },
     ausreisser: { abStunde: 28, dauerMin: 14, spitzeC: 8.7 },
   },
   // Künftige Buchungen.
@@ -290,6 +297,8 @@ export const DEMO_MIETEN: readonly DemoMiete[] = [
     startStunden: 5 * 24,
     endeStunden: 6 * 24,
     status: 'bestaetigt',
+    // Schon ausgestellt, gilt aber erst ab einer Stunde vor Mietbeginn.
+    digitalerSchluessel: { befehle: [] },
   },
 ];
 

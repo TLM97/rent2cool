@@ -12,6 +12,7 @@
  * Für eine frische Vorführung: `docker compose down -v`, dann Migrationen,
  * `db:seed` und `db:seed:demo`.
  */
+import { ConflictException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import { and, eq } from 'drizzle-orm';
 import { STANDARD_TEMPERATURPROFILE, type Principal } from '@rent2cool/shared';
@@ -28,6 +29,8 @@ import { FahrzeugService } from '../../fahrzeug/fahrzeug.service';
 import { KundeService } from '../../kunde/kunde.service';
 import { MieteService } from '../../miete/miete.service';
 import { RechnungService } from '../../rechnung/rechnung.service';
+import { SimulatorKeyProvider } from '../../schluessel/key-provider';
+import { SchluesselService } from '../../schluessel/schluessel.service';
 import { StandortService } from '../../standort/standort.service';
 import { pruefeUebergabe } from '../../standort/uebergabe';
 import { verarbeiteNachricht } from '../../telemetry/processor';
@@ -41,6 +44,7 @@ import {
   DEMO_MIETEN,
   DEMO_STANDORTE,
   positionsNachricht,
+  type DemoMiete,
   relativ,
   temperaturVerlauf,
   versetzt,
@@ -59,6 +63,8 @@ export interface DemoErgebnis {
   alarme: number;
   rechnungen: number;
   standorte: number;
+  schluessel: number;
+  befehle: number;
 }
 
 export async function ladeDemoDaten(
@@ -77,6 +83,8 @@ export async function ladeDemoDaten(
     alarme: 0,
     rechnungen: 0,
     standorte: 0,
+    schluessel: 0,
+    befehle: 0,
   };
 
   const [vorhanden] = await db
@@ -109,10 +117,14 @@ export async function ladeDemoDaten(
     new RendererRegistry([new JsonNachweisRenderer()]),
     new InMemoryBerichtSpeicher(),
   );
-  const mieten = new MieteService(db, fahrzeuge, kunden, berichte);
+  const schluesselDienst = new SchluesselService(db, new SimulatorKeyProvider(), kunden);
+  const mieten = new MieteService(db, fahrzeuge, kunden, berichte, schluesselDienst);
   const rechnungen = new RechnungService(db, config, mieten);
   const alarme = new AlarmService(db);
   const abweichungen = new AbweichungService(db);
+
+  /** App-Konten sind systemweit eindeutig – je Mandant eine eigene Demo-Kennung. */
+  const demoKonto = (konto: string) => `${konto}-${mandantId.slice(0, 8)}`;
 
   // --- Standorte (D-011) ---
   const standortIds = new Map<string, string>();
@@ -195,12 +207,44 @@ export async function ladeDemoDaten(
       });
       await kunden.aendereFahrerStatus(akteur, fahrerId, 'identitaet_pruefung');
       await kunden.aendereFahrerStatus(akteur, fahrerId, 'freigegeben');
+      if (f.konto) {
+        const vorher = await kunden.holeFahrer(fahrerId);
+        await kunden.aendereFahrer(akteur, fahrerId, {
+          version: vorher.aktualisiertAm.toISOString(),
+          kontoId: demoKonto(f.konto),
+        });
+      }
       ids.push(fahrerId);
       ergebnis.fahrer++;
     }
     kundenIds.set(k.schluessel, id);
     fahrerIds.set(k.schluessel, ids);
     ergebnis.kunden++;
+  }
+
+  // --- Digitaler Schlüssel (D-014): ausstellen, dann Befehle mit dem Fahrer-Login ---
+  async function digitalerSchluessel(m: DemoMiete, mieteId: string, fahrerId: string) {
+    if (!m.digitalerSchluessel) return;
+    const { id } = await schluesselDienst.stelleAus(akteur, mieteId, fahrerId);
+    ergebnis.schluessel++;
+    const f = DEMO_KUNDEN.find((k) => k.schluessel === m.kunde)!.fahrer[m.fahrer]!;
+    const fahrerLogin: Principal = {
+      akteurId: demoKonto(f.konto!),
+      name: f.name,
+      rollen: ['fahrer'],
+      mandantId,
+    };
+    for (const [i, befehl] of m.digitalerSchluessel.befehle.entries()) {
+      try {
+        await schluesselDienst.befehlMitSchluessel(fahrerLogin, id, {
+          befehl,
+          idempotencyKey: `demo-${mandantId.slice(0, 8)}-${m.schluessel}-${i}`,
+        });
+      } catch (e) {
+        if (!(e instanceof ConflictException)) throw e; // abgelehnt: steht im Protokoll
+      }
+      ergebnis.befehle++;
+    }
   }
 
   // --- Mieten ---
@@ -217,7 +261,7 @@ export async function ladeDemoDaten(
 
     if (m.status === 'bestaetigt') {
       // Künftige Buchung: normaler Weg mit allen Buchungsregeln.
-      await mieten.erstelle(akteur, {
+      const { id: kuenftigId } = await mieten.erstelle(akteur, {
         kundeId,
         fahrzeugId,
         fahrerId,
@@ -229,6 +273,7 @@ export async function ladeDemoDaten(
         endeGeplant: ende.toISOString(),
       });
       ergebnis.mieten++;
+      await digitalerSchluessel(m, kuenftigId, fahrerId);
       continue;
     }
 
@@ -300,6 +345,7 @@ export async function ladeDemoDaten(
     if (m.status === 'aktiv') {
       await fahrzeuge.aendereStatus(akteur, fahrzeugId, 'reserviert');
       await fahrzeuge.aendereStatus(akteur, fahrzeugId, 'vermietet');
+      await digitalerSchluessel(m, mieteId, fahrerId);
       continue;
     }
 

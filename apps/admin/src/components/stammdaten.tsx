@@ -118,6 +118,14 @@ export function FahrerFelder({ werte }: { werte?: Fahrer }) {
             : ''
         }
       />
+      {werte ? (
+        <Feld
+          name="kontoId"
+          label="App-Konto (Benutzer-ID)"
+          standard={werte.kontoId ?? ''}
+          hinweis="Verknüpft den Login des Fahrers in der App mit diesem Datensatz – Voraussetzung für den digitalen Schlüssel."
+        />
+      ) : null}
     </>
   );
 }

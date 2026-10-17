@@ -9,6 +9,7 @@ import {
   Seitenkopf,
   UebergabePlakette,
 } from '../../../../components/bausteine';
+import { FernzugriffKarte } from '../../../../components/fernzugriff';
 import { Verlauf } from '../../../../components/verlauf';
 import { Auswahl, FormularRahmen } from '../../../../components/formular';
 import { KalibrierungFelder } from '../../../../components/stammdaten';
@@ -19,7 +20,9 @@ import { istUuid, type SuchParameter } from '../../../../lib/seiten';
 import { holeSitzung } from '../../../../lib/sitzung';
 import { hatRolle } from '../../../../lib/token';
 import type {
+  Befehl,
   FahrzeugAkte,
+  Liste,
   FahrzeugPosition,
   Pruefergebnis,
   Standort,
@@ -54,6 +57,9 @@ export default async function FahrzeugDetail({
   const rollen = sitzung?.rollen ?? [];
   const darfAendern = hatRolle(rollen, 'ops', 'admin');
   const darfAbweichung = hatRolle(rollen, 'ops', 'admin', 'qa_approver');
+  const befehle = hatRolle(rollen, 'ops', 'admin', 'qa_approver')
+    ? await apiGet<Liste<Befehl>>(`/v1/fahrzeuge/${id}/befehle`, { limit: 10, offset: 0 })
+    : null;
   const naechste = istFahrzeugStatus(f.status) ? erlaubteUebergaenge(f.status) : [];
   const alleSensoren = akte.aggregate.flatMap((a) => a.sensoren);
   const sensoren = alleSensoren.filter((s) => s.aktiv);
@@ -166,6 +172,10 @@ export default async function FahrzeugDetail({
             </dd>
           </dl>
         </section>
+      ) : null}
+
+      {befehle ? (
+        <FernzugriffKarte fahrzeugId={f.id} befehle={befehle} darfSenden={darfAendern} />
       ) : null}
 
       <section className="karte" aria-labelledby="aufbau-titel">

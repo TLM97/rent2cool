@@ -1,4 +1,10 @@
-import type { Oeffnungsregeln, Position, UebergabePruefung } from '@rent2cool/shared';
+import type {
+  BefehlStatus,
+  FahrzeugBefehl,
+  Oeffnungsregeln,
+  Position,
+  UebergabePruefung,
+} from '@rent2cool/shared';
 
 /**
  * Antwortformen der Kern-API, wie die Oberfläche sie nutzt (JSON: Zeitpunkte
@@ -84,6 +90,8 @@ export interface Fahrer {
   fuehrerscheinNummer: string | null;
   fuehrerscheinGueltigBis: string | null;
   status: string;
+  /** Login-Konto für die App (digitaler Schlüssel). */
+  kontoId?: string | null;
   aktualisiertAm: string;
 }
 
@@ -210,4 +218,37 @@ export interface Standort {
 export interface FahrzeugPosition {
   position: Position | null;
   pruefung: UebergabePruefung;
+}
+
+/** Digitaler Schlüssel (GET /v1/mieten/:id/schluessel). */
+export interface Schluessel {
+  id: string;
+  mieteId: string;
+  fahrerId: string;
+  fahrerName: string;
+  appKontoVerknuepft: boolean;
+  status: 'aktiv' | 'widerrufen';
+  gueltigVon: string;
+  gueltigBis: string | null;
+  ausgestelltVon: string;
+  widerrufenAm: string | null;
+  widerrufGrund: string | null;
+  erstelltAm: string;
+}
+
+/** Befehl an ein Fahrzeug (Protokoll, auch abgelehnte). */
+export interface Befehl {
+  id: string;
+  fahrzeugId: string;
+  mieteId: string | null;
+  schluesselId: string | null;
+  befehl: FahrzeugBefehl;
+  status: BefehlStatus;
+  gruende: string[] | null;
+  grund: string | null;
+  angefordertVon: string;
+  angefordertAm: string;
+  abgeschlossenAm: string | null;
+  /** Fahrer, falls mit dessen Schlüssel gesendet. */
+  fahrerName: string | null;
 }

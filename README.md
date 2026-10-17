@@ -375,6 +375,26 @@ gegen den Rückgabestandort geprüft und das Ergebnis an der Miete festgehalten
 - Fahrzeugakte: Karte „Position“. Mietakte: Übergabe, Rückgabe und bei
   laufender Miete „Jetzt“ mit Hinweis vor dem Beenden.
 
+### Digitaler Schlüssel und Fernzugriff (D-014, Vorschlag D-018)
+
+Jeder Befehl an ein Fahrzeug läuft über den Kern, wird geprüft und
+protokolliert – auch abgelehnte Versuche. Ausgeführt wird über die
+Schnittstelle `KeyProvider` (`apps/core/src/schluessel/key-provider.ts`), heute
+der Simulator (D-015).
+
+- **Schlüssel** je Miete und Fahrer des Mietkunden (Fahrerlaubnis geprüft,
+  R-22), gültig ab 1 h vor Mietbeginn bis Mietende; Mietende oder Storno
+  widerrufen ihn automatisch. `POST/GET /v1/mieten/:id/schluessel`,
+  `POST /v1/schluessel/:id/widerruf`.
+- **Fahrer (App):** `GET /v1/schluessel/meine`, `POST /v1/schluessel/:id/befehle`
+  (Entriegeln, Verriegeln; Pflicht-`idempotencyKey`). Zuordnung des Logins über
+  das App-Konto am Fahrer (`kontoId`).
+- **Betrieb:** `POST /v1/fahrzeuge/:id/befehle` (auch Wegfahrsperre, Grund
+  Pflicht), Protokolle `GET /v1/fahrzeuge/:id/befehle`, `GET /v1/mieten/:id/befehle`,
+  Status `GET /v1/befehle/:id`.
+- Oberfläche: Mietakte „Digitaler Schlüssel“ (ausstellen, widerrufen, Befehle
+  der Miete), Fahrzeugakte „Fernzugriff“, App-Konto beim Bearbeiten des Fahrers.
+
 ### Stammdaten bearbeiten
 
 Kunde, Fahrer und Fahrzeug lassen sich ändern (`PATCH` im Kern). Anlegen und

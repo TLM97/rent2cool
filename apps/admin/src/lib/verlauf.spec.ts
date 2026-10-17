@@ -97,4 +97,20 @@ describe('Verlauf', () => {
       { feld: 'Ort', alt: 'A', neu: 'B' },
     ]);
   });
+
+  it('Schlüssel und Befehle', () => {
+    const ausgestellt = beschreibe(
+      eintrag({
+        entitaetTyp: 'schluessel',
+        neuWert: { status: 'aktiv', gueltigVon: '2026-10-17T07:00:00.000Z', fahrerId: 'f1' },
+      }),
+    );
+    expect(ausgestellt.vorgang).toBe('Schlüssel ausgestellt');
+    expect(ausgestellt.aenderungen).toEqual([
+      { feld: 'Status', alt: null, neu: 'aktiv' },
+      { feld: 'gültig ab', alt: null, neu: '17.10.2026, 09:00' },
+    ]);
+    expect(formatWert('befehl', 'wegfahrsperre_ein')).toBe('Wegfahrsperre ein');
+    expect(formatWert('gruende', ['a', 'b'])).toBe('a · b');
+  });
 });

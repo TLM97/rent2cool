@@ -43,6 +43,8 @@ export const fahrer = pgTable(
     identitaetspruefungStatus: text('identitaetspruefung_status').notNull().default('offen'),
     status: text('status').notNull().default('angelegt'),
     letztePruefungAm: timestamp('letzte_pruefung_am', { withTimezone: true }),
+    /** Login-Konto (Keycloak-Benutzer-ID) für die App; eindeutig (Migration 0013). */
+    kontoId: text('konto_id'),
     erstelltAm: timestamp('erstellt_am', { withTimezone: true }).notNull().defaultNow(),
     aktualisiertAm: timestamp('aktualisiert_am', { withTimezone: true }).notNull().defaultNow(),
   },

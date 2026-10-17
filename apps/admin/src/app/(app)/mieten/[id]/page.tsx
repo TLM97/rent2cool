@@ -10,6 +10,7 @@ import {
   StatusFormular,
   UebergabePlakette,
 } from '../../../../components/bausteine';
+import { SchluesselKarte } from '../../../../components/fernzugriff';
 import { Verlauf } from '../../../../components/verlauf';
 import { Feld, FormularRahmen } from '../../../../components/formular';
 import { apiGet, apiGetOderNull } from '../../../../lib/api';
@@ -26,11 +27,14 @@ import { istUuid, type SuchParameter } from '../../../../lib/seiten';
 import { holeSitzung } from '../../../../lib/sitzung';
 import { hatRolle } from '../../../../lib/token';
 import type {
+  Befehl,
+  Fahrer,
   Fahrzeug,
   Kunde,
   Liste,
   Miete,
   Rechnung,
+  Schluessel,
   Standort,
   FahrzeugPosition,
 } from '../../../../lib/typen';
@@ -65,6 +69,14 @@ export default async function MieteDetail({
   const naechsteMiete = naechsteStatus(MIETE_STATUS, miete.status, istMieteUebergangErlaubt);
   const darfAbweichung = hatRolle(rollen, 'ops', 'admin', 'qa_approver');
   const rechnung = rechnungen.eintraege[0];
+  // Digitaler Schlüssel (D-014): nur für den Betrieb.
+  const [schluessel, fahrerListe, befehle] = darfAendern
+    ? await Promise.all([
+        apiGet<Schluessel[]>(`/v1/mieten/${id}/schluessel`),
+        apiGet<Fahrer[]>(`/v1/kunden/${miete.kundeId}/fahrer`),
+        apiGet<Liste<Befehl>>(`/v1/mieten/${id}/befehle`, { limit: 10, offset: 0 }),
+      ])
+    : [null, [], null];
   const standorte = new Map(
     (
       await Promise.all(
@@ -215,6 +227,17 @@ export default async function MieteDetail({
         </section>
       </div>
 
+      {schluessel && befehle ? (
+        <SchluesselKarte
+          mieteId={miete.id}
+          mieteStatus={miete.status}
+          schluessel={schluessel}
+          fahrer={fahrerListe}
+          befehle={befehle}
+          darfAendern={darfAendern}
+        />
+      ) : null}
+
       <section className="karte" aria-labelledby="rechnung-titel">
         <h2 id="rechnung-titel">Rechnung</h2>
         {rechnung ? (
@@ -287,7 +310,13 @@ export default async function MieteDetail({
           </div>
         </section>
       ) : null}
-      <Verlauf entitaetIds={[miete.id]} typen={['miete', 'miete_status']} />
+      <Verlauf
+        entitaetIds={[miete.id, ...(schluessel ?? []).map((s) => s.id)]}
+        typen={['miete', 'miete_status', 'schluessel', 'schluessel_status']}
+        bezeichnungen={Object.fromEntries(
+          (schluessel ?? []).map((s) => [s.id, `Schlüssel ${s.fahrerName}`]),
+        )}
+      />
     </>
   );
 }
